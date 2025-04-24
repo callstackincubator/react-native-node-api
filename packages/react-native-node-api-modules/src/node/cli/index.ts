@@ -158,11 +158,12 @@ export function rebuildXcframeworkHashed(modulePath: string) {
                 // Expect the library in the new location
                 assert(fs.existsSync(newLibraryPath));
                 // Update the binary
-                cp.spawnSync("install_name_tool", [
+                const { status } = cp.spawnSync("install_name_tool", [
                   "-id",
                   `@rpath/${newLibraryName}.framework/${newLibraryName}`,
                   newLibraryPath,
                 ]);
+                assert.equal(status, 0, "Failed to update the library id");
                 // Update the Info.plist file for the framework
                 updateInfoPlist({
                   filePath: path.join(newFrameworkPath, "Info.plist"),
@@ -180,7 +181,7 @@ export function rebuildXcframeworkHashed(modulePath: string) {
       });
 
     // Create a new xcframework from the renamed frameworks
-    cp.spawnSync("xcodebuild", [
+    const { status } = cp.spawnSync("xcodebuild", [
       "-create-xcframework",
       ...frameworkPaths.flatMap((frameworkPath) => [
         "-framework",
@@ -189,6 +190,7 @@ export function rebuildXcframeworkHashed(modulePath: string) {
       "-output",
       outputPath,
     ]);
+    assert.equal(status, 0, "Failed to create xcframework");
 
     return outputPath;
   } finally {
