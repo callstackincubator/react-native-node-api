@@ -1,3 +1,3 @@
 #!/usr/bin/env node
-import { run } from "../dist/node/cli/index.js";
+import { run } from "../dist/node/cli.js";
 run(process.argv);

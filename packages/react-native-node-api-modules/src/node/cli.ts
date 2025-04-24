@@ -6,11 +6,29 @@ import { createRequire } from "node:module";
 
 import { Command } from "@commander-js/extra-typings";
 
-import { hashNodeApiModulePath } from "../path-utils.js";
+import { hashNodeApiModulePath } from "./path-utils.js";
 
 // Must be in all xcframeworks to be considered as Node-API modules
 const MAGIC_FILENAME = "react-native-node-api-module";
-const XCFRAMEWORKS_PATH = path.resolve(__dirname, "../../../xcframeworks");
+const XCFRAMEWORKS_PATH = path.resolve(__dirname, "../../xcframeworks");
+
+console.log(`Copying Node-API xcframeworks with ${process.execPath}`);
+
+export function findDuplicates<T, KeyType>(
+  items: T[],
+  getKey: (item: T) => KeyType
+) {
+  const duplicates = new Set<T>();
+  const seen = new Set<KeyType>();
+  for (const item of items) {
+    const key = getKey(item);
+    if (seen.has(key)) {
+      duplicates.add(item);
+    }
+    seen.add(key);
+  }
+  return duplicates;
+}
 
 /**
  * Search upwards from a directory to find a package.json and
@@ -97,7 +115,15 @@ export function updateInfoPlist({
   fs.writeFileSync(filePath, updatedContents, "utf-8");
 }
 
-export function rebuildXcframeworkHashed(modulePath: string) {
+type HashedXCFramework = {
+  originalPath: string;
+  hash: string;
+  path: string;
+};
+
+export function rebuildXcframeworkHashed(
+  modulePath: string
+): HashedXCFramework {
   // Copy the xcframework to the output directory and rename the framework and binary
   const hash = hashNodeApiModulePath(modulePath);
   const tempPath = path.join(XCFRAMEWORKS_PATH, `node-api-${hash}-temp`);
@@ -192,7 +218,11 @@ export function rebuildXcframeworkHashed(modulePath: string) {
     ]);
     assert.equal(status, 0, "Failed to create xcframework");
 
-    return outputPath;
+    return {
+      path: outputPath,
+      originalPath: modulePath,
+      hash,
+    };
   } finally {
     fs.rmSync(tempPath, { recursive: true, force: true });
   }
@@ -201,7 +231,7 @@ export function rebuildXcframeworkHashed(modulePath: string) {
 export const program = new Command("react-native-node-api-modules");
 
 program
-  .command("link-xcframework-paths")
+  .command("copy-xcframeworks")
   .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
     path.resolve(process.cwd(), p)
   )
@@ -233,7 +263,7 @@ program
     fs.rmSync(XCFRAMEWORKS_PATH, { recursive: true, force: true });
     fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
     // Create symbolic links for each xcframework found in dependencies
-    const xcframeworkPaths = Object.entries(dependenciesByName).flatMap(
+    const xcframeworks = Object.entries(dependenciesByName).flatMap(
       ([, dependency]) => {
         return dependency.xcframeworkPaths.map((xcframeworkPath) => {
           return rebuildXcframeworkHashed(
@@ -242,7 +272,19 @@ program
         });
       }
     );
-    console.log(JSON.stringify(xcframeworkPaths, null, 2));
+
+    const duplicates = findDuplicates(xcframeworks, ({ path }) => path);
+    for (const duplicate of duplicates) {
+      console.warn(
+        `Warning: Duplicate xcframework found: ${duplicate}. This may cause issues.`
+      );
+    }
+
+    for (const xcframework of xcframeworks) {
+      // TODO: Print some info about the xcframework (including the hash)
+      const isDuplicate = duplicates.has(xcframework);
+      console.log(xcframework.path);
+    }
   });
 
 export function run(argv: string[]) {
