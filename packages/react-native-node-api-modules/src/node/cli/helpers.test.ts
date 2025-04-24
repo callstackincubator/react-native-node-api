@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import path from "node:path";
 
 import {
   findDuplicates,
   findPackageDependencyPaths,
   findXCFrameworkPaths,
-} from "./cli";
-import { setupTempDirectory } from "./test-utils";
-import path from "node:path";
+} from "./helpers";
+import { setupTempDirectory } from "../test-utils";
 
 describe("findDuplicates", () => {
   it("should find duplicates", () => {

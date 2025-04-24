@@ -4,15 +4,14 @@ import fs from "node:fs";
 import cp from "node:child_process";
 import { createRequire } from "node:module";
 
-import { Command } from "@commander-js/extra-typings";
-
-import { hashNodeApiModulePath } from "./path-utils.js";
+import { hashNodeApiModulePath } from "../path-utils.js";
 
 // Must be in all xcframeworks to be considered as Node-API modules
-const MAGIC_FILENAME = "react-native-node-api-module";
-const XCFRAMEWORKS_PATH = path.resolve(__dirname, "../../xcframeworks");
-
-console.log(`Copying Node-API xcframeworks with ${process.execPath}`);
+export const MAGIC_FILENAME = "react-native-node-api-module";
+export const XCFRAMEWORKS_PATH = path.resolve(
+  __dirname,
+  "../../../xcframeworks"
+);
 
 export function findDuplicates<T, KeyType extends string>(
   items: T[],
@@ -243,67 +242,4 @@ export function rebuildXcframeworkHashed(
   } finally {
     fs.rmSync(tempPath, { recursive: true, force: true });
   }
-}
-
-export const program = new Command("react-native-node-api-modules");
-
-program
-  .command("copy-xcframeworks")
-  .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
-    path.resolve(process.cwd(), p)
-  )
-  .action((installationRoot: string) => {
-    // Find the location of each dependency
-    const dependencyPathsByName = findPackageDependencyPaths(installationRoot);
-    // Find all their xcframeworks
-    const dependenciesByName = Object.fromEntries(
-      Object.entries(dependencyPathsByName)
-        .map(([dependencyName, dependencyPath]) => {
-          // Make all the xcframeworks relative to the dependency path
-          const xcframeworkPaths = findXCFrameworkPaths(dependencyPath).map(
-            (p) => path.relative(dependencyPath, p)
-          );
-          return [
-            dependencyName,
-            {
-              path: dependencyPath,
-              xcframeworkPaths,
-            },
-          ] as const;
-        })
-        // Remove any dependencies without xcframeworks
-        .filter(([, { xcframeworkPaths }]) => xcframeworkPaths.length > 0)
-    );
-    // To be able to reference the xcframeworks from the Podspec,
-    // we need them as sub-directories of the Podspec parent directory.
-    // Create or clean the output directory
-    fs.rmSync(XCFRAMEWORKS_PATH, { recursive: true, force: true });
-    fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
-    // Create symbolic links for each xcframework found in dependencies
-    const xcframeworks = Object.entries(dependenciesByName).flatMap(
-      ([, dependency]) => {
-        return dependency.xcframeworkPaths.map((xcframeworkPath) => {
-          return rebuildXcframeworkHashed(
-            path.join(dependency.path, xcframeworkPath)
-          );
-        });
-      }
-    );
-
-    const duplicates = findDuplicates(xcframeworks, ({ path }) => path);
-    for (const duplicate of duplicates) {
-      console.warn(
-        `Warning: Duplicate xcframework found: ${duplicate}. This may cause issues.`
-      );
-    }
-
-    for (const xcframework of xcframeworks) {
-      // TODO: Print some info about the xcframework (including the hash)
-      // const isDuplicate = duplicates.has(xcframework);
-      console.log(xcframework.path);
-    }
-  });
-
-export function run(argv: string[]) {
-  program.parse(argv);
 }
