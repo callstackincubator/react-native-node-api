@@ -7,8 +7,8 @@ export function setupTempDirectory(
   context: TestContext,
   files: Record<string, string>
 ) {
-  const tempDirectoryPath = fs.mkdtempSync(
-    path.join(os.tmpdir(), "babel-transform-test-")
+  const tempDirectoryPath = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "babel-transform-test-"))
   );
 
   context.after(() => {

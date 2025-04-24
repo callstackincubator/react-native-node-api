@@ -14,25 +14,32 @@ const XCFRAMEWORKS_PATH = path.resolve(__dirname, "../../xcframeworks");
 
 console.log(`Copying Node-API xcframeworks with ${process.execPath}`);
 
-export function findDuplicates<T, KeyType>(
+export function findDuplicates<T, KeyType extends string>(
   items: T[],
   getKey: (item: T) => KeyType
-) {
-  const duplicates = new Set<T>();
-  const seen = new Set<KeyType>();
+): Set<T> {
+  const itemsByKey = new Map<KeyType, Set<T>>();
+  // Find keys of duplicates
   for (const item of items) {
     const key = getKey(item);
-    if (seen.has(key)) {
-      duplicates.add(item);
+    let itemsWithKey = itemsByKey.get(key);
+    if (!itemsWithKey) {
+      itemsWithKey = new Set();
+      itemsByKey.set(key, itemsWithKey);
     }
-    seen.add(key);
+    itemsWithKey.add(item);
   }
-  return duplicates;
+  // Find items matching the keys of duplicates
+  return new Set(
+    [...itemsByKey.values()]
+      .filter((items) => items.size > 1)
+      .flatMap((items) => [...items])
+  );
 }
 
 /**
  * Search upwards from a directory to find a package.json and
- * return a list of the resolved paths of all dependencies of that package.
+ * return a record mapping from each dependencies of that package to their path on disk.
  */
 export function findPackageDependencyPaths(
   from: string
@@ -59,7 +66,11 @@ export function findPackageDependencyPaths(
             try {
               return [
                 dependencyName,
-                path.dirname(require.resolve(`${dependencyName}/package.json`)),
+                path.dirname(
+                  require.resolve(`${dependencyName}/package.json`, {
+                    paths: [from],
+                  })
+                ),
               ];
             } catch {
               return undefined;
@@ -77,6 +88,9 @@ export function findPackageDependencyPaths(
   }
 }
 
+/**
+ * Recursively search into a directory for xcframeworks containing Node-API modules.
+ */
 export function findXCFrameworkPaths(dependencyPath: string): string[] {
   return fs
     .readdirSync(dependencyPath, { withFileTypes: true })
@@ -101,13 +115,16 @@ type UpdateInfoPlistOptions = {
   newLibraryName: string;
 };
 
+/**
+ * Update the Info.plist file of an xcframework to use the new library name.
+ */
 export function updateInfoPlist({
   filePath,
   oldLibraryName,
   newLibraryName,
 }: UpdateInfoPlistOptions) {
-  // TODO: Use a proper plist parser
   const infoPlistContents = fs.readFileSync(filePath, "utf-8");
+  // TODO: Use a proper plist parser
   const updatedContents = infoPlistContents.replaceAll(
     oldLibraryName,
     newLibraryName
@@ -282,7 +299,7 @@ program
 
     for (const xcframework of xcframeworks) {
       // TODO: Print some info about the xcframework (including the hash)
-      const isDuplicate = duplicates.has(xcframework);
+      // const isDuplicate = duplicates.has(xcframework);
       console.log(xcframework.path);
     }
   });
