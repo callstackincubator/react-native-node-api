@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc --build",
     "copy-node-api-headers": "node scripts/copy-node-api-headers.mjs",
-    "test": "tsx --test src/node/**.test.ts"
+    "test": "tsx --test src/node/**/*.test.ts src/node/*.test.ts"
   },
   "keywords": [
     "react-native",

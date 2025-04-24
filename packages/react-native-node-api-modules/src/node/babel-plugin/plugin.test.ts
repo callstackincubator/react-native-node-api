@@ -37,8 +37,10 @@ describe("plugin", () => {
       `,
     });
 
-    const ADDON_1_HASH = "eb5c6d4b";
-    const ADDON_2_HASH = "6c4e5fed";
+    const ADDON_1_REQUIRE_ARG =
+      "@rpath/node-api-eb5c6d4b.framework/node-api-eb5c6d4b";
+    const ADDON_2_REQUIRE_ARG =
+      "@rpath/node-api-6c4e5fed.framework/node-api-6c4e5fed";
 
     {
       const result = transformFileSync(
@@ -48,7 +50,7 @@ describe("plugin", () => {
       assert(result);
       const { code } = result;
       assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_HASH}")`),
+        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
         `Unexpected code: ${code}`
       );
     }
@@ -61,7 +63,7 @@ describe("plugin", () => {
       assert(result);
       const { code } = result;
       assert(
-        code && code.includes(`requireNodeAddon("${ADDON_2_HASH}")`),
+        code && code.includes(`requireNodeAddon("${ADDON_2_REQUIRE_ARG}")`),
         `Unexpected code: ${code}`
       );
     }
@@ -74,7 +76,7 @@ describe("plugin", () => {
       assert(result);
       const { code } = result;
       assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_HASH}")`),
+        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
         `Unexpected code: ${code}`
       );
     }
@@ -87,7 +89,7 @@ describe("plugin", () => {
       assert(result);
       const { code } = result;
       assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_HASH}")`),
+        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
         `Unexpected code: ${code}`
       );
     }
