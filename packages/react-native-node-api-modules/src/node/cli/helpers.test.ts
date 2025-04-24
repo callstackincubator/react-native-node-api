@@ -2,23 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import path from "node:path";
 
-import {
-  findDuplicates,
-  findPackageDependencyPaths,
-  findXCFrameworkPaths,
-} from "./helpers";
+import { findPackageDependencyPaths, findXCFrameworkPaths } from "./helpers";
 import { setupTempDirectory } from "../test-utils";
-
-describe("findDuplicates", () => {
-  it("should find duplicates", () => {
-    const items = [{ key: "a" }, { key: "b" }, { key: "a" }];
-    const duplicates = findDuplicates(items, (item) => item.key);
-    assert.equal(duplicates.size, 2);
-    const [duplicate1, duplicate2] = duplicates;
-    assert.equal(duplicate1, items[0]);
-    assert.equal(duplicate2, items[2]);
-  });
-});
 
 describe("findPackageDependencyPaths", () => {
   it("should find package dependency paths", (context) => {

@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
-import cp from "node:child_process";
 import { createRequire } from "node:module";
+
+import { spawn } from "bufout";
 
 import { hashNodeApiModulePath } from "../path-utils.js";
 
@@ -12,29 +13,6 @@ export const XCFRAMEWORKS_PATH = path.resolve(
   __dirname,
   "../../../xcframeworks"
 );
-
-export function findDuplicates<T, KeyType extends string>(
-  items: T[],
-  getKey: (item: T) => KeyType
-): Set<T> {
-  const itemsByKey = new Map<KeyType, Set<T>>();
-  // Find keys of duplicates
-  for (const item of items) {
-    const key = getKey(item);
-    let itemsWithKey = itemsByKey.get(key);
-    if (!itemsWithKey) {
-      itemsWithKey = new Set();
-      itemsByKey.set(key, itemsWithKey);
-    }
-    itemsWithKey.add(item);
-  }
-  // Find items matching the keys of duplicates
-  return new Set(
-    [...itemsByKey.values()]
-      .filter((items) => items.size > 1)
-      .flatMap((items) => [...items])
-  );
-}
 
 /**
  * Search upwards from a directory to find a package.json and
@@ -137,9 +115,9 @@ type HashedXCFramework = {
   path: string;
 };
 
-export function rebuildXcframeworkHashed(
+export async function rebuildXcframeworkHashed(
   modulePath: string
-): HashedXCFramework {
+): Promise<HashedXCFramework> {
   // Copy the xcframework to the output directory and rename the framework and binary
   const hash = hashNodeApiModulePath(modulePath);
   const tempPath = path.join(XCFRAMEWORKS_PATH, `node-api-${hash}-temp`);
@@ -151,88 +129,92 @@ export function rebuildXcframeworkHashed(
 
     fs.cpSync(modulePath, tempPath, { recursive: true });
 
-    const frameworkPaths = fs
-      .readdirSync(tempPath, {
-        withFileTypes: true,
-      })
-      .flatMap((tripletEntry) => {
-        if (tripletEntry.isDirectory()) {
+    const frameworkPaths = await Promise.all(
+      fs
+        .readdirSync(tempPath, {
+          withFileTypes: true,
+        })
+        .filter((tripletEntry) => tripletEntry.isDirectory())
+        .flatMap((tripletEntry) => {
           const tripletPath = path.join(tempPath, tripletEntry.name);
           return fs
             .readdirSync(tripletPath, {
               withFileTypes: true,
             })
-            .flatMap((frameworkEntry) => {
-              if (
+            .filter(
+              (frameworkEntry) =>
                 frameworkEntry.isDirectory() &&
                 path.extname(frameworkEntry.name) === ".framework"
-              ) {
-                const frameworkPath = path.join(
-                  tripletPath,
-                  frameworkEntry.name
-                );
-                const oldLibraryName = path.basename(
-                  frameworkEntry.name,
-                  ".framework"
-                );
-                const oldLibraryPath = path.join(frameworkPath, oldLibraryName);
-                const newLibraryName = `node-api-${hash}`;
-                const newFrameworkPath = path.join(
-                  tripletPath,
-                  `${newLibraryName}.framework`
-                );
-                const newLibraryPath = path.join(
-                  newFrameworkPath,
-                  newLibraryName
-                );
-                assert(
-                  fs.existsSync(oldLibraryPath),
-                  `Expected a library at '${oldLibraryPath}'`
-                );
-                // Rename the library
-                fs.renameSync(
-                  oldLibraryPath,
-                  // Cannot use newLibraryPath here, because the framework isn't renamed yet
-                  path.join(frameworkPath, `node-api-${hash}`)
-                );
-                // Rename the framework
-                fs.renameSync(frameworkPath, newFrameworkPath);
-                // Expect the library in the new location
-                assert(fs.existsSync(newLibraryPath));
-                // Update the binary
-                const { status } = cp.spawnSync("install_name_tool", [
+            )
+            .flatMap(async (frameworkEntry) => {
+              const frameworkPath = path.join(tripletPath, frameworkEntry.name);
+              const oldLibraryName = path.basename(
+                frameworkEntry.name,
+                ".framework"
+              );
+              const oldLibraryPath = path.join(frameworkPath, oldLibraryName);
+              const newLibraryName = `node-api-${hash}`;
+              const newFrameworkPath = path.join(
+                tripletPath,
+                `${newLibraryName}.framework`
+              );
+              const newLibraryPath = path.join(
+                newFrameworkPath,
+                newLibraryName
+              );
+              assert(
+                fs.existsSync(oldLibraryPath),
+                `Expected a library at '${oldLibraryPath}'`
+              );
+              // Rename the library
+              fs.renameSync(
+                oldLibraryPath,
+                // Cannot use newLibraryPath here, because the framework isn't renamed yet
+                path.join(frameworkPath, `node-api-${hash}`)
+              );
+              // Rename the framework
+              fs.renameSync(frameworkPath, newFrameworkPath);
+              // Expect the library in the new location
+              assert(fs.existsSync(newLibraryPath));
+              // Update the binary
+              await spawn(
+                "install_name_tool",
+                [
                   "-id",
                   `@rpath/${newLibraryName}.framework/${newLibraryName}`,
                   newLibraryPath,
-                ]);
-                assert.equal(status, 0, "Failed to update the library id");
-                // Update the Info.plist file for the framework
-                updateInfoPlist({
-                  filePath: path.join(newFrameworkPath, "Info.plist"),
-                  oldLibraryName,
-                  newLibraryName,
-                });
-                return newFrameworkPath;
-              } else {
-                return [];
-              }
+                ],
+                {
+                  outputMode: "buffered",
+                }
+              );
+              // Update the Info.plist file for the framework
+              updateInfoPlist({
+                filePath: path.join(newFrameworkPath, "Info.plist"),
+                oldLibraryName,
+                newLibraryName,
+              });
+              return newFrameworkPath;
             });
-        } else {
-          return [];
-        }
-      });
+        })
+    );
 
     // Create a new xcframework from the renamed frameworks
-    const { status } = cp.spawnSync("xcodebuild", [
-      "-create-xcframework",
-      ...frameworkPaths.flatMap((frameworkPath) => [
-        "-framework",
-        frameworkPath,
-      ]),
-      "-output",
-      outputPath,
-    ]);
-    assert.equal(status, 0, "Failed to create xcframework");
+    await spawn(
+      "xcodebuild",
+      [
+        "-create-xcframework",
+        ...frameworkPaths.flatMap((frameworkPath) => [
+          "-framework",
+          frameworkPath,
+        ]),
+        "-output",
+        outputPath,
+      ],
+      {
+        outputMode: "buffered",
+      }
+    );
 
     return {
       path: outputPath,
