@@ -15,6 +15,30 @@ export const XCFRAMEWORKS_PATH = path.resolve(
 );
 
 /**
+ * Get the latest modification time of all files in a directory and its subdirectories.
+ */
+function getLatestMtime(dir: string): number {
+  const entries = fs.readdirSync(dir, {
+    withFileTypes: true,
+    recursive: true,
+  });
+
+  let latest = 0;
+
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      const fullPath = path.join(entry.parentPath, entry.name);
+      const stat = fs.statSync(fullPath);
+      if (stat.mtimeMs > latest) {
+        latest = stat.mtimeMs;
+      }
+    }
+  }
+
+  return latest;
+}
+
+/**
  * Search upwards from a directory to find a package.json and
  * return a record mapping from each dependencies of that package to their path on disk.
  */
@@ -109,15 +133,22 @@ export function updateInfoPlist({
   fs.writeFileSync(filePath, updatedContents, "utf-8");
 }
 
-type HashedXCFramework = {
-  originalPath: string;
-  hash: string;
-  path: string;
+type RebuildXcframeworkOptions = {
+  modulePath: string;
+  incremental: boolean;
 };
 
-export async function rebuildXcframeworkHashed(
-  modulePath: string
-): Promise<HashedXCFramework> {
+type HashedXCFramework = {
+  originalPath: string;
+  outputPath: string;
+  skipped: boolean;
+  hash: string;
+};
+
+export async function rebuildXcframeworkHashed({
+  modulePath,
+  incremental,
+}: RebuildXcframeworkOptions): Promise<HashedXCFramework> {
   // Copy the xcframework to the output directory and rename the framework and binary
   const hash = hashNodeApiModulePath(modulePath);
   const tempPath = path.join(XCFRAMEWORKS_PATH, `node-api-${hash}-temp`);
@@ -126,7 +157,20 @@ export async function rebuildXcframeworkHashed(
       XCFRAMEWORKS_PATH,
       `node-api-${hash}.xcframework`
     );
-
+    if (incremental && fs.existsSync(outputPath)) {
+      const moduleModified = getLatestMtime(modulePath);
+      const outputModified = getLatestMtime(outputPath);
+      if (moduleModified < outputModified) {
+        return {
+          skipped: true,
+          outputPath,
+          originalPath: modulePath,
+          hash,
+        };
+      }
+    }
+    // Delete any existing xcframework (or xcodebuild will try to amend it)
+    fs.rmSync(outputPath, { recursive: true, force: true });
     fs.cpSync(modulePath, tempPath, { recursive: true });
 
     const frameworkPaths = await Promise.all(
@@ -217,7 +261,8 @@ export async function rebuildXcframeworkHashed(
     );
 
     return {
-      path: outputPath,
+      skipped: false,
+      outputPath,
       originalPath: modulePath,
       hash,
     };

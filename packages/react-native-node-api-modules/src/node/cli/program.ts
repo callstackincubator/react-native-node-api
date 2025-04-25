@@ -1,6 +1,6 @@
+import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
-import { EventEmitter } from "node:events";
 
 import { Command } from "@commander-js/extra-typings";
 import { SpawnFailure } from "bufout";
@@ -24,7 +24,26 @@ function prettyPath(p: string) {
   return chalk.dim(path.relative(process.cwd(), p));
 }
 
-async function copyXCFrameworks(installationRoot: string) {
+type CopyXCFrameworksOptions = {
+  installationRoot: string;
+  incremental: boolean;
+};
+
+type XCFrameworkOutputBase = {
+  originalPath: string;
+  skipped: boolean;
+};
+
+type XCFrameworkOutput = XCFrameworkOutputBase &
+  (
+    | { outputPath: string; failure?: never }
+    | { outputPath?: never; failure: SpawnFailure }
+  );
+
+async function copyXCFrameworks({
+  installationRoot,
+  incremental,
+}: CopyXCFrameworksOptions): Promise<XCFrameworkOutput[]> {
   const spinner = ora(
     `Copying Node-API xcframeworks into ${prettyPath(XCFRAMEWORKS_PATH)}`
   ).start();
@@ -51,10 +70,7 @@ async function copyXCFrameworks(installationRoot: string) {
         .filter(([, { xcframeworkPaths }]) => xcframeworkPaths.length > 0)
     );
 
-    // To be able to reference the xcframeworks from the Podspec,
-    // we need them as sub-directories of the Podspec parent directory.
     // Create or clean the output directory
-    fs.rmSync(XCFRAMEWORKS_PATH, { recursive: true, force: true });
     fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
     // Create symbolic links for each xcframework found in dependencies
     return await Promise.all(
@@ -62,12 +78,16 @@ async function copyXCFrameworks(installationRoot: string) {
         return dependency.xcframeworkPaths.map(async (xcframeworkPath) => {
           const originalPath = path.join(dependency.path, xcframeworkPath);
           try {
-            return await rebuildXcframeworkHashed(originalPath);
+            return await rebuildXcframeworkHashed({
+              modulePath: originalPath,
+              incremental,
+            });
           } catch (error) {
             if (error instanceof SpawnFailure) {
               return {
                 originalPath,
-                error,
+                skipped: false,
+                failure: error,
               };
             } else {
               throw error;
@@ -81,34 +101,78 @@ async function copyXCFrameworks(installationRoot: string) {
   }
 }
 
+// TODO: Consider adding a flag to drive the build of the original xcframeworks too
+
 program
   .command("copy-xcframeworks")
   .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
     path.resolve(process.cwd(), p)
   )
-  .action(async (installationRoot: string) => {
-    const xcframeworks = await copyXCFrameworks(installationRoot);
+  .option(
+    "--force",
+    "Don't check timestamps of input files to skip unnecessary rebuilds",
+    false
+  )
+  .option("--prune", "Delete xcframeworks that are no longer auto-linked", true)
+  .action(async (installationRoot: string, { force, prune }) => {
+    const xcframeworks = await copyXCFrameworks({
+      installationRoot,
+      incremental: !force,
+    });
 
-    const failures = xcframeworks.filter((result) => "error" in result);
-    const rebuilds = xcframeworks.filter((result) => "path" in result);
+    const failures = xcframeworks.filter((result) => "failure" in result);
+    const rebuilds = xcframeworks.filter((result) => "outputPath" in result);
 
     for (const xcframework of rebuilds) {
-      const { originalPath, path } = xcframework;
-      console.log(
-        `${chalk.greenBright("✓")} Rebuilt ${prettyPath(originalPath)}`
-      );
-      console.log(`  into ${prettyPath(path)}`);
+      const { originalPath, outputPath, skipped } = xcframework;
+      const outputPart = outputPath
+        ? "→ " + prettyPath(path.basename(outputPath))
+        : "";
+      if (skipped) {
+        console.log(
+          chalk.greenBright("✓"),
+          "Skipped",
+          prettyPath(originalPath),
+          outputPart,
+          "(already up to date)"
+        );
+      } else {
+        console.log(
+          chalk.greenBright("✓"),
+          "Recreated",
+          prettyPath(originalPath),
+          outputPart
+        );
+      }
     }
 
-    for (const { originalPath, error } of failures) {
+    for (const { originalPath, failure } of failures) {
+      assert(failure instanceof SpawnFailure);
       console.error(
         "\n",
         chalk.redBright("✖"),
         "Failed to copy",
         prettyPath(originalPath)
       );
-      console.error(error.message);
-      error.flushOutput("both");
+      console.error(failure.message);
+      failure.flushOutput("both");
       process.exitCode = 1;
+    }
+
+    if (prune && failures.length === 0) {
+      // Pruning only when all xcframeworks are copied successfully
+      const expectedPaths = new Set([
+        ...rebuilds.map((xcframework) => xcframework.outputPath),
+      ]);
+      for (const entry of fs.readdirSync(XCFRAMEWORKS_PATH)) {
+        const candidatePath = path.resolve(XCFRAMEWORKS_PATH, entry);
+        if (!expectedPaths.has(candidatePath)) {
+          console.log(
+            "🧹Deleting extroneous xcframework",
+            prettyPath(candidatePath)
+          );
+          fs.rmSync(candidatePath, { recursive: true, force: true });
+        }
+      }
     }
   });

@@ -10,8 +10,10 @@ COPY_FRAMEWORKS_COMMAND ||= "#{CLI_COMMAND} copy-xcframeworks '#{Pod::Config.ins
 
 # We need to run this now to ensure the xcframeworks are copied vendored_frameworks are considered
 XCFRAMEWORKS_DIR ||= File.join(__dir__, "xcframeworks")
-unless Dir.exist?(XCFRAMEWORKS_DIR) && !Dir.empty?(XCFRAMEWORKS_DIR)
+unless defined?(@xcframeworks_copied)
   system(COPY_FRAMEWORKS_COMMAND) or raise "Failed to copy xcframeworks"
+  # Setting a flag to avoid running this command on every require
+  @xcframeworks_copied = true
 end
 
 Pod::Spec.new do |s|
