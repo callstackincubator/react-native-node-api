@@ -24,15 +24,11 @@ function prettyPath(p: string) {
   return chalk.dim(path.relative(process.cwd(), p));
 }
 
-program
-  .command("copy-xcframeworks")
-  .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
-    path.resolve(process.cwd(), p)
-  )
-  .action(async (installationRoot: string) => {
-    const spinner = ora(
-      `Copying Node-API xcframeworks into ${prettyPath(XCFRAMEWORKS_PATH)}`
-    ).start();
+async function copyXCFrameworks(installationRoot: string) {
+  const spinner = ora(
+    `Copying Node-API xcframeworks into ${prettyPath(XCFRAMEWORKS_PATH)}`
+  ).start();
+  try {
     // Find the location of each dependency
     const dependencyPathsByName = findPackageDependencyPaths(installationRoot);
     // Find all their xcframeworks
@@ -61,7 +57,7 @@ program
     fs.rmSync(XCFRAMEWORKS_PATH, { recursive: true, force: true });
     fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
     // Create symbolic links for each xcframework found in dependencies
-    const xcframeworks = await Promise.all(
+    return await Promise.all(
       Object.entries(dependenciesByName).flatMap(([, dependency]) => {
         return dependency.xcframeworkPaths.map(async (xcframeworkPath) => {
           const originalPath = path.join(dependency.path, xcframeworkPath);
@@ -80,11 +76,20 @@ program
         });
       })
     );
-
+  } finally {
     spinner.stop();
+  }
+}
+
+program
+  .command("copy-xcframeworks")
+  .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
+    path.resolve(process.cwd(), p)
+  )
+  .action(async (installationRoot: string) => {
+    const xcframeworks = await copyXCFrameworks(installationRoot);
 
     const failures = xcframeworks.filter((result) => "error" in result);
-
     const rebuilds = xcframeworks.filter((result) => "path" in result);
 
     for (const xcframework of rebuilds) {
