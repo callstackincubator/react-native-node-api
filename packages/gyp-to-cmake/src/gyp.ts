@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
+import { parse } from "gyp-parser";
+
 export type GypTarget = {
   target_name: string;
   sources: string[];
@@ -73,8 +75,7 @@ export function readBindingFile(
 ): GypBinding {
   try {
     const contents = fs.readFileSync(path, "utf-8");
-    // TODO: Use a loose json parser to allow single quotes (and comments)
-    const json = JSON.parse(contents);
+    const json = parse(contents);
     assertBinding(json, disallowUnknownProperties);
     return json;
   } catch (err) {

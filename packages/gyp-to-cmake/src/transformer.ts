@@ -1,3 +1,5 @@
+import cp from "node:child_process";
+
 import type { GypBinding } from "./gyp.js";
 
 const DEFAULT_NAPI_VERSION = 8;
@@ -6,6 +8,7 @@ export type GypToCmakeListsOptions = {
   gyp: GypBinding;
   projectName: string;
   napiVersion?: number;
+  executeCmdExpansions?: boolean;
   unsupportedBehaviour?: "skip" | "warn" | "throw";
 };
 
@@ -26,17 +29,23 @@ export function bindingGypToCmakeLists({
   gyp,
   projectName,
   napiVersion = DEFAULT_NAPI_VERSION,
+  executeCmdExpansions = true,
   unsupportedBehaviour = "skip",
 }: GypToCmakeListsOptions): string {
-  function filterExpansion(value: string) {
+  function mapExpansion(value: string): string[] {
     if (!isCmdExpansion(value)) {
-      return true;
+      return [value];
+    } else if (executeCmdExpansions) {
+      const cmd = value.trim().replace(/^<!@?/, "");
+      const output = cp.execSync(cmd, { encoding: "utf-8" }).trim();
+      // Split on whitespace, if the expansion starts with "<!@"
+      return value.trim().startsWith("<!@") ? output.split(/\s/) : [output];
     } else if (unsupportedBehaviour === "throw") {
       throw new Error(`Unsupported command expansion: ${value}`);
     } else if (unsupportedBehaviour === "warn") {
       console.warn(`Unsupported command expansion: ${value}`);
     }
-    return false;
+    return [value];
   }
 
   const lines: string[] = [
@@ -57,12 +66,12 @@ export function bindingGypToCmakeLists({
     // TODO: Handle "ldflags"
 
     const escapedJoinedSources = target.sources
-      .filter(filterExpansion)
+      .flatMap(mapExpansion)
       .map(escapePath)
       .join(" ");
 
     const escapedJoinedIncludes = (target.include_dirs || [])
-      .filter(filterExpansion)
+      .flatMap(mapExpansion)
       .map(escapePath)
       .join(" ");
 
@@ -71,9 +80,8 @@ export function bindingGypToCmakeLists({
       `add_library(${targetName} SHARED ${escapedJoinedSources} \${CMAKE_JS_SRC})`,
       `set_target_properties(${targetName} PROPERTIES PREFIX "" SUFFIX ".node")`,
       `target_include_directories(${targetName} PRIVATE ${escapedJoinedIncludes} \${CMAKE_JS_INC})`,
-      `target_link_libraries(${targetName} PRIVATE \${CMAKE_JS_LIB})`
-      // TODO: Consider declaring the C++ standard version
-      // `target_compile_features(${targetName} PRIVATE cxx_std_17)`
+      `target_link_libraries(${targetName} PRIVATE \${CMAKE_JS_LIB})`,
+      `target_compile_features(${targetName} PRIVATE cxx_std_17)`
       // or
       // `set_target_properties(${targetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
     );
