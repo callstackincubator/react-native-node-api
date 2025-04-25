@@ -15,6 +15,7 @@ import {
 } from "./helpers";
 
 // We're attaching a lot of listeners when spawning in parallel
+process.setMaxListeners(100);
 process.stdout.setMaxListeners(100);
 process.stderr.setMaxListeners(100);
 
