@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import { EventEmitter } from "node:events";
 
 import { Command } from "@commander-js/extra-typings";
 import { SpawnFailure } from "bufout";
@@ -12,6 +13,10 @@ import {
   rebuildXcframeworkHashed,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
+
+// We're attaching a lot of listeners when spawning in parallel
+process.stdout.setMaxListeners(100);
+process.stderr.setMaxListeners(100);
 
 export const program = new Command("react-native-node-api-modules");
 
@@ -85,10 +90,9 @@ program
     for (const xcframework of rebuilds) {
       const { originalPath, path } = xcframework;
       console.log(
-        `${chalk.greenBright("✓")} Rebuilt ${prettyPath(
-          originalPath
-        )}\n  into ${prettyPath(path)}`
+        `${chalk.greenBright("✓")} Rebuilt ${prettyPath(originalPath)}`
       );
+      console.log(`  into ${prettyPath(path)}`);
     }
 
     for (const { originalPath, error } of failures) {
