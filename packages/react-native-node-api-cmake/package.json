@@ -13,8 +13,11 @@
   },
   "dependencies": {
     "@commander-js/extra-typings": "^13.1.0",
+    "bufout": "^0.3.1",
+    "chalk": "^5.4.1",
     "cmake-js": "^7.3.1",
-    "commander": "^13.1.0"
+    "commander": "^13.1.0",
+    "ora": "^8.2.0"
   },
   "peerDependencies": {
     "node-addon-api": "^8.3.1",

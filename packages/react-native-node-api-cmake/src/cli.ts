@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
-import cp from "node:child_process";
 import path from "node:path";
 import fs from "node:fs";
 
 import { Command, Option } from "@commander-js/extra-typings";
+import { spawn, SpawnFailure } from "bufout";
+import ora from "ora";
+
 import { SUPPORTED_TRIPLETS, SupportedTriplet } from "./triplets.js";
 import { getNodeApiHeadersPath, getNodeAddonHeadersPath } from "./headers.js";
 import {
@@ -15,9 +17,13 @@ import {
   getAppleConfigureCmakeArgs,
   isAppleTriplet,
 } from "./apple.js";
+import chalk from "chalk";
+
+// We're attaching a lot of listeners when spawning in parallel
+process.stdout.setMaxListeners(100);
+process.stderr.setMaxListeners(100);
 
 // TODO: Add automatic ccache support
-// TODO: Detect and pipe through xcbeautify if available or use buffered output
 
 const sourcePathOption = new Option(
   "--source <path>",
@@ -63,80 +69,123 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(buildPathOption)
   .addOption(outPathOption)
   .addOption(cleanOption)
-  .action(({ triplet: triplets = [], ...globalOptions }) => {
-    const buildPath = getBuildPath(globalOptions);
-    if (globalOptions.clean) {
-      fs.rmSync(buildPath, { recursive: true, force: true });
-    }
-    if (globalOptions.apple) {
-      triplets.push(...DEFAULT_APPLE_TRIPLETS);
-    }
-    const tripletOptions = triplets.map((triplet) => {
-      const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
-      return {
-        ...globalOptions,
-        triplet,
-        tripletBuildPath,
-        tripletOutputPath: path.join(tripletBuildPath, "out"),
-      };
-    });
-
-    // Configure every triplet project
-    for (const options of tripletOptions) {
-      configureProject(options);
-    }
-
-    // Build every triplet project
-    for (const options of tripletOptions) {
-      // Delete any stale build artifacts before building
-      // This is important, since we might rename the output files
-      fs.rmSync(options.tripletOutputPath, { recursive: true, force: true });
-      buildProject(options);
-    }
-
-    // Collect triplets in vendor specific containers
-    const appleTriplets = tripletOptions.filter(({ triplet }) =>
-      isAppleTriplet(triplet)
-    );
-    if (appleTriplets.length > 0) {
-      const libraryPaths = appleTriplets.flatMap(({ tripletOutputPath }) => {
-        const configSpecifcPath = path.join(
-          tripletOutputPath,
-          globalOptions.configuration
-        );
-        assert(
-          fs.existsSync(configSpecifcPath),
-          `Expected a directory at ${configSpecifcPath}`
-        );
-        // Expect binary file(s), either .node or .dylib
-        return fs.readdirSync(configSpecifcPath).map((file) => {
-          const filePath = path.join(configSpecifcPath, file);
-          if (filePath.endsWith(".dylib")) {
-            return filePath;
-          } else if (file.endsWith(".node")) {
-            // Rename the file to .dylib for xcodebuild to accept it
-            const newFilePath = filePath.replace(/\.node$/, ".dylib");
-            fs.renameSync(filePath, newFilePath);
-            return newFilePath;
-          } else {
-            throw new Error(
-              `Expected a .node or .dylib file, but found ${file}`
-            );
-          }
-        });
+  .action(async ({ triplet: triplets = [], ...globalOptions }) => {
+    try {
+      const spinner = ora();
+      const buildPath = getBuildPath(globalOptions);
+      if (globalOptions.clean) {
+        fs.rmSync(buildPath, { recursive: true, force: true });
+      }
+      if (globalOptions.apple) {
+        triplets.push(...DEFAULT_APPLE_TRIPLETS);
+      }
+      const tripletOptions = triplets.map((triplet) => {
+        const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
+        return {
+          ...globalOptions,
+          triplet,
+          tripletBuildPath,
+          tripletOutputPath: path.join(tripletBuildPath, "out"),
+        };
       });
-      const frameworkPaths = libraryPaths.map(createFramework);
-      const xcframeworkFilename = determineXCFrameworkFilename(frameworkPaths);
-      // Create the xcframework
-      createXCframework({
-        outputPath: path.join(
+
+      // Configure every triplet project
+      try {
+        spinner.start("Configuring projects");
+        await Promise.all(
+          tripletOptions.map((options) => configureProject(options))
+        );
+      } finally {
+        spinner.stop();
+      }
+
+      // Build every triplet project
+      try {
+        spinner.start("Building projects");
+        await Promise.all(
+          tripletOptions.map(async (options) => {
+            // Delete any stale build artifacts before building
+            // This is important, since we might rename the output files
+            fs.rmSync(options.tripletOutputPath, {
+              recursive: true,
+              force: true,
+            });
+            await buildProject(options);
+          })
+        );
+      } finally {
+        spinner.stop();
+      }
+
+      // Collect triplets in vendor specific containers
+      const appleTriplets = tripletOptions.filter(({ triplet }) =>
+        isAppleTriplet(triplet)
+      );
+      if (appleTriplets.length > 0) {
+        const libraryPaths = appleTriplets.flatMap(({ tripletOutputPath }) => {
+          const configSpecifcPath = path.join(
+            tripletOutputPath,
+            globalOptions.configuration
+          );
+          assert(
+            fs.existsSync(configSpecifcPath),
+            `Expected a directory at ${configSpecifcPath}`
+          );
+          // Expect binary file(s), either .node or .dylib
+          return fs.readdirSync(configSpecifcPath).map((file) => {
+            const filePath = path.join(configSpecifcPath, file);
+            if (filePath.endsWith(".dylib")) {
+              return filePath;
+            } else if (file.endsWith(".node")) {
+              // Rename the file to .dylib for xcodebuild to accept it
+              const newFilePath = filePath.replace(/\.node$/, ".dylib");
+              fs.renameSync(filePath, newFilePath);
+              return newFilePath;
+            } else {
+              throw new Error(
+                `Expected a .node or .dylib file, but found ${file}`
+              );
+            }
+          });
+        });
+        const frameworkPaths = libraryPaths.map(createFramework);
+        const xcframeworkFilename =
+          determineXCFrameworkFilename(frameworkPaths);
+
+        // Create the xcframework
+        const xcframeworkOutputPath = path.resolve(
           // Defaults to storing the xcframework next to the CMakeLists.txt file
           globalOptions.out || globalOptions.source,
           xcframeworkFilename
-        ),
-        libraryPaths: [],
-        frameworkPaths,
-      });
+        );
+
+        try {
+          spinner.start("Assembling XCFramework");
+          await createXCframework({
+            outputPath: xcframeworkOutputPath,
+            libraryPaths: [],
+            frameworkPaths,
+          });
+        } finally {
+          spinner.stop();
+        }
+
+        console.log(
+          chalk.greenBright("✓"),
+          "XCFramework created at",
+          chalk.dim(path.relative(process.cwd(), xcframeworkOutputPath))
+        );
+      }
+    } catch (error) {
+      if (error instanceof SpawnFailure) {
+        error.flushOutput("both");
+        console.error();
+        console.error(chalk.redBright("✖"), error.message);
+        process.exitCode = 1;
+      } else {
+        process.exitCode = 2;
+        throw error;
+      }
     }
   });
 
@@ -178,16 +227,15 @@ function getBuildArgs(triplet: SupportedTriplet) {
   }
 }
 
-function configureProject(options: TripletScopedOptions) {
+async function configureProject(options: TripletScopedOptions) {
   const { triplet, tripletBuildPath, source } = options;
-  console.log(`Configuring project for '${triplet}'`);
   const variables = getVariables(options);
   const variablesArgs = Object.entries(variables).flatMap(([key, value]) => [
     "-D",
     `${key}=${value}`,
   ]);
 
-  const { status } = cp.spawnSync(
+  await spawn(
     "cmake",
     [
       "-S",
@@ -198,16 +246,14 @@ function configureProject(options: TripletScopedOptions) {
       ...getTripletConfigureCmakeArgs(triplet),
     ],
     {
-      stdio: "inherit",
+      outputMode: "buffered",
     }
   );
-  assert.equal(status, 0, `Failed to configure project for '${triplet}'`);
 }
 
-function buildProject(options: TripletScopedOptions) {
+async function buildProject(options: TripletScopedOptions) {
   const { triplet, tripletBuildPath, configuration } = options;
-  console.log(`Building project for '${triplet}'`);
-  const { status } = cp.spawnSync(
+  await spawn(
     "cmake",
     [
       "--build",
@@ -218,10 +264,9 @@ function buildProject(options: TripletScopedOptions) {
       ...getBuildArgs(triplet),
     ],
     {
-      stdio: "inherit",
+      outputMode: "buffered",
     }
   );
-  assert.equal(status, 0, `Failed to build project for '${triplet}'`);
 }
 
 function getVariables(options: TripletScopedOptions): Record<string, string> {

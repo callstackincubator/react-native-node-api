@@ -10,4 +10,5 @@ for (const projectDirectory of projectDirectories) {
     cwd: projectDirectory,
     stdio: "inherit",
   });
+  console.log();
 }
