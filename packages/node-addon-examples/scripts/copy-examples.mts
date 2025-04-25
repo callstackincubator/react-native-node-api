@@ -6,14 +6,14 @@ import { EXAMPLES_DIR } from "./cmake-projects.mjs";
 
 const ALLOW_LIST = [
   "1-getting-started/1_hello_world/napi/",
-  // "1-getting-started/1_hello_world/node-addon-api/"
-  // "1-getting-started/1_hello_world/node-addon-api-addon-class/"
+  "1-getting-started/1_hello_world/node-addon-api/",
+  "1-getting-started/1_hello_world/node-addon-api-addon-class/",
   "1-getting-started/2_function_arguments/napi/",
-  // "1-getting-started/2_function_arguments/node-addon-api/",
+  "1-getting-started/2_function_arguments/node-addon-api/",
   "1-getting-started/3_callbacks/napi/",
-  // "1-getting-started/3_callbacks/node-addon-api/",
+  "1-getting-started/3_callbacks/node-addon-api/",
   "1-getting-started/4_object_factory/napi/",
-  // "1-getting-started/4_object_factory/node-addon-api/",
+  "1-getting-started/4_object_factory/node-addon-api/",
   "1-getting-started/5_function_factory/napi/",
   // "1-getting-started/5_function_factory/node-addon-api/",
   // "1-getting-started/6_object_wrap/napi/", // TODO: Fix C++ support to allow lambda functions
@@ -66,12 +66,4 @@ for (const src of ALLOW_LIST) {
   const destPath = path.join(EXAMPLES_DIR, src);
   console.log("Copying from", srcPath, "to", destPath);
   fs.cpSync(srcPath, destPath, { recursive: true });
-  // Patch binding.gyp files
-  // TODO: Make the gyp-to-cmake tool handle single quotes in binding.gyp files
-  const bindingGypPath = path.join(destPath, "binding.gyp");
-  if (fs.existsSync(bindingGypPath)) {
-    const contents = fs.readFileSync(bindingGypPath, "utf-8");
-    const patchedContents = contents.replaceAll("'", '"');
-    fs.writeFileSync(bindingGypPath, patchedContents, "utf-8");
-  }
 }
