@@ -4,6 +4,7 @@ import path from "node:path";
 
 import {
   determineModuleContext,
+  hashNodeApiModulePath,
   isNodeApiModule,
   replaceWithNodeExtension,
   stripExtension,
@@ -59,7 +60,9 @@ describe("determineModuleContext", () => {
   it("works", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
-      "sub-package/package.json": `{ "name": "my-sub-package" }`,
+      // Two sub-packages with the same name
+      "sub-package-a/package.json": `{ "name": "my-sub-package" }`,
+      "sub-package-b/package.json": `{ "name": "my-sub-package" }`,
     });
 
     {
@@ -72,10 +75,45 @@ describe("determineModuleContext", () => {
 
     {
       const { packageName, relativePath } = determineModuleContext(
-        path.join(tempDirectoryPath, "sub-package/some-file.js")
+        path.join(tempDirectoryPath, "sub-package-a/some-file.js")
       );
       assert.equal(packageName, "my-sub-package");
       assert.equal(relativePath, "some-file.js");
     }
+
+    {
+      const { packageName, relativePath } = determineModuleContext(
+        path.join(tempDirectoryPath, "sub-package-b/some-file.js")
+      );
+      assert.equal(packageName, "my-sub-package");
+      assert.equal(relativePath, "some-file.js");
+    }
+  });
+});
+
+describe("hashNodeApiModulePath", () => {
+  it("produce the same has for sub-packages of equal names", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "my-package" }`,
+      // Two sub-packages with the same name
+      "sub-package-a/package.json": `{ "name": "my-sub-package" }`,
+      "sub-dir/sub-package-b/package.json": `{ "name": "my-sub-package" }`,
+    });
+
+    const hashInRoot = hashNodeApiModulePath(
+      path.join(tempDirectoryPath, "some-dir/some-file.js")
+    );
+
+    const hashInSubPackageA = hashNodeApiModulePath(
+      path.join(tempDirectoryPath, "sub-package-a/some-file.js")
+    );
+    const hashInSubPackageB = hashNodeApiModulePath(
+      path.join(tempDirectoryPath, "sub-dir/sub-package-b/some-file.js")
+    );
+
+    assert.notEqual(hashInRoot, hashInSubPackageA);
+    assert.notEqual(hashInRoot, hashInSubPackageB);
+    // Because they both reference the same file in packages of equal names
+    assert.equal(hashInSubPackageA, hashInSubPackageB);
   });
 });
