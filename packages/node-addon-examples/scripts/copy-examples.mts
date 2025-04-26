@@ -66,4 +66,15 @@ for (const src of ALLOW_LIST) {
   const destPath = path.join(EXAMPLES_DIR, src);
   console.log("Copying from", srcPath, "to", destPath);
   fs.cpSync(srcPath, destPath, { recursive: true });
+  // Delete all package.json files recursively, as they have duplicate names, causing collisions when hashing
+  for (const entry of fs.readdirSync(destPath, {
+    withFileTypes: true,
+    recursive: true,
+  })) {
+    if (entry.name === "package.json") {
+      const filePath = path.join(entry.parentPath, entry.name);
+      console.log("Deleting", filePath);
+      fs.rmSync(filePath);
+    }
+  }
 }
