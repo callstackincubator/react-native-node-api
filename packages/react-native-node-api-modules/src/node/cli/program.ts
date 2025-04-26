@@ -74,7 +74,7 @@ async function copyXCFrameworks({
 
     // Create or clean the output directory
     fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
-    // Create symbolic links for each xcframework found in dependencies
+    // Create hashes copies of xcframework found in dependencies
     return await Promise.all(
       Object.entries(dependenciesByName).flatMap(([, dependency]) => {
         return dependency.xcframeworkPaths.map(async (xcframeworkPath) => {
