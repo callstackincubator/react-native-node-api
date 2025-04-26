@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import fs from "node:fs";
+import fs from "node:fs/promises";
+import { existsSync, readdirSync, renameSync } from "node:fs";
 
 import { Command, Option } from "@commander-js/extra-typings";
 import { spawn, SpawnFailure } from "bufout";
@@ -73,7 +74,7 @@ export const program = new Command("react-native-node-api-cmake")
     try {
       const buildPath = getBuildPath(globalContext);
       if (globalContext.clean) {
-        fs.rmSync(buildPath, { recursive: true, force: true });
+        await fs.rm(buildPath, { recursive: true, force: true });
       }
       const triplets = new Set<SupportedTriplet>(tripletValues);
       if (globalContext.apple) {
@@ -104,7 +105,7 @@ export const program = new Command("react-native-node-api-cmake")
           tripletContext.map(async (context) => {
             // Delete any stale build artifacts before building
             // This is important, since we might rename the output files
-            fs.rmSync(context.tripletOutputPath, {
+            await fs.rm(context.tripletOutputPath, {
               recursive: true,
               force: true,
             });
@@ -129,18 +130,18 @@ export const program = new Command("react-native-node-api-cmake")
             globalContext.configuration
           );
           assert(
-            fs.existsSync(configSpecifcPath),
+            existsSync(configSpecifcPath),
             `Expected a directory at ${configSpecifcPath}`
           );
           // Expect binary file(s), either .node or .dylib
-          return fs.readdirSync(configSpecifcPath).map((file) => {
+          return readdirSync(configSpecifcPath).map((file) => {
             const filePath = path.join(configSpecifcPath, file);
             if (filePath.endsWith(".dylib")) {
               return filePath;
             } else if (file.endsWith(".node")) {
               // Rename the file to .dylib for xcodebuild to accept it
               const newFilePath = filePath.replace(/\.node$/, ".dylib");
-              fs.renameSync(filePath, newFilePath);
+              renameSync(filePath, newFilePath);
               return newFilePath;
             } else {
               throw new Error(
@@ -163,7 +164,6 @@ export const program = new Command("react-native-node-api-cmake")
         await oraPromise(
           createXCframework({
             outputPath: xcframeworkOutputPath,
-            libraryPaths: [],
             frameworkPaths,
           }),
           {

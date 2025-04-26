@@ -124,7 +124,6 @@ export function getAppleBuildArgs() {
 }
 
 type XCframeworkOptions = {
-  libraryPaths: string[];
   frameworkPaths: string[];
   outputPath: string;
 };
@@ -170,7 +169,6 @@ export function createFramework(libraryPath: string) {
 }
 
 export async function createXCframework({
-  libraryPaths,
   frameworkPaths,
   outputPath,
 }: XCframeworkOptions) {
@@ -183,7 +181,6 @@ export async function createXCframework({
     "xcodebuild",
     [
       "-create-xcframework",
-      ...libraryPaths.flatMap((p) => ["-library", p]),
       ...frameworkPaths.flatMap((p) => ["-framework", p]),
       "-output",
       outputPath,
