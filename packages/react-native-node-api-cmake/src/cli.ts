@@ -69,20 +69,23 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(buildPathOption)
   .addOption(outPathOption)
   .addOption(cleanOption)
-  .action(async ({ triplet: triplets = [], ...globalOptions }) => {
+  .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
       const spinner = ora();
-      const buildPath = getBuildPath(globalOptions);
-      if (globalOptions.clean) {
+      const buildPath = getBuildPath(globalContext);
+      if (globalContext.clean) {
         fs.rmSync(buildPath, { recursive: true, force: true });
       }
-      if (globalOptions.apple) {
-        triplets.push(...DEFAULT_APPLE_TRIPLETS);
+      const triplets = new Set<SupportedTriplet>(tripletValues);
+      if (globalContext.apple) {
+        for (const triplet of DEFAULT_APPLE_TRIPLETS) {
+          triplets.add(triplet);
+        }
       }
-      const tripletOptions = triplets.map((triplet) => {
+      const tripletContext = [...triplets].map((triplet) => {
         const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
         return {
-          ...globalOptions,
+          ...globalContext,
           triplet,
           tripletBuildPath,
           tripletOutputPath: path.join(tripletBuildPath, "out"),
@@ -93,7 +96,7 @@ export const program = new Command("react-native-node-api-cmake")
       try {
         spinner.start("Configuring projects");
         await Promise.all(
-          tripletOptions.map((options) => configureProject(options))
+          tripletContext.map((context) => configureProject(context))
         );
       } finally {
         spinner.stop();
@@ -103,14 +106,14 @@ export const program = new Command("react-native-node-api-cmake")
       try {
         spinner.start("Building projects");
         await Promise.all(
-          tripletOptions.map(async (options) => {
+          tripletContext.map(async (context) => {
             // Delete any stale build artifacts before building
             // This is important, since we might rename the output files
-            fs.rmSync(options.tripletOutputPath, {
+            fs.rmSync(context.tripletOutputPath, {
               recursive: true,
               force: true,
             });
-            await buildProject(options);
+            await buildProject(context);
           })
         );
       } finally {
@@ -118,14 +121,14 @@ export const program = new Command("react-native-node-api-cmake")
       }
 
       // Collect triplets in vendor specific containers
-      const appleTriplets = tripletOptions.filter(({ triplet }) =>
+      const appleTriplets = tripletContext.filter(({ triplet }) =>
         isAppleTriplet(triplet)
       );
       if (appleTriplets.length > 0) {
         const libraryPaths = appleTriplets.flatMap(({ tripletOutputPath }) => {
           const configSpecifcPath = path.join(
             tripletOutputPath,
-            globalOptions.configuration
+            globalContext.configuration
           );
           assert(
             fs.existsSync(configSpecifcPath),
@@ -155,7 +158,7 @@ export const program = new Command("react-native-node-api-cmake")
         // Create the xcframework
         const xcframeworkOutputPath = path.resolve(
           // Defaults to storing the xcframework next to the CMakeLists.txt file
-          globalOptions.out || globalOptions.source,
+          globalContext.out || globalContext.source,
           xcframeworkFilename
         );
 
@@ -189,18 +192,18 @@ export const program = new Command("react-native-node-api-cmake")
     }
   });
 
-type GlobalOptions = ReturnType<typeof program.optsWithGlobals>;
-type TripletScopedOptions = Omit<GlobalOptions, "triplet"> & {
+type GlobalContext = ReturnType<typeof program.optsWithGlobals>;
+type TripletScopedContext = Omit<GlobalContext, "triplet"> & {
   triplet: SupportedTriplet;
   tripletBuildPath: string;
   tripletOutputPath: string;
 };
 
-function getBuildPath(options: GlobalOptions) {
+function getBuildPath(context: GlobalContext) {
   // TODO: Add configuration (debug vs release)
   return path.resolve(
     process.cwd(),
-    options.build || path.join(options.source, "build")
+    context.build || path.join(context.source, "build")
   );
 }
 
@@ -227,9 +230,9 @@ function getBuildArgs(triplet: SupportedTriplet) {
   }
 }
 
-async function configureProject(options: TripletScopedOptions) {
-  const { triplet, tripletBuildPath, source } = options;
-  const variables = getVariables(options);
+async function configureProject(context: TripletScopedContext) {
+  const { triplet, tripletBuildPath, source } = context;
+  const variables = getVariables(context);
   const variablesArgs = Object.entries(variables).flatMap(([key, value]) => [
     "-D",
     `${key}=${value}`,
@@ -251,8 +254,8 @@ async function configureProject(options: TripletScopedOptions) {
   );
 }
 
-async function buildProject(options: TripletScopedOptions) {
-  const { triplet, tripletBuildPath, configuration } = options;
+async function buildProject(context: TripletScopedContext) {
+  const { triplet, tripletBuildPath, configuration } = context;
   await spawn(
     "cmake",
     [
@@ -269,7 +272,7 @@ async function buildProject(options: TripletScopedOptions) {
   );
 }
 
-function getVariables(options: TripletScopedOptions): Record<string, string> {
+function getVariables(context: TripletScopedContext): Record<string, string> {
   const includePaths = [getNodeApiHeadersPath(), getNodeAddonHeadersPath()];
   for (const includePath of includePaths) {
     assert(
@@ -279,6 +282,6 @@ function getVariables(options: TripletScopedOptions): Record<string, string> {
   }
   return {
     CMAKE_JS_INC: includePaths.join(";"),
-    CMAKE_LIBRARY_OUTPUT_DIRECTORY: options.tripletOutputPath,
+    CMAKE_LIBRARY_OUTPUT_DIRECTORY: context.tripletOutputPath,
   };
 }
