@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 import { Command, Option } from "@commander-js/extra-typings";
 import { spawn, SpawnFailure } from "bufout";
-import ora from "ora";
+import { oraPromise } from "ora";
 
 import { SUPPORTED_TRIPLETS, SupportedTriplet } from "./triplets.js";
 import { getNodeApiHeadersPath, getNodeAddonHeadersPath } from "./headers.js";
@@ -71,7 +71,6 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(cleanOption)
   .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
-      const spinner = ora();
       const buildPath = getBuildPath(globalContext);
       if (globalContext.clean) {
         fs.rmSync(buildPath, { recursive: true, force: true });
@@ -93,19 +92,15 @@ export const program = new Command("react-native-node-api-cmake")
       });
 
       // Configure every triplet project
-      try {
-        spinner.start("Configuring projects");
-        await Promise.all(
-          tripletContext.map((context) => configureProject(context))
-        );
-      } finally {
-        spinner.stop();
-      }
+      await oraPromise(Promise.all(tripletContext.map(configureProject)), {
+        text: "Configuring projects",
+        successText: "Configured projects",
+        failText: ({ message }) => `Failed to configure projects: ${message}`,
+      });
 
       // Build every triplet project
-      try {
-        spinner.start("Building projects");
-        await Promise.all(
+      await oraPromise(
+        Promise.all(
           tripletContext.map(async (context) => {
             // Delete any stale build artifacts before building
             // This is important, since we might rename the output files
@@ -115,10 +110,13 @@ export const program = new Command("react-native-node-api-cmake")
             });
             await buildProject(context);
           })
-        );
-      } finally {
-        spinner.stop();
-      }
+        ),
+        {
+          text: "Building projects",
+          successText: "Built projects",
+          failText: ({ message }) => `Failed to build projects: ${message}`,
+        }
+      );
 
       // Collect triplets in vendor specific containers
       const appleTriplets = tripletContext.filter(({ triplet }) =>
@@ -162,28 +160,25 @@ export const program = new Command("react-native-node-api-cmake")
           xcframeworkFilename
         );
 
-        try {
-          spinner.start("Assembling XCFramework");
-          await createXCframework({
+        await oraPromise(
+          createXCframework({
             outputPath: xcframeworkOutputPath,
             libraryPaths: [],
             frameworkPaths,
-          });
-        } finally {
-          spinner.stop();
-        }
-
-        console.log(
-          chalk.greenBright("✓"),
-          "XCFramework created at",
-          chalk.dim(path.relative(process.cwd(), xcframeworkOutputPath))
+          }),
+          {
+            text: "Assembling XCFramework",
+            successText: `XCFramework assembled into ${chalk.dim(
+              path.relative(process.cwd(), xcframeworkOutputPath)
+            )}`,
+            failText: ({ message }) =>
+              `Failed to assemble XCFramework: ${message}`,
+          }
         );
       }
     } catch (error) {
       if (error instanceof SpawnFailure) {
         error.flushOutput("both");
-        console.error();
-        console.error(chalk.redBright("✖"), error.message);
         process.exitCode = 1;
       } else {
         process.exitCode = 2;
