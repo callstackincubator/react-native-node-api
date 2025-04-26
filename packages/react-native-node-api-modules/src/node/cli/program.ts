@@ -13,7 +13,7 @@ import {
   rebuildXcframeworkHashed,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
-import { determineModuleContext, hashNodeApiModulePath } from "../path-utils";
+import { determineModuleContext, hashModulePath } from "../path-utils";
 
 // We're attaching a lot of listeners when spawning in parallel
 process.setMaxListeners(100);
@@ -186,6 +186,6 @@ program
     const resolvedModulePath = path.resolve(pathInput);
     const { packageName, relativePath } =
       determineModuleContext(resolvedModulePath);
-    const hash = hashNodeApiModulePath(resolvedModulePath);
+    const hash = hashModulePath(resolvedModulePath);
     console.log({ resolvedModulePath, packageName, relativePath, hash });
   });

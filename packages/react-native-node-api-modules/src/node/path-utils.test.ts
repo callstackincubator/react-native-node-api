@@ -4,7 +4,7 @@ import path from "node:path";
 
 import {
   determineModuleContext,
-  hashNodeApiModulePath,
+  hashModulePath,
   isNodeApiModule,
   replaceWithNodeExtension,
   stripExtension,
@@ -91,8 +91,8 @@ describe("determineModuleContext", () => {
   });
 });
 
-describe("hashNodeApiModulePath", () => {
-  it("produce the same has for sub-packages of equal names", (context) => {
+describe("hashModulePath", () => {
+  it("produce the same hash for sub-packages of equal names", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
       // Two sub-packages with the same name
@@ -100,20 +100,44 @@ describe("hashNodeApiModulePath", () => {
       "sub-dir/sub-package-b/package.json": `{ "name": "my-sub-package" }`,
     });
 
-    const hashInRoot = hashNodeApiModulePath(
+    const hashInRoot = hashModulePath(
       path.join(tempDirectoryPath, "some-dir/some-file.js")
     );
 
-    const hashInSubPackageA = hashNodeApiModulePath(
+    const hashInRootAgain = hashModulePath(
+      path.join(tempDirectoryPath, "some-dir/../some-dir/some-file.js")
+    );
+
+    const hashInSubPackageA = hashModulePath(
       path.join(tempDirectoryPath, "sub-package-a/some-file.js")
     );
-    const hashInSubPackageB = hashNodeApiModulePath(
+    const hashInSubPackageB = hashModulePath(
       path.join(tempDirectoryPath, "sub-dir/sub-package-b/some-file.js")
     );
 
+    assert.equal(hashInRoot, hashInRootAgain);
     assert.notEqual(hashInRoot, hashInSubPackageA);
     assert.notEqual(hashInRoot, hashInSubPackageB);
     // Because they both reference the same file in packages of equal names
     assert.equal(hashInSubPackageA, hashInSubPackageB);
+  });
+
+  it("produce the same hash from different cwds", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "my-package" }`,
+    });
+    const hashInRoot = hashModulePath(
+      path.join(tempDirectoryPath, "some-dir/some-file.js")
+    );
+    const previousCwd = process.cwd();
+    try {
+      process.chdir(tempDirectoryPath);
+      const hashInRootAgain = hashModulePath(
+        path.join(tempDirectoryPath, "some-dir/../some-dir/some-file.js")
+      );
+      assert.equal(hashInRoot, hashInRootAgain);
+    } finally {
+      process.chdir(previousCwd);
+    }
   });
 });

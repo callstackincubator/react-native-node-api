@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 
 import { spawn } from "bufout";
 
-import { hashNodeApiModulePath } from "../path-utils.js";
+import { hashModulePath } from "../path-utils.js";
 
 // Must be in all xcframeworks to be considered as Node-API modules
 export const MAGIC_FILENAME = "react-native-node-api-module";
@@ -150,7 +150,7 @@ export async function rebuildXcframeworkHashed({
   incremental,
 }: RebuildXcframeworkOptions): Promise<HashedXCFramework> {
   // Copy the xcframework to the output directory and rename the framework and binary
-  const hash = hashNodeApiModulePath(modulePath);
+  const hash = hashModulePath(modulePath);
   const tempPath = path.join(XCFRAMEWORKS_PATH, `node-api-${hash}-temp`);
   try {
     const outputPath = path.join(

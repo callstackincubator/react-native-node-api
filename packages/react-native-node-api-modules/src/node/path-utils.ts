@@ -78,20 +78,23 @@ export function determineModuleContext(
   }
 }
 
-export function hashNodeApiModulePath(modulePath: string) {
+export function getHashModulePathInput(modulePath: string) {
   // Transforming platform specific paths to a common path
   if (path.extname(modulePath) !== ".node") {
-    return hashNodeApiModulePath(replaceWithNodeExtension(modulePath));
+    return getHashModulePathInput(replaceWithNodeExtension(modulePath));
   }
   const { packageName, relativePath } = determineModuleContext(modulePath);
+  return path.normalize(path.join(packageName, relativePath));
+}
+
+export function hashModulePath(modulePath: string) {
   const hash = crypto.createHash("sha256");
-  hash.update(path.resolve(packageName, relativePath));
-  const result = hash.digest("hex").slice(0, 8);
-  return result;
+  hash.update(getHashModulePathInput(modulePath));
+  return hash.digest("hex").slice(0, 8);
 }
 
 // TODO: Find a better name for this function 🤦
 export function getNodeApiRequireCallArgument(modulePath: string) {
-  const hash = hashNodeApiModulePath(modulePath);
+  const hash = hashModulePath(modulePath);
   return `@rpath/node-api-${hash}.framework/node-api-${hash}`;
 }
