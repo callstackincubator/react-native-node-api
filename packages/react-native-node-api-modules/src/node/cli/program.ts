@@ -9,11 +9,16 @@ import ora from "ora";
 
 import {
   findPackageDependencyPaths,
+  findPackageDependencyPathsAndXcframeworks,
   findXCFrameworkPaths,
   rebuildXcframeworkHashed,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
-import { determineModuleContext, hashModulePath } from "../path-utils";
+import {
+  determineModuleContext,
+  hashModulePath,
+  normalizeModulePath,
+} from "../path-utils";
 
 // We're attaching a lot of listeners when spawning in parallel
 process.setMaxListeners(100);
@@ -188,4 +193,38 @@ program
       determineModuleContext(resolvedModulePath);
     const hash = hashModulePath(resolvedModulePath);
     console.log({ resolvedModulePath, packageName, relativePath, hash });
+  });
+
+program
+  .command("print-xcframeworks")
+  .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
+    path.resolve(process.cwd(), p)
+  )
+  .option("--json", "Output as JSON", false)
+  .action(async (installationRoot: string, { json }) => {
+    const dependenciesByName =
+      findPackageDependencyPathsAndXcframeworks(installationRoot);
+    const xcframeworkPaths = Object.values(dependenciesByName).flatMap(
+      (dependency) =>
+        dependency.xcframeworkPaths.map((xcframeworkPath) => ({
+          installPath: normalizeModulePath(
+            path.join(dependency.path, xcframeworkPath)
+          ),
+          path: path.join(dependency.path, xcframeworkPath),
+        }))
+    );
+
+    if (json) {
+      console.log(JSON.stringify(xcframeworkPaths, null, 2));
+    } else {
+      console.log(
+        "Found",
+        chalk.greenBright(xcframeworkPaths.length),
+        "xcframeworks in",
+        prettyPath(installationRoot)
+      );
+      for (const { installPath, path: xcframeworkPath } of xcframeworkPaths) {
+        console.log("  -", installPath, "→", prettyPath(xcframeworkPath));
+      }
+    }
   });

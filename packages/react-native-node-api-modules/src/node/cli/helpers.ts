@@ -110,6 +110,35 @@ export function findXCFrameworkPaths(dependencyPath: string): string[] {
     });
 }
 
+/**
+ * Finds all dependencies of the app package and their xcframeworks.
+ */
+export function findPackageDependencyPathsAndXcframeworks(
+  installationRoot: string
+) {
+  // Find the location of each dependency
+  const dependencyPathsByName = findPackageDependencyPaths(installationRoot);
+  // Find all their xcframeworks
+  return Object.fromEntries(
+    Object.entries(dependencyPathsByName)
+      .map(([dependencyName, dependencyPath]) => {
+        // Make all the xcframeworks relative to the dependency path
+        const xcframeworkPaths = findXCFrameworkPaths(dependencyPath).map((p) =>
+          path.relative(dependencyPath, p)
+        );
+        return [
+          dependencyName,
+          {
+            path: dependencyPath,
+            xcframeworkPaths,
+          },
+        ] as const;
+      })
+      // Remove any dependencies without xcframeworks
+      .filter(([, { xcframeworkPaths }]) => xcframeworkPaths.length > 0)
+  );
+}
+
 type UpdateInfoPlistOptions = {
   filePath: string;
   oldLibraryName: string;
