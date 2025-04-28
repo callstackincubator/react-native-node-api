@@ -1,6 +1,7 @@
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
+import { readPackageSync } from "read-pkg";
 
 import { EXAMPLES_DIR } from "./cmake-projects.mjs";
 
@@ -61,6 +62,8 @@ const EXAMPLES_PACKAGE_PATH = require.resolve(
 const SRC_DIR = path.join(path.dirname(EXAMPLES_PACKAGE_PATH), "src");
 console.log("Copying files from", SRC_DIR);
 
+let counter = 0;
+
 for (const src of ALLOW_LIST) {
   const srcPath = path.join(SRC_DIR, src);
   const destPath = path.join(EXAMPLES_DIR, src);
@@ -72,9 +75,14 @@ for (const src of ALLOW_LIST) {
     recursive: true,
   })) {
     if (entry.name === "package.json") {
-      const filePath = path.join(entry.parentPath, entry.name);
-      console.log("Deleting", filePath);
-      fs.rmSync(filePath);
+      const packageJson = readPackageSync({ cwd: entry.parentPath });
+      // Ensure example package names are unique
+      packageJson.name = `example-${counter++}`;
+      fs.writeFileSync(
+        path.join(entry.parentPath, entry.name),
+        JSON.stringify(packageJson, null, 2),
+        "utf-8"
+      );
     }
   }
 }
