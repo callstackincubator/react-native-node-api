@@ -221,11 +221,14 @@ export function determineVendoredXcframeworkDetails(
   }
 }
 
-export function hasDuplicatesWhenVendored(modulePaths: string[]): boolean {
+export function hasDuplicatesWhenVendored(
+  modulePaths: string[],
+  naming: NamingStrategy
+): boolean {
   const outputPaths = modulePaths.map((modulePath) => {
     const { outputPath } = determineVendoredXcframeworkDetails(
       modulePath,
-      "hash"
+      naming
     );
     return outputPath;
   });

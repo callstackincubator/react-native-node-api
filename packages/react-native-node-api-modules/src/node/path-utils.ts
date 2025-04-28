@@ -133,17 +133,29 @@ export function hashModulePath(
   return hash.digest("hex").slice(0, 8);
 }
 
-export function getLibraryInstallName(
+export function getLibraryDiscriminator(
   modulePath: string,
   naming: NamingStrategy
 ) {
   if (naming === "package-name") {
-    const hash = determineModuleContext(modulePath);
-    return `@rpath/node-api-${hash}.framework/node-api-${hash}`;
+    const { packageName } = determineModuleContext(modulePath);
+    return packageName;
   } else if (naming === "hash") {
-    const hash = hashModulePath(modulePath);
-    return `@rpath/node-api-${hash}.framework/node-api-${hash}`;
+    return hashModulePath(modulePath);
   } else {
     throw new Error(`Unknown naming strategy: ${naming}`);
   }
+}
+
+export function getLibraryName(modulePath: string, naming: NamingStrategy) {
+  const discriminator = getLibraryDiscriminator(modulePath, naming);
+  return naming === "hash" ? `node-api-${discriminator}` : discriminator;
+}
+
+export function getLibraryInstallName(
+  modulePath: string,
+  naming: NamingStrategy
+) {
+  const libraryName = getLibraryName(modulePath, naming);
+  return `@rpath/${libraryName}.framework/${libraryName}`;
 }
