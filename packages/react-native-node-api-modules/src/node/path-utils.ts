@@ -89,9 +89,27 @@ export function normalizeModulePath(modulePath: string) {
   return path.normalize(path.join(packageName, relativePath));
 }
 
-export function hashModulePath(modulePath: string) {
+type HashModulePathOptions = {
+  verify?: boolean;
+};
+
+export function hashModulePath(
+  modulePath: string,
+  { verify = true }: HashModulePathOptions = {}
+) {
   const hash = crypto.createHash("sha256");
-  hash.update(normalizeModulePath(modulePath));
+  assert(
+    path.isAbsolute(modulePath),
+    `Expected absolute path when hashing, got: ${modulePath}`
+  );
+  const strippedModulePath = stripExtension(modulePath);
+  if (verify) {
+    assert(
+      isNodeApiModule(strippedModulePath),
+      `Expected a Node-API module at ${strippedModulePath}`
+    );
+  }
+  hash.update(normalizeModulePath(strippedModulePath));
   return hash.digest("hex").slice(0, 8);
 }
 

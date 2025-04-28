@@ -95,24 +95,28 @@ describe("hashModulePath", () => {
   it("produce the same hash for sub-packages of equal names", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
+      "some-dir/addon.xcframework/react-native-node-api-module": "",
       // Two sub-packages with the same name
       "sub-package-a/package.json": `{ "name": "my-sub-package" }`,
+      "sub-package-a/addon.xcframework/react-native-node-api-module": "",
       "sub-dir/sub-package-b/package.json": `{ "name": "my-sub-package" }`,
+      "sub-dir/sub-package-b/addon.xcframework/react-native-node-api-module":
+        "",
     });
 
     const hashInRoot = hashModulePath(
-      path.join(tempDirectoryPath, "some-dir/some-file.js")
+      path.join(tempDirectoryPath, "some-dir/addon")
     );
 
     const hashInRootAgain = hashModulePath(
-      path.join(tempDirectoryPath, "some-dir/../some-dir/some-file.js")
+      path.join(tempDirectoryPath, "some-dir/../some-dir/addon")
     );
 
     const hashInSubPackageA = hashModulePath(
-      path.join(tempDirectoryPath, "sub-package-a/some-file.js")
+      path.join(tempDirectoryPath, "sub-package-a/addon")
     );
     const hashInSubPackageB = hashModulePath(
-      path.join(tempDirectoryPath, "sub-dir/sub-package-b/some-file.js")
+      path.join(tempDirectoryPath, "sub-dir/sub-package-b/addon")
     );
 
     assert.equal(hashInRoot, hashInRootAgain);
@@ -125,15 +129,16 @@ describe("hashModulePath", () => {
   it("produce the same hash from different cwds", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
+      "some-dir/addon.xcframework/react-native-node-api-module": "",
     });
     const hashInRoot = hashModulePath(
-      path.join(tempDirectoryPath, "some-dir/some-file.js")
+      path.join(tempDirectoryPath, "some-dir/addon")
     );
     const previousCwd = process.cwd();
     try {
       process.chdir(tempDirectoryPath);
       const hashInRootAgain = hashModulePath(
-        path.join(tempDirectoryPath, "some-dir/../some-dir/some-file.js")
+        path.join(tempDirectoryPath, "some-dir/../some-dir/addon")
       );
       assert.equal(hashInRoot, hashInRootAgain);
     } finally {
