@@ -12,7 +12,7 @@ import {
   findPackageDependencyPaths,
   findPackageDependencyPathsAndXcframeworks,
   findXCFrameworkPaths,
-  rebuildXcframeworkHashed,
+  vendorXcframework,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
 import { determineModuleContext, hashModulePath } from "../path-utils";
@@ -74,13 +74,13 @@ async function copyXCFrameworks({
 
     // Create or clean the output directory
     fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
-    // Create hashes copies of xcframework found in dependencies
+    // Create vendored copies of xcframework found in dependencies
     return await Promise.all(
       Object.entries(dependenciesByName).flatMap(([, dependency]) => {
         return dependency.xcframeworkPaths.map(async (xcframeworkPath) => {
           const originalPath = path.join(dependency.path, xcframeworkPath);
           try {
-            return await rebuildXcframeworkHashed({
+            return await vendorXcframework({
               modulePath: originalPath,
               incremental,
             });

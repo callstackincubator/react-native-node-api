@@ -185,7 +185,7 @@ type HashedXCFramework = {
   hash: string;
 };
 
-export async function rebuildXcframeworkHashed({
+export async function vendorXcframework({
   modulePath,
   incremental,
 }: RebuildXcframeworkOptions): Promise<HashedXCFramework> {
