@@ -4,13 +4,13 @@ import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
 
 import {
-  getNodeApiRequireCallArgument,
+  getLibraryInstallName,
   isNodeApiModule,
   replaceWithNodeExtension,
 } from "../path-utils";
 
 export function replaceWithRequireNodeAddon(p: NodePath, modulePath: string) {
-  const requireCallArgument = getNodeApiRequireCallArgument(
+  const requireCallArgument = getLibraryInstallName(
     replaceWithNodeExtension(modulePath)
   );
   p.replaceWith(

@@ -3,6 +3,8 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 
+import { spawn } from "bufout";
+
 export function isNodeApiModule(modulePath: string): boolean {
   // Determine if we're trying to load a Node-API module
   // Strip optional .node extension
@@ -78,10 +80,10 @@ export function determineModuleContext(
   }
 }
 
-export function getHashModulePathInput(modulePath: string) {
+export function normalizeModulePath(modulePath: string) {
   // Transforming platform specific paths to a common path
   if (path.extname(modulePath) !== ".node") {
-    return getHashModulePathInput(replaceWithNodeExtension(modulePath));
+    return normalizeModulePath(replaceWithNodeExtension(modulePath));
   }
   const { packageName, relativePath } = determineModuleContext(modulePath);
   return path.normalize(path.join(packageName, relativePath));
@@ -89,12 +91,27 @@ export function getHashModulePathInput(modulePath: string) {
 
 export function hashModulePath(modulePath: string) {
   const hash = crypto.createHash("sha256");
-  hash.update(getHashModulePathInput(modulePath));
+  hash.update(normalizeModulePath(modulePath));
   return hash.digest("hex").slice(0, 8);
 }
 
-// TODO: Find a better name for this function 🤦
-export function getNodeApiRequireCallArgument(modulePath: string) {
-  const hash = hashModulePath(modulePath);
-  return `@rpath/node-api-${hash}.framework/node-api-${hash}`;
+export function getLibraryInstallName(modulePath: string) {
+  return `@rpath/${normalizeModulePath(modulePath)}`;
+}
+
+export async function updateLibraryInstallPathInXCFramework(
+  xcframeworkPath: string
+) {
+  for (const file of fs.readdirSync(xcframeworkPath, {
+    withFileTypes: true,
+    recursive: true,
+  })) {
+    if (file.isDirectory() && path.extname(file.name) === ".framework") {
+      const libraryName = path.basename(file.name, ".framework");
+      const libraryPath = path.join(file.parentPath, file.name, libraryName);
+      assert(fs.existsSync(libraryPath), `Expected library at: ${libraryPath}`);
+      const newInstallName = getLibraryInstallName(xcframeworkPath);
+      await spawn("install_name_tool", ["-id", newInstallName, libraryPath]);
+    }
+  }
 }
