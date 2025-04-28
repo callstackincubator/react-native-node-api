@@ -190,6 +190,16 @@ program
     console.log({ resolvedModulePath, packageName, relativePath, hash });
   });
 
+function logXcframeworkPaths(xcframeworkPaths: string[]) {
+  for (const xcframeworkPath of xcframeworkPaths) {
+    console.log(
+      " ↳",
+      prettyPath(xcframeworkPath),
+      chalk.greenBright(`(${hashModulePath(xcframeworkPath)})`)
+    );
+  }
+}
+
 program
   .command("print-xcframeworks")
   .description("Lists Node-API module XCFrameworks")
@@ -201,64 +211,56 @@ program
     "Output as JSON with paths relative to the CWD",
     false
   )
-  .action(
-    async ({
-      podfile: podfileArg,
-      dependency: dependencyArg,
-      json,
-      jsonRelative,
-    }) => {
-      if (podfileArg) {
-        const rootPath = path.dirname(path.resolve(podfileArg));
-        const dependencies =
-          findPackageDependencyPathsAndXcframeworks(rootPath);
+  .action(async ({ podfile: podfileArg, dependency: dependencyArg, json }) => {
+    if (podfileArg) {
+      const rootPath = path.dirname(path.resolve(podfileArg));
+      const dependencies = findPackageDependencyPathsAndXcframeworks(rootPath);
 
-        if (json) {
-          console.log(JSON.stringify(dependencies, null, 2));
-        } else {
-          const dependencyCount = Object.keys(dependencies);
-          const xframeworkCount = Object.values(dependencies).reduce(
-            (acc, { xcframeworkPaths }) => acc + xcframeworkPaths.length,
-            0
-          );
-          console.log(
-            "Found",
-            chalk.greenBright(xframeworkCount),
-            "xcframeworks in",
-            chalk.greenBright(dependencyCount),
-            "of",
-            prettyPath(rootPath)
-          );
-          for (const [dependencyName, dependency] of Object.entries(
-            dependencies
-          )) {
-            console.log(dependencyName, "→", prettyPath(dependency.path));
-            for (const xcframeworkPath of dependency.xcframeworkPaths) {
-              console.log(" ↳", prettyPath(xcframeworkPath));
-            }
-          }
-        }
-      } else if (dependencyArg) {
-        const dependencyPath = path.resolve(dependencyArg);
-        const xcframeworkPaths = findXCFrameworkPaths(dependencyPath).map((p) =>
-          path.relative(dependencyPath, p)
-        );
-
-        if (json) {
-          console.log(JSON.stringify(xcframeworkPaths, null, 2));
-        } else {
-          console.log(
-            "Found",
-            chalk.greenBright(xcframeworkPaths.length),
-            "of",
-            prettyPath(dependencyPath)
-          );
-          for (const xcframeworkPath of xcframeworkPaths) {
-            console.log(" ↳", prettyPath(xcframeworkPath));
-          }
-        }
+      if (json) {
+        console.log(JSON.stringify(dependencies, null, 2));
       } else {
-        throw new Error("Expected either --podfile or --package option");
+        const dependencyCount = Object.keys(dependencies);
+        const xframeworkCount = Object.values(dependencies).reduce(
+          (acc, { xcframeworkPaths }) => acc + xcframeworkPaths.length,
+          0
+        );
+        console.log(
+          "Found",
+          chalk.greenBright(xframeworkCount),
+          "xcframeworks in",
+          chalk.greenBright(dependencyCount),
+          "of",
+          prettyPath(rootPath)
+        );
+        for (const [dependencyName, dependency] of Object.entries(
+          dependencies
+        )) {
+          console.log(dependencyName, "→", prettyPath(dependency.path));
+          logXcframeworkPaths(
+            dependency.xcframeworkPaths.map((p) =>
+              path.join(dependency.path, p)
+            )
+          );
+        }
       }
+    } else if (dependencyArg) {
+      const dependencyPath = path.resolve(dependencyArg);
+      const xcframeworkPaths = findXCFrameworkPaths(dependencyPath).map((p) =>
+        path.relative(dependencyPath, p)
+      );
+
+      if (json) {
+        console.log(JSON.stringify(xcframeworkPaths, null, 2));
+      } else {
+        console.log(
+          "Found",
+          chalk.greenBright(xcframeworkPaths.length),
+          "of",
+          prettyPath(dependencyPath)
+        );
+        logXcframeworkPaths(xcframeworkPaths);
+      }
+    } else {
+      throw new Error("Expected either --podfile or --package option");
     }
-  );
+  });
