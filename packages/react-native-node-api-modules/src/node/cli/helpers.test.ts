@@ -10,10 +10,14 @@ describe("findPackageDependencyPaths", () => {
     const tempDir = setupTempDirectory(context, {
       "node_modules/lib-a/package.json": JSON.stringify({
         name: "lib-a",
+        main: "index.js",
       }),
+      "node_modules/lib-a/index.js": "",
       "test-package/node_modules/lib-b/package.json": JSON.stringify({
         name: "lib-b",
+        main: "index.js",
       }),
+      "test-package/node_modules/lib-b/index.js": "",
       "test-package/package.json": JSON.stringify({
         name: "test-package",
         dependencies: {
@@ -75,6 +79,18 @@ describe("findXCFrameworkPaths", () => {
     assert.deepEqual(result.sort(), [
       path.join(tempDir, "child-dir/dependency/lib.xcframework"),
       path.join(tempDir, "child-dir/node_modules/dependency/lib.xcframework"),
+    ]);
+  });
+
+  it("disregards parts futher up in filesystem when excluding", (context) => {
+    const tempDir = setupTempDirectory(context, {
+      "node_modules/root.xcframework/react-native-node-api-module": "",
+      "node_modules/child-dir/node_modules/dependency/lib.xcframework/react-native-node-api-module":
+        "",
+    });
+    const result = findXCFrameworkPaths(path.join(tempDir, "node_modules"));
+    assert.deepEqual(result, [
+      path.join(tempDir, "node_modules/root.xcframework"),
     ]);
   });
 });

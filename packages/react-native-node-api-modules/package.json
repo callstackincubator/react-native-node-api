@@ -48,7 +48,9 @@
     "bufout": "^0.3.1",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
-    "ora": "^8.2.0"
+    "ora": "^8.2.0",
+    "pkg-dir": "^8.0.0",
+    "read-pkg": "^9.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.26.10",

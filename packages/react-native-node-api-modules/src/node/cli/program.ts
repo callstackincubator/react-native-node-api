@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
+import { EventEmitter } from "node:stream";
 
 import { Command } from "@commander-js/extra-typings";
 import { SpawnFailure } from "bufout";
@@ -14,16 +15,10 @@ import {
   rebuildXcframeworkHashed,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
-import {
-  determineModuleContext,
-  hashModulePath,
-  normalizeModulePath,
-} from "../path-utils";
+import { determineModuleContext, hashModulePath } from "../path-utils";
 
 // We're attaching a lot of listeners when spawning in parallel
-process.setMaxListeners(100);
-process.stdout.setMaxListeners(100);
-process.stderr.setMaxListeners(100);
+EventEmitter.defaultMaxListeners = 100;
 
 export const program = new Command("react-native-node-api-modules");
 
@@ -197,34 +192,73 @@ program
 
 program
   .command("print-xcframeworks")
-  .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
-    path.resolve(process.cwd(), p)
-  )
+  .description("Lists Node-API module XCFrameworks")
+  .option("--podfile <file-path>", "Path of the App's Podfile")
+  .option("--dependency <dir-path>", "Path of some dependency directory")
   .option("--json", "Output as JSON", false)
-  .action(async (installationRoot: string, { json }) => {
-    const dependenciesByName =
-      findPackageDependencyPathsAndXcframeworks(installationRoot);
-    const xcframeworkPaths = Object.values(dependenciesByName).flatMap(
-      (dependency) =>
-        dependency.xcframeworkPaths.map((xcframeworkPath) => ({
-          installPath: normalizeModulePath(
-            path.join(dependency.path, xcframeworkPath)
-          ),
-          path: path.join(dependency.path, xcframeworkPath),
-        }))
-    );
+  .option(
+    "--json-relative",
+    "Output as JSON with paths relative to the CWD",
+    false
+  )
+  .action(
+    async ({
+      podfile: podfileArg,
+      dependency: dependencyArg,
+      json,
+      jsonRelative,
+    }) => {
+      if (podfileArg) {
+        const rootPath = path.dirname(path.resolve(podfileArg));
+        const dependencies =
+          findPackageDependencyPathsAndXcframeworks(rootPath);
 
-    if (json) {
-      console.log(JSON.stringify(xcframeworkPaths, null, 2));
-    } else {
-      console.log(
-        "Found",
-        chalk.greenBright(xcframeworkPaths.length),
-        "xcframeworks in",
-        prettyPath(installationRoot)
-      );
-      for (const { installPath, path: xcframeworkPath } of xcframeworkPaths) {
-        console.log("  -", installPath, "→", prettyPath(xcframeworkPath));
+        if (json) {
+          console.log(JSON.stringify(dependencies, null, 2));
+        } else {
+          const dependencyCount = Object.keys(dependencies);
+          const xframeworkCount = Object.values(dependencies).reduce(
+            (acc, { xcframeworkPaths }) => acc + xcframeworkPaths.length,
+            0
+          );
+          console.log(
+            "Found",
+            chalk.greenBright(xframeworkCount),
+            "xcframeworks in",
+            chalk.greenBright(dependencyCount),
+            "of",
+            prettyPath(rootPath)
+          );
+          for (const [dependencyName, dependency] of Object.entries(
+            dependencies
+          )) {
+            console.log(dependencyName, "→", prettyPath(dependency.path));
+            for (const xcframeworkPath of dependency.xcframeworkPaths) {
+              console.log(" ↳", prettyPath(xcframeworkPath));
+            }
+          }
+        }
+      } else if (dependencyArg) {
+        const dependencyPath = path.resolve(dependencyArg);
+        const xcframeworkPaths = findXCFrameworkPaths(dependencyPath).map((p) =>
+          path.relative(dependencyPath, p)
+        );
+
+        if (json) {
+          console.log(JSON.stringify(xcframeworkPaths, null, 2));
+        } else {
+          console.log(
+            "Found",
+            chalk.greenBright(xcframeworkPaths.length),
+            "of",
+            prettyPath(dependencyPath)
+          );
+          for (const xcframeworkPath of xcframeworkPaths) {
+            console.log(" ↳", prettyPath(xcframeworkPath));
+          }
+        }
+      } else {
+        throw new Error("Expected either --podfile or --package option");
       }
     }
-  });
+  );
