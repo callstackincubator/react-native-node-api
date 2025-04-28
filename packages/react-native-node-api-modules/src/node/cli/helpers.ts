@@ -13,6 +13,7 @@ export const XCFRAMEWORKS_PATH = path.resolve(
   __dirname,
   "../../../xcframeworks"
 );
+export const DEFAULT_EXCLUDE_PATTERNS = [/\/node_modules\//, /\/.git\//];
 
 /**
  * Get the latest modification time of all files in a directory and its subdirectories.
@@ -89,10 +90,18 @@ export function findPackageDependencyPaths(
   }
 }
 
+export type FindXCFrameworkOptions = {
+  excludePatterns?: RegExp[];
+};
+
 /**
  * Recursively search into a directory for xcframeworks containing Node-API modules.
  */
-export function findXCFrameworkPaths(dependencyPath: string): string[] {
+export function findXCFrameworkPaths(
+  dependencyPath: string,
+  options: FindXCFrameworkOptions = {}
+): string[] {
+  const { excludePatterns = DEFAULT_EXCLUDE_PATTERNS } = options;
   return fs
     .readdirSync(dependencyPath, { withFileTypes: true })
     .flatMap((file) => {
@@ -103,8 +112,11 @@ export function findXCFrameworkPaths(dependencyPath: string): string[] {
       ) {
         return [dependencyPath];
       } else if (file.isDirectory()) {
-        // Traverse into the child directory
-        return findXCFrameworkPaths(path.join(dependencyPath, file.name));
+        const candidatePath = path.join(dependencyPath, file.name);
+        if (!excludePatterns.some((pattern) => pattern.test(candidatePath))) {
+          // Traverse into the child directory
+          return findXCFrameworkPaths(candidatePath, options);
+        }
       }
       return [];
     });
@@ -114,7 +126,8 @@ export function findXCFrameworkPaths(dependencyPath: string): string[] {
  * Finds all dependencies of the app package and their xcframeworks.
  */
 export function findPackageDependencyPathsAndXcframeworks(
-  installationRoot: string
+  installationRoot: string,
+  options: FindXCFrameworkOptions = {}
 ) {
   // Find the location of each dependency
   const dependencyPathsByName = findPackageDependencyPaths(installationRoot);
@@ -123,9 +136,10 @@ export function findPackageDependencyPathsAndXcframeworks(
     Object.entries(dependencyPathsByName)
       .map(([dependencyName, dependencyPath]) => {
         // Make all the xcframeworks relative to the dependency path
-        const xcframeworkPaths = findXCFrameworkPaths(dependencyPath).map((p) =>
-          path.relative(dependencyPath, p)
-        );
+        const xcframeworkPaths = findXCFrameworkPaths(
+          dependencyPath,
+          options
+        ).map((p) => path.relative(dependencyPath, p));
         return [
           dependencyName,
           {
