@@ -96,7 +96,8 @@ export function hashModulePath(modulePath: string) {
 }
 
 export function getLibraryInstallName(modulePath: string) {
-  return `@rpath/${normalizeModulePath(modulePath)}`;
+  const hash = hashModulePath(modulePath);
+  return `@rpath/node-api-${hash}.framework/node-api-${hash}`;
 }
 
 export async function updateLibraryInstallPathInXCFramework(
