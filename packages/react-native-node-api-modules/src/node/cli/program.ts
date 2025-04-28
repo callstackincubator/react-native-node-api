@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { EventEmitter } from "node:stream";
 
-import { Command } from "@commander-js/extra-typings";
+import { Command, Option } from "@commander-js/extra-typings";
 import { SpawnFailure } from "bufout";
 import chalk from "chalk";
 import ora from "ora";
@@ -12,10 +12,15 @@ import {
   findPackageDependencyPaths,
   findPackageDependencyPathsAndXcframeworks,
   findXCFrameworkPaths,
+  hasDuplicatesWhenVendored,
   vendorXcframework,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
-import { determineModuleContext, hashModulePath } from "../path-utils";
+import {
+  NamingStrategy,
+  determineModuleContext,
+  hashModulePath,
+} from "../path-utils";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -29,6 +34,7 @@ function prettyPath(p: string) {
 type CopyXCFrameworksOptions = {
   installationRoot: string;
   incremental: boolean;
+  naming: NamingStrategy;
 };
 
 type XCFrameworkOutputBase = {
@@ -45,6 +51,7 @@ type XCFrameworkOutput = XCFrameworkOutputBase &
 async function copyXCFrameworks({
   installationRoot,
   incremental,
+  naming,
 }: CopyXCFrameworksOptions): Promise<XCFrameworkOutput[]> {
   const spinner = ora(
     `Copying Node-API xcframeworks into ${prettyPath(XCFRAMEWORKS_PATH)}`
@@ -75,6 +82,20 @@ async function copyXCFrameworks({
     // Create or clean the output directory
     fs.mkdirSync(XCFRAMEWORKS_PATH, { recursive: true });
     // Create vendored copies of xcframework found in dependencies
+
+    const xcframeworksPaths = Object.entries(dependenciesByName).flatMap(
+      ([, dependency]) => {
+        return dependency.xcframeworkPaths.map((xcframeworkPath) =>
+          path.join(dependency.path, xcframeworkPath)
+        );
+      }
+    );
+
+    if (hasDuplicatesWhenVendored(xcframeworksPaths)) {
+      // TODO: Make this prettier
+      throw new Error("Duplicate xcframeworks found");
+    }
+
     return await Promise.all(
       Object.entries(dependenciesByName).flatMap(([, dependency]) => {
         return dependency.xcframeworkPaths.map(async (xcframeworkPath) => {
@@ -83,6 +104,7 @@ async function copyXCFrameworks({
             return await vendorXcframework({
               modulePath: originalPath,
               incremental,
+              naming,
             });
           } catch (error) {
             if (error instanceof SpawnFailure) {
@@ -105,6 +127,21 @@ async function copyXCFrameworks({
 
 // TODO: Consider adding a flag to drive the build of the original xcframeworks too
 
+const { NODE_API_MODULES_NAMING = "package-name" } = process.env;
+assert(
+  typeof NODE_API_MODULES_NAMING === "undefined" ||
+    NODE_API_MODULES_NAMING === "hash" ||
+    NODE_API_MODULES_NAMING === "package-name",
+  "Expected NODE_API_MODULES_NAMING to be either 'hash' or 'package-name'"
+);
+
+const namingStrategyOption = new Option(
+  "--naming <strategy>",
+  "Naming strategy to use when copying the xcframeworks"
+)
+  .choices(["hash", "package-name"] as const satisfies NamingStrategy[])
+  .default(NODE_API_MODULES_NAMING as NamingStrategy);
+
 program
   .command("copy-xcframeworks")
   .argument("<installation-root>", "Parent directory of the Podfile", (p) =>
@@ -115,11 +152,14 @@ program
     "Don't check timestamps of input files to skip unnecessary rebuilds",
     false
   )
+  .addOption(namingStrategyOption)
   .option("--prune", "Delete xcframeworks that are no longer auto-linked", true)
-  .action(async (installationRoot: string, { force, prune }) => {
+  .action(async (installationRoot: string, { force, prune, naming }) => {
+    console.log(`Using ${naming} naming strategy`);
     const xcframeworks = await copyXCFrameworks({
       installationRoot,
       incremental: !force,
+      naming,
     });
 
     const failures = xcframeworks.filter((result) => "failure" in result);

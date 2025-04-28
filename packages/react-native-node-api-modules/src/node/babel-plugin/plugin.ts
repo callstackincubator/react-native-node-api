@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import path from "node:path";
 
 import type { PluginObj, NodePath } from "@babel/core";
@@ -7,11 +8,33 @@ import {
   getLibraryInstallName,
   isNodeApiModule,
   replaceWithNodeExtension,
+  NamingStrategy,
+  NAMING_STATEGIES,
 } from "../path-utils";
 
-export function replaceWithRequireNodeAddon(p: NodePath, modulePath: string) {
+type PluginOptions = {
+  naming?: NamingStrategy;
+};
+
+function assertOptions(opts: unknown): asserts opts is PluginOptions {
+  assert(typeof opts === "object" && opts !== null, "Expected an object");
+  if ("naming" in opts) {
+    assert(typeof opts.naming === "string", "Expected 'naming' to be a string");
+    assert(
+      NAMING_STATEGIES.includes(opts.naming as NamingStrategy),
+      "Expected 'naming' to be either 'hash' or 'package-name'"
+    );
+  }
+}
+
+export function replaceWithRequireNodeAddon(
+  p: NodePath,
+  modulePath: string,
+  naming: NamingStrategy
+) {
   const requireCallArgument = getLibraryInstallName(
-    replaceWithNodeExtension(modulePath)
+    replaceWithNodeExtension(modulePath),
+    naming
   );
   p.replaceWith(
     t.callExpression(
@@ -30,6 +53,8 @@ export function plugin(): PluginObj {
   return {
     visitor: {
       CallExpression(p) {
+        assertOptions(this.opts);
+        const { naming = "package-name" } = this.opts;
         if (typeof this.filename !== "string") {
           // This transformation only works when the filename is known
           return;
@@ -52,7 +77,7 @@ export function plugin(): PluginObj {
               const relativePath = path.join(from, id);
               // TODO: Support traversing the filesystem to find the Node-API module
               if (isNodeApiModule(relativePath)) {
-                replaceWithRequireNodeAddon(p.parentPath, relativePath);
+                replaceWithRequireNodeAddon(p.parentPath, relativePath, naming);
               }
             }
           } else if (
@@ -60,7 +85,7 @@ export function plugin(): PluginObj {
             isNodeApiModule(path.join(from, id))
           ) {
             const relativePath = path.join(from, id);
-            replaceWithRequireNodeAddon(p, relativePath);
+            replaceWithRequireNodeAddon(p, relativePath, naming);
           }
         }
       },

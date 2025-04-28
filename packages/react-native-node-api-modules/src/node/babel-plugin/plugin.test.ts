@@ -39,16 +39,18 @@ describe("plugin", () => {
     });
 
     const ADDON_1_REQUIRE_ARG = getLibraryInstallName(
-      path.join(tempDirectoryPath, "addon-1")
+      path.join(tempDirectoryPath, "addon-1"),
+      "hash"
     );
     const ADDON_2_REQUIRE_ARG = getLibraryInstallName(
-      path.join(tempDirectoryPath, "addon-2")
+      path.join(tempDirectoryPath, "addon-2"),
+      "hash"
     );
 
     {
       const result = transformFileSync(
         path.join(tempDirectoryPath, "./addon-1.js"),
-        { plugins: [plugin] }
+        { plugins: [[plugin, { naming: "hash" }]] }
       );
       assert(result);
       const { code } = result;
@@ -61,7 +63,7 @@ describe("plugin", () => {
     {
       const result = transformFileSync(
         path.join(tempDirectoryPath, "./addon-2.js"),
-        { plugins: [plugin] }
+        { plugins: [[plugin, { naming: "hash" }]] }
       );
       assert(result);
       const { code } = result;
@@ -74,7 +76,7 @@ describe("plugin", () => {
     {
       const result = transformFileSync(
         path.join(tempDirectoryPath, "./sub-directory/addon-1.js"),
-        { plugins: [plugin] }
+        { plugins: [[plugin, { naming: "hash" }]] }
       );
       assert(result);
       const { code } = result;
@@ -87,7 +89,7 @@ describe("plugin", () => {
     {
       const result = transformFileSync(
         path.join(tempDirectoryPath, "./addon-1-bindings.js"),
-        { plugins: [plugin] }
+        { plugins: [[plugin, { naming: "hash" }]] }
       );
       assert(result);
       const { code } = result;
@@ -100,7 +102,7 @@ describe("plugin", () => {
     {
       const result = transformFileSync(
         path.join(tempDirectoryPath, "./require-js-file.js"),
-        { plugins: [plugin] }
+        { plugins: [[plugin, { naming: "hash" }]] }
       );
       assert(result);
       const { code } = result;

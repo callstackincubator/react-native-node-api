@@ -8,7 +8,7 @@ import { spawn } from "bufout";
 import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 
-import { hashModulePath } from "../path-utils.js";
+import { NamingStrategy, hashModulePath } from "../path-utils.js";
 
 // Must be in all xcframeworks to be considered as Node-API modules
 export const MAGIC_FILENAME = "react-native-node-api-module";
@@ -176,37 +176,83 @@ export async function updateInfoPlist({
 type RebuildXcframeworkOptions = {
   modulePath: string;
   incremental: boolean;
+  naming: NamingStrategy;
 };
 
-type HashedXCFramework = {
+type VendoredXcframework = {
   originalPath: string;
   outputPath: string;
+} & (
+  | {
+      hash: string;
+      packageName?: never;
+    }
+  | {
+      hash?: never;
+      packageName: string;
+    }
+);
+
+type VendoredXcframeworkResult = VendoredXcframework & {
   skipped: boolean;
-  hash: string;
 };
+
+export function determineVendoredXcframeworkDetails(
+  modulePath: string,
+  naming: NamingStrategy
+): VendoredXcframework {
+  if (naming === "hash") {
+    const hash = hashModulePath(modulePath);
+    return {
+      hash,
+      originalPath: modulePath,
+      outputPath: path.join(XCFRAMEWORKS_PATH, `node-api-${hash}.xcframework`),
+    };
+  } else {
+    const packageRoot = packageDirectorySync({ cwd: modulePath });
+    assert(packageRoot, `Could not find package root from ${modulePath}`);
+    const { name } = readPackageSync({ cwd: packageRoot });
+    assert(name, `Could not find package name from ${packageRoot}`);
+    return {
+      packageName: name,
+      originalPath: modulePath,
+      outputPath: path.join(XCFRAMEWORKS_PATH, `${name}.xcframework`),
+    };
+  }
+}
+
+export function hasDuplicatesWhenVendored(modulePaths: string[]): boolean {
+  const outputPaths = modulePaths.map((modulePath) => {
+    const { outputPath } = determineVendoredXcframeworkDetails(
+      modulePath,
+      "hash"
+    );
+    return outputPath;
+  });
+  const uniqueNames = new Set(outputPaths);
+  return uniqueNames.size !== outputPaths.length;
+}
 
 export async function vendorXcframework({
   modulePath,
   incremental,
-}: RebuildXcframeworkOptions): Promise<HashedXCFramework> {
+  naming,
+}: RebuildXcframeworkOptions): Promise<VendoredXcframeworkResult> {
   // Copy the xcframework to the output directory and rename the framework and binary
-  const hash = hashModulePath(modulePath);
-  const tempPath = path.join(XCFRAMEWORKS_PATH, `node-api-${hash}-temp`);
+  const details = determineVendoredXcframeworkDetails(modulePath, naming);
+  const { outputPath } = details;
+  const discriminator =
+    typeof details.hash === "string" ? details.hash : details.packageName;
+  const tempPath = path.join(
+    XCFRAMEWORKS_PATH,
+    `node-api-${discriminator}-temp`
+  );
   try {
-    const outputPath = path.join(
-      XCFRAMEWORKS_PATH,
-      `node-api-${hash}.xcframework`
-    );
     if (incremental && existsSync(outputPath)) {
       const moduleModified = getLatestMtime(modulePath);
       const outputModified = getLatestMtime(outputPath);
       if (moduleModified < outputModified) {
-        return {
-          skipped: true,
-          outputPath,
-          originalPath: modulePath,
-          hash,
-        };
+        return { ...details, skipped: true };
       }
     }
     // Delete any existing xcframework (or xcodebuild will try to amend it)
@@ -235,7 +281,10 @@ export async function vendorXcframework({
                 ".framework"
               );
               const oldLibraryPath = path.join(frameworkPath, oldLibraryName);
-              const newLibraryName = `node-api-${hash}`;
+              const newLibraryName = path.basename(
+                details.outputPath,
+                ".xcframework"
+              );
               const newFrameworkPath = path.join(
                 tripletPath,
                 `${newLibraryName}.framework`
@@ -252,7 +301,7 @@ export async function vendorXcframework({
               await fs.rename(
                 oldLibraryPath,
                 // Cannot use newLibraryPath here, because the framework isn't renamed yet
-                path.join(frameworkPath, `node-api-${hash}`)
+                path.join(frameworkPath, newLibraryName)
               );
               // Rename the framework
               await fs.rename(frameworkPath, newFrameworkPath);
@@ -298,12 +347,7 @@ export async function vendorXcframework({
       }
     );
 
-    return {
-      skipped: false,
-      outputPath,
-      originalPath: modulePath,
-      hash,
-    };
+    return { ...details, skipped: false };
   } finally {
     await fs.rm(tempPath, { recursive: true, force: true });
   }
