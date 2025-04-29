@@ -219,7 +219,7 @@ program
       if (json) {
         console.log(JSON.stringify(dependencies, null, 2));
       } else {
-        const dependencyCount = Object.keys(dependencies);
+        const dependencyCount = Object.keys(dependencies).length;
         const xframeworkCount = Object.values(dependencies).reduce(
           (acc, { xcframeworkPaths }) => acc + xcframeworkPaths.length,
           0
@@ -229,7 +229,7 @@ program
           chalk.greenBright(xframeworkCount),
           "xcframeworks in",
           chalk.greenBright(dependencyCount),
-          "of",
+          dependencyCount === 1 ? "dependency of" : "dependencies of",
           prettyPath(rootPath)
         );
         for (const [dependencyName, dependency] of Object.entries(
