@@ -83,7 +83,7 @@ export function determineModuleContext(
 export function normalizeModulePath(modulePath: string) {
   // Transforming platform specific paths to a common path
   if (path.extname(modulePath) !== ".node") {
-    return normalizeModulePath(replaceWithNodeExtension(modulePath));
+    modulePath = replaceWithNodeExtension(modulePath);
   }
   const { packageName, relativePath } = determineModuleContext(modulePath);
   return path.normalize(path.join(packageName, relativePath));
