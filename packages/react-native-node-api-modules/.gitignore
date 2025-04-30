@@ -11,3 +11,7 @@ include/
 
 # iOS build artifacts
 xcframeworks/
+
+# Android build artifacts
+android/.cxx/
+android/build/

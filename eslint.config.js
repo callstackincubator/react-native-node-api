@@ -17,6 +17,7 @@ export default tseslint.config(
       "apps/test-app/*.js",
       "packages/node-addon-examples/*.js",
       "packages/react-native-node-api-modules/babel-plugin.js",
+      "packages/react-native-node-api-modules/react-native.config.js"
     ],
     languageOptions: {
       parserOptions: {
