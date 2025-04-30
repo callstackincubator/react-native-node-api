@@ -13,6 +13,7 @@ import {
   findPackageDependencyPathsAndXcframeworks,
   findXCFrameworkPaths,
   hasDuplicatesWhenVendored,
+  prettyPath,
   vendorXcframework,
   XCFRAMEWORKS_PATH,
 } from "./helpers";
@@ -29,10 +30,6 @@ EventEmitter.defaultMaxListeners = 100;
 export const command = new Command("xcframeworks").description(
   "Working with Node-API xcframeworks"
 );
-
-function prettyPath(p: string) {
-  return chalk.dim(path.relative(process.cwd(), p));
-}
 
 type CopyXCFrameworksOptions = {
   installationRoot: string;
@@ -141,8 +138,8 @@ async function copyXCFrameworks({
 const { NODE_API_MODULES_STRIP_PATH_SUFFIX } = process.env;
 assert(
   typeof NODE_API_MODULES_STRIP_PATH_SUFFIX === "undefined" ||
-  NODE_API_MODULES_STRIP_PATH_SUFFIX === "true" ||
-  NODE_API_MODULES_STRIP_PATH_SUFFIX === "false",
+    NODE_API_MODULES_STRIP_PATH_SUFFIX === "true" ||
+    NODE_API_MODULES_STRIP_PATH_SUFFIX === "false",
   "Expected NODE_API_MODULES_STRIP_PATH_SUFFIX to be either 'true' or 'false'"
 );
 

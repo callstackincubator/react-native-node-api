@@ -9,6 +9,7 @@ import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 
 import { NamingStrategy, getLibraryName } from "../path-utils.js";
+import chalk from "chalk";
 
 // Must be in all xcframeworks to be considered as Node-API modules
 export const MAGIC_FILENAME = "react-native-node-api-module";
@@ -17,6 +18,10 @@ export const XCFRAMEWORKS_PATH = path.resolve(
   "../../../xcframeworks"
 );
 export const DEFAULT_EXCLUDE_PATTERNS = [/\/node_modules\//, /\/.git\//];
+
+export function prettyPath(p: string) {
+  return chalk.dim(path.relative(process.cwd(), p));
+}
 
 export function resolvePackageRoot(
   requireFromPackageRoot: NodeJS.Require,
