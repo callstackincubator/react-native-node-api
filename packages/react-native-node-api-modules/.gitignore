@@ -1,3 +1,13 @@
-include/
+
+# Vendored hermes
 hermes/
+
+# Vendored Node-API header files
+include/
+
+# Android build artifacts
+**/android/.cxx/
+**/android/build/
+
+# iOS build artifacts
 xcframeworks/
