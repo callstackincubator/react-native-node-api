@@ -260,20 +260,24 @@ function logXcframeworkPaths(
   const discriminatorsPerPath = Object.fromEntries(
     xcframeworkPaths.map((xcframeworkPath) => [
       xcframeworkPath,
-      getLibraryDiscriminator(xcframeworkPath, naming),
+      naming ? getLibraryDiscriminator(xcframeworkPath, naming) : undefined,
     ])
   );
-  const duplicates = findDuplicates(Object.values(discriminatorsPerPath));
+  const duplicates = findDuplicates(
+    Object.values(discriminatorsPerPath).filter((p) => typeof p === "string")
+  );
   for (const [xcframeworkPath, discriminator] of Object.entries(
     discriminatorsPerPath
   )) {
-    const duplicated = duplicates.has(discriminator);
+    const duplicated = discriminator && duplicates.has(discriminator);
     console.log(
       " ↳",
       prettyPath(xcframeworkPath),
-      duplicated
-        ? chalk.redBright(`(${discriminator})`)
-        : chalk.greenBright(`(${discriminator})`)
+      discriminator
+        ? duplicated
+          ? chalk.redBright(`(${discriminator})`)
+          : chalk.greenBright(`(${discriminator})`)
+        : ""
     );
   }
 }

@@ -10,7 +10,8 @@
   },
   "exports": {
     ".": "./dist/react-native/index.js",
-    "./babel-plugin": "./dist/node/babel-plugin/index.js"
+    "./babel-plugin": "./dist/node/babel-plugin/index.js",
+    "./cli": "./dist/node/cli/run.js"
   },
   "scripts": {
     "build": "tsc --build",
@@ -69,6 +70,9 @@
     "outputDir": {
       "ios": "ios/generated",
       "android": "android/generated"
+    },
+    "android": {
+      "javaPackageName": "com.callstack.node_api_modules"
     }
   }
 }

@@ -7,6 +7,6 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src/node"],
+  "include": ["src/node/**/*.ts"],
   "exclude": ["**.test.ts"]
 }
