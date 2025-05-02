@@ -9,20 +9,18 @@ import {
   isNodeApiModule,
   replaceWithNodeExtension,
   NamingStrategy,
-  NAMING_STATEGIES,
 } from "../path-utils";
 
 type PluginOptions = {
-  naming?: NamingStrategy;
+  stripPathSuffix?: boolean;
 };
 
 function assertOptions(opts: unknown): asserts opts is PluginOptions {
   assert(typeof opts === "object" && opts !== null, "Expected an object");
-  if ("naming" in opts) {
-    assert(typeof opts.naming === "string", "Expected 'naming' to be a string");
+  if ("stripPathSuffix" in opts) {
     assert(
-      NAMING_STATEGIES.includes(opts.naming as NamingStrategy),
-      "Expected 'naming' to be either 'hash' or 'package-name'"
+      typeof opts.stripPathSuffix === "boolean",
+      "Expected 'stripPathSuffix' to be a boolean"
     );
   }
 }
@@ -54,7 +52,7 @@ export function plugin(): PluginObj {
     visitor: {
       CallExpression(p) {
         assertOptions(this.opts);
-        const { naming = "package-name" } = this.opts;
+        const { stripPathSuffix = false } = this.opts;
         if (typeof this.filename !== "string") {
           // This transformation only works when the filename is known
           return;
@@ -77,7 +75,9 @@ export function plugin(): PluginObj {
               const relativePath = path.join(from, id);
               // TODO: Support traversing the filesystem to find the Node-API module
               if (isNodeApiModule(relativePath)) {
-                replaceWithRequireNodeAddon(p.parentPath, relativePath, naming);
+                replaceWithRequireNodeAddon(p.parentPath, relativePath, {
+                  stripPathSuffix,
+                });
               }
             }
           } else if (
@@ -85,7 +85,7 @@ export function plugin(): PluginObj {
             isNodeApiModule(path.join(from, id))
           ) {
             const relativePath = path.join(from, id);
-            replaceWithRequireNodeAddon(p, relativePath, naming);
+            replaceWithRequireNodeAddon(p, relativePath, { stripPathSuffix });
           }
         }
       },

@@ -6,11 +6,13 @@ require_relative "./scripts/patch-hermes"
 
 NODE_PATH ||= `which node`.strip
 CLI_COMMAND ||= "'#{NODE_PATH}' '#{File.join(__dir__, "dist/node/cli/run.js")}'"
-COPY_FRAMEWORKS_COMMAND ||= "#{CLI_COMMAND} copy-xcframeworks '#{Pod::Config.instance.installation_root}'"
+STRIP_PATH_SUFFIX ||= ENV['NODE_API_MODULES_STRIP_PATH_SUFFIX'] === "true"
+COPY_FRAMEWORKS_COMMAND ||= "#{CLI_COMMAND} xcframeworks copy --podfile '#{Pod::Config.instance.installation_root}' #{STRIP_PATH_SUFFIX ? '--strip-path-suffix' : ''}"
 
 # We need to run this now to ensure the xcframeworks are copied vendored_frameworks are considered
 XCFRAMEWORKS_DIR ||= File.join(__dir__, "xcframeworks")
 unless defined?(@xcframeworks_copied)
+  puts "Executing #{COPY_FRAMEWORKS_COMMAND}"
   system(COPY_FRAMEWORKS_COMMAND) or raise "Failed to copy xcframeworks"
   # Setting a flag to avoid running this command on every require
   @xcframeworks_copied = true

@@ -8,7 +8,7 @@ import { spawn } from "bufout";
 import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 
-import { NamingStrategy, hashModulePath } from "../path-utils.js";
+import { NamingStrategy, getLibraryName } from "../path-utils.js";
 
 // Must be in all xcframeworks to be considered as Node-API modules
 export const MAGIC_FILENAME = "react-native-node-api-module";
@@ -182,16 +182,8 @@ type RebuildXcframeworkOptions = {
 type VendoredXcframework = {
   originalPath: string;
   outputPath: string;
-} & (
-  | {
-      hash: string;
-      packageName?: never;
-    }
-  | {
-      hash?: never;
-      packageName: string;
-    }
-);
+  libraryName: string;
+};
 
 type VendoredXcframeworkResult = VendoredXcframework & {
   skipped: boolean;
@@ -201,24 +193,16 @@ export function determineVendoredXcframeworkDetails(
   modulePath: string,
   naming: NamingStrategy
 ): VendoredXcframework {
-  if (naming === "hash") {
-    const hash = hashModulePath(modulePath);
-    return {
-      hash,
-      originalPath: modulePath,
-      outputPath: path.join(XCFRAMEWORKS_PATH, `node-api-${hash}.xcframework`),
-    };
-  } else {
-    const packageRoot = packageDirectorySync({ cwd: modulePath });
-    assert(packageRoot, `Could not find package root from ${modulePath}`);
-    const { name } = readPackageSync({ cwd: packageRoot });
-    assert(name, `Could not find package name from ${packageRoot}`);
-    return {
-      packageName: name,
-      originalPath: modulePath,
-      outputPath: path.join(XCFRAMEWORKS_PATH, `${name}.xcframework`),
-    };
-  }
+  const packageRoot = packageDirectorySync({ cwd: modulePath });
+  assert(packageRoot, `Could not find package root from ${modulePath}`);
+  const { name } = readPackageSync({ cwd: packageRoot });
+  assert(name, `Could not find package name from ${packageRoot}`);
+  const libraryName = getLibraryName(modulePath, naming);
+  return {
+    originalPath: modulePath,
+    outputPath: path.join(XCFRAMEWORKS_PATH, `${libraryName}.xcframework`),
+    libraryName,
+  };
 }
 
 export function hasDuplicatesWhenVendored(
@@ -243,13 +227,8 @@ export async function vendorXcframework({
 }: RebuildXcframeworkOptions): Promise<VendoredXcframeworkResult> {
   // Copy the xcframework to the output directory and rename the framework and binary
   const details = determineVendoredXcframeworkDetails(modulePath, naming);
-  const { outputPath } = details;
-  const discriminator =
-    typeof details.hash === "string" ? details.hash : details.packageName;
-  const tempPath = path.join(
-    XCFRAMEWORKS_PATH,
-    `node-api-${discriminator}-temp`
-  );
+  const { outputPath, libraryName: newLibraryName } = details;
+  const tempPath = path.join(XCFRAMEWORKS_PATH, `${newLibraryName}.temp`);
   try {
     if (incremental && existsSync(outputPath)) {
       const moduleModified = getLatestMtime(modulePath);
@@ -284,10 +263,6 @@ export async function vendorXcframework({
                 ".framework"
               );
               const oldLibraryPath = path.join(frameworkPath, oldLibraryName);
-              const newLibraryName = path.basename(
-                details.outputPath,
-                ".xcframework"
-              );
               const newFrameworkPath = path.join(
                 tripletPath,
                 `${newLibraryName}.framework`

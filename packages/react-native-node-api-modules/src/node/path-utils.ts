@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
-import crypto from "node:crypto";
 
-// import { spawn } from "bufout";
-
-export const NAMING_STATEGIES = ["hash", "package-name"] as const;
-export type NamingStrategy = (typeof NAMING_STATEGIES)[number];
+export type NamingStrategy = {
+  stripPathSuffix: boolean;
+};
 
 export function isNodeApiModule(modulePath: string): boolean {
   // Determine if we're trying to load a Node-API module
@@ -73,7 +71,9 @@ export function determineModuleContext(
     );
     return {
       packageName: packageJson.name,
-      relativePath: path.relative(modulePath, originalPath),
+      relativePath: normalizeModulePath(
+        path.relative(modulePath, originalPath)
+      ),
     };
   } else if (parentDirectoryPath === modulePath) {
     // We've reached the root of the filesystem
@@ -84,12 +84,11 @@ export function determineModuleContext(
 }
 
 export function normalizeModulePath(modulePath: string) {
-  // Transforming platform specific paths to a common path
-  if (path.extname(modulePath) !== ".node") {
-    modulePath = replaceWithNodeExtension(modulePath);
-  }
-  const { packageName, relativePath } = determineModuleContext(modulePath);
-  return path.normalize(path.join(packageName, relativePath));
+  return path.normalize(stripExtension(modulePath));
+}
+
+export function escapePath(modulePath: string) {
+  return modulePath.replace(/[^a-zA-Z0-9]/g, "-");
 }
 
 // export async function updateLibraryInstallPathInXCFramework(
@@ -109,47 +108,11 @@ export function normalizeModulePath(modulePath: string) {
 //   }
 // }
 
-type HashModulePathOptions = {
-  verify?: boolean;
-};
-
-export function hashModulePath(
-  modulePath: string,
-  { verify = true }: HashModulePathOptions = {}
-) {
-  const hash = crypto.createHash("sha256");
-  assert(
-    path.isAbsolute(modulePath),
-    `Expected absolute path when hashing, got: ${modulePath}`
-  );
-  const strippedModulePath = stripExtension(modulePath);
-  if (verify) {
-    assert(
-      isNodeApiModule(strippedModulePath),
-      `Expected a Node-API module at ${strippedModulePath}`
-    );
-  }
-  hash.update(normalizeModulePath(strippedModulePath));
-  return hash.digest("hex").slice(0, 8);
-}
-
-export function getLibraryDiscriminator(
-  modulePath: string,
-  naming: NamingStrategy
-) {
-  if (naming === "package-name") {
-    const { packageName } = determineModuleContext(modulePath);
-    return packageName;
-  } else if (naming === "hash") {
-    return hashModulePath(modulePath);
-  } else {
-    throw new Error(`Unknown naming strategy: ${naming}`);
-  }
-}
-
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
-  const discriminator = getLibraryDiscriminator(modulePath, naming);
-  return naming === "hash" ? `node-api-${discriminator}` : discriminator;
+  const { packageName, relativePath } = determineModuleContext(modulePath);
+  return naming.stripPathSuffix
+    ? packageName
+    : `${packageName}--${escapePath(relativePath)}`;
 }
 
 export function getLibraryInstallName(

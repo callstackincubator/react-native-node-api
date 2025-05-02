@@ -40,17 +40,17 @@ describe("plugin", () => {
 
     const ADDON_1_REQUIRE_ARG = getLibraryInstallName(
       path.join(tempDirectoryPath, "addon-1"),
-      "hash"
+      { stripPathSuffix: false }
     );
     const ADDON_2_REQUIRE_ARG = getLibraryInstallName(
       path.join(tempDirectoryPath, "addon-2"),
-      "hash"
+      { stripPathSuffix: false }
     );
 
     {
       const result = transformFileSync(
         path.join(tempDirectoryPath, "./addon-1.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
+        { plugins: [[plugin, { stripPathSuffix: false }]] }
       );
       assert(result);
       const { code } = result;
