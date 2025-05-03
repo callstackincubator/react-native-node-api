@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist",
+    "rootDir": "scripts",
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.ts"],
+  "exclude": []
+}
