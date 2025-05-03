@@ -114,11 +114,3 @@ export function getLibraryName(modulePath: string, naming: NamingStrategy) {
     ? packageName
     : `${packageName}--${escapePath(relativePath)}`;
 }
-
-export function getLibraryInstallName(
-  modulePath: string,
-  naming: NamingStrategy
-) {
-  const libraryName = getLibraryName(modulePath, naming);
-  return `@rpath/${libraryName}.framework/${libraryName}`;
-}

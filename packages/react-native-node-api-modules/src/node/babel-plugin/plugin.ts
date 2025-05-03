@@ -5,7 +5,7 @@ import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
 
 import {
-  getLibraryInstallName,
+  getLibraryName,
   isNodeApiModule,
   replaceWithNodeExtension,
   NamingStrategy,
@@ -30,7 +30,7 @@ export function replaceWithRequireNodeAddon(
   modulePath: string,
   naming: NamingStrategy
 ) {
-  const requireCallArgument = getLibraryInstallName(
+  const requireCallArgument = getLibraryName(
     replaceWithNodeExtension(modulePath),
     naming
   );

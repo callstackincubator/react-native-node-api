@@ -23,16 +23,17 @@ CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
   return jsi::Value::undefined();
 }
 
-jsi::Value CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
-                                                  const jsi::String path) {
-  const std::string pathStr = path.utf8(rt);
+jsi::Value
+CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
+                                       const jsi::String libraryName) {
+  const std::string libraryNameStr = libraryName.utf8(rt);
 
-  auto [it, inserted] = nodeAddons_.emplace(pathStr, NodeAddon());
+  auto [it, inserted] = nodeAddons_.emplace(libraryNameStr, NodeAddon());
   NodeAddon &addon = it->second;
 
   // Check if this module has been loaded already, if not then load it...
   if (inserted) {
-    if (!loadNodeAddon(addon, pathStr)) {
+    if (!loadNodeAddon(addon, libraryNameStr)) {
       return jsi::Value::undefined();
     }
   }
@@ -47,10 +48,19 @@ jsi::Value CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
 }
 
 bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
-                                         const std::string &path) const {
+                                         const std::string &libraryName) const {
+#if defined(__APPLE__)
+  std::string libraryPath =
+      "@rpath/" + libraryName + ".framework/" + libraryName;
+#elif defined(__ANDROID__)
+  std::string libraryPath = libraryName
+#else
+  abort()
+#endif
+
   typename LoaderPolicy::Symbol initFn = NULL;
   typename LoaderPolicy::Module library =
-      LoaderPolicy::loadLibrary(path.c_str());
+      LoaderPolicy::loadLibrary(libraryPath.c_str());
   if (NULL != library) {
     addon.moduleHandle = library;
 
