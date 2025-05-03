@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { existsSync, readdirSync, renameSync } from "node:fs";
+import { EventEmitter } from "node:events";
 
 import { Command, Option } from "@commander-js/extra-typings";
 import { spawn, SpawnFailure } from "bufout";
@@ -23,11 +24,13 @@ import {
   DEFAULT_ANDROID_TRIPLETS,
   getAndroidConfigureCmakeArgs,
   isAndroidTriplet,
+  determineAndroidLibsFilename,
+  createAndroidLibsDirectory,
+  AndroidTriplet,
 } from "./android.js";
 
 // We're attaching a lot of listeners when spawning in parallel
-process.stdout.setMaxListeners(100);
-process.stderr.setMaxListeners(100);
+EventEmitter.defaultMaxListeners = 100;
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
@@ -91,6 +94,7 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(outPathOption)
   .addOption(cleanOption)
   .addOption(ndkVersionOption)
+  .addOption(noAutoLinkOption)
   .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
       const buildPath = getBuildPath(globalContext);
@@ -217,6 +221,57 @@ export const program = new Command("react-native-node-api-cmake")
             )}`,
             failText: ({ message }) =>
               `Failed to assemble XCFramework: ${message}`,
+          }
+        );
+      }
+
+      const androidTriplets = tripletContext.filter(({ triplet }) =>
+        isAndroidTriplet(triplet)
+      );
+      if (androidTriplets.length > 0) {
+        const libraryPathByTriplet = Object.fromEntries(
+          androidTriplets.map(({ tripletOutputPath, triplet }) => {
+            assert(
+              existsSync(tripletOutputPath),
+              `Expected a directory at ${tripletOutputPath}`
+            );
+            // Expect binary file(s), either .node or .so
+            const result = readdirSync(tripletOutputPath).map((file) => {
+              const filePath = path.join(tripletOutputPath, file);
+              if (file.endsWith(".so") || file.endsWith(".node")) {
+                return filePath;
+              } else {
+                throw new Error(
+                  `Expected a .node or .so file, but found ${file}`
+                );
+              }
+            });
+            assert.equal(result.length, 1, "Expected exactly library file");
+            return [triplet, result[0]] as const;
+          })
+        ) as Record<AndroidTriplet, string>;
+        const androidLibsFilename = determineAndroidLibsFilename(
+          Object.values(libraryPathByTriplet)
+        );
+        const androidLibsOutputPath = path.resolve(
+          // Defaults to storing the xcframework next to the CMakeLists.txt file
+          globalContext.out || globalContext.source,
+          androidLibsFilename
+        );
+
+        await oraPromise(
+          createAndroidLibsDirectory({
+            outputPath: androidLibsOutputPath,
+            libraryPathByTriplet,
+            autoLink: globalContext.autoLink,
+          }),
+          {
+            text: "Assembling Android libs directory",
+            successText: `Android libs directory assembled into ${chalk.dim(
+              path.relative(process.cwd(), androidLibsOutputPath)
+            )}`,
+            failText: ({ message }) =>
+              `Failed to assemble Android libs directory: ${message}`,
           }
         );
       }

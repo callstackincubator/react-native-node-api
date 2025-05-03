@@ -41,7 +41,7 @@ type XcodeSDKName =
   | "appletvsimulator"
   | "macosx";
 
-const SDK_NAMES = {
+const XCODE_SDK_NAMES = {
   "x86_64-apple-darwin": "macosx",
   "arm64-apple-darwin": "macosx",
   "arm64;x86_64-apple-darwin": "macosx",
@@ -56,7 +56,7 @@ const SDK_NAMES = {
 
 type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
 
-export const ARCHITECTURES = {
+export const APPLE_ARCHITECTURES = {
   "x86_64-apple-darwin": "x86_64",
   "arm64-apple-darwin": "arm64",
   "arm64;x86_64-apple-darwin": "arm64;x86_64",
@@ -77,9 +77,13 @@ export function isAppleTriplet(
 
 export function getAppleSDKPath(triplet: AppleTriplet) {
   return cp
-    .spawnSync("xcrun", ["--sdk", SDK_NAMES[triplet], "--show-sdk-path"], {
-      encoding: "utf-8",
-    })
+    .spawnSync(
+      "xcrun",
+      ["--sdk", XCODE_SDK_NAMES[triplet], "--show-sdk-path"],
+      {
+        encoding: "utf-8",
+      }
+    )
     .stdout.trim();
 }
 
@@ -102,19 +106,31 @@ export function getAppleConfigureCmakeArgs(triplet: AppleTriplet) {
   assert(isAppleTriplet(triplet));
   const sdkPath = getAppleSDKPath(triplet);
 
+  // TODO: Make this Node-API version configurable
+  // const nodeApiSymbols = getNodeApiSymbols("v10");
+
+  const linkerFlags = [
+    // Link against weak-node-api and remove this
+    "-Wl,-undefined,dynamic_lookup",
+    // Tread undefined symbols as errors
+    // "-Wl,-undefined,error",
+    // Pass all Node-API symbols to the linker
+    // ...nodeApiSymbols.map((symbol) => `-Wl,-U,_${symbol}`),
+  ];
+
   return [
     // Use the XCode as generator for Apple platforms
     "-G",
     "Xcode",
     // Pass linker flags to avoid errors from undefined symbols
     "-D",
-    `CMAKE_SHARED_LINKER_FLAGS="-Wl,-undefined,dynamic_lookup"`,
+    `CMAKE_SHARED_LINKER_FLAGS=${linkerFlags.join(" ")}`,
     // Set the SDK path for the target platform
     "-D",
     `CMAKE_OSX_SYSROOT=${sdkPath}`,
     // Set the target architecture
     "-D",
-    `CMAKE_OSX_ARCHITECTURES=${ARCHITECTURES[triplet]}`,
+    `CMAKE_OSX_ARCHITECTURES=${APPLE_ARCHITECTURES[triplet]}`,
   ];
 }
 
