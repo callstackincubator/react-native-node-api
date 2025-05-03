@@ -19,6 +19,7 @@ import {
   isAppleTriplet,
 } from "./apple.js";
 import chalk from "chalk";
+import { DEFAULT_ANDROID_TRIPLETS, isAndroidTriplet } from "./android.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 process.stdout.setMaxListeners(100);
@@ -59,13 +60,15 @@ const outPathOption = new Option(
   "Specify the output directory to store the final build artifacts"
 );
 
-const appleOption = new Option("--apple", "Enable all apple triplets");
+const androidOption = new Option("--android", "Enable all Android triplets");
+const appleOption = new Option("--apple", "Enable all Apple triplets");
 
 export const program = new Command("react-native-node-api-cmake")
   .description("Build React Native Node API modules with CMake")
   .addOption(sourcePathOption)
   .addOption(configurationOption)
   .addOption(tripletOption)
+  .addOption(androidOption)
   .addOption(appleOption)
   .addOption(buildPathOption)
   .addOption(outPathOption)
@@ -82,6 +85,28 @@ export const program = new Command("react-native-node-api-cmake")
           triplets.add(triplet);
         }
       }
+      if (globalContext.android) {
+        for (const triplet of DEFAULT_ANDROID_TRIPLETS) {
+          triplets.add(triplet);
+        }
+      }
+
+      if (triplets.size === 0) {
+        console.error(
+          "Nothing to build 🤷",
+          "Please specify at least one triplet with",
+          chalk.dim("--triplet"),
+          `(or use the ${chalk.dim("--android")} or ${chalk.dim(
+            "--apple"
+          )} shorthands)`
+        );
+        for (const triplet of SUPPORTED_TRIPLETS) {
+          console.error(`${chalk.dim("--triplet")} ${triplet}`);
+        }
+        process.exitCode = 1;
+        return;
+      }
+
       const tripletContext = [...triplets].map((triplet) => {
         const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
         return {
