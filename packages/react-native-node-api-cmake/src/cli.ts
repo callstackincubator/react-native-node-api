@@ -19,11 +19,18 @@ import {
   isAppleTriplet,
 } from "./apple.js";
 import chalk from "chalk";
-import { DEFAULT_ANDROID_TRIPLETS, isAndroidTriplet } from "./android.js";
+import {
+  DEFAULT_ANDROID_TRIPLETS,
+  getAndroidConfigureCmakeArgs,
+  isAndroidTriplet,
+} from "./android.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 process.stdout.setMaxListeners(100);
 process.stderr.setMaxListeners(100);
+
+// This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
+const DEFAULT_NDK_VERSION = "27.1.12297006";
 
 // TODO: Add automatic ccache support
 
@@ -60,6 +67,11 @@ const outPathOption = new Option(
   "Specify the output directory to store the final build artifacts"
 );
 
+const ndkVersionOption = new Option(
+  "--ndk-version <version>",
+  "The NDK version to use for Android builds"
+).default(DEFAULT_NDK_VERSION);
+
 const androidOption = new Option("--android", "Enable all Android triplets");
 const appleOption = new Option("--apple", "Enable all Apple triplets");
 
@@ -73,6 +85,7 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(buildPathOption)
   .addOption(outPathOption)
   .addOption(cleanOption)
+  .addOption(ndkVersionOption)
   .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
       const buildPath = getBuildPath(globalContext);
@@ -234,8 +247,13 @@ function getTripletBuildPath(buildPath: string, triplet: SupportedTriplet) {
   return path.join(buildPath, triplet.replace(/;/g, "_"));
 }
 
-function getTripletConfigureCmakeArgs(triplet: SupportedTriplet) {
-  if (isAppleTriplet(triplet)) {
+function getTripletConfigureCmakeArgs(
+  triplet: SupportedTriplet,
+  { ndkVersion }: Pick<GlobalContext, "ndkVersion">
+) {
+  if (isAndroidTriplet(triplet)) {
+    return getAndroidConfigureCmakeArgs({ triplet, ndkVersion });
+  } else if (isAppleTriplet(triplet)) {
     return getAppleConfigureCmakeArgs(triplet);
   } else {
     throw new Error(`Support for '${triplet}' is not implemented yet`);
@@ -243,7 +261,9 @@ function getTripletConfigureCmakeArgs(triplet: SupportedTriplet) {
 }
 
 function getBuildArgs(triplet: SupportedTriplet) {
-  if (isAppleTriplet(triplet)) {
+  if (isAndroidTriplet(triplet)) {
+    return [];
+  } else if (isAppleTriplet(triplet)) {
     return getAppleBuildArgs();
   } else {
     throw new Error(`Support for '${triplet}' is not implemented yet`);
@@ -251,7 +271,7 @@ function getBuildArgs(triplet: SupportedTriplet) {
 }
 
 async function configureProject(context: TripletScopedContext) {
-  const { triplet, tripletBuildPath, source } = context;
+  const { triplet, tripletBuildPath, source, ndkVersion } = context;
   const variables = getVariables(context);
   const variablesArgs = Object.entries(variables).flatMap(([key, value]) => [
     "-D",
@@ -266,7 +286,7 @@ async function configureProject(context: TripletScopedContext) {
       "-B",
       tripletBuildPath,
       ...variablesArgs,
-      ...getTripletConfigureCmakeArgs(triplet),
+      ...getTripletConfigureCmakeArgs(triplet, { ndkVersion }),
     ],
     {
       outputMode: "buffered",
