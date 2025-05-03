@@ -126,6 +126,7 @@ export function getAppleBuildArgs() {
 type XCframeworkOptions = {
   frameworkPaths: string[];
   outputPath: string;
+  autoLink: boolean;
 };
 
 export function createFramework(libraryPath: string) {
@@ -171,6 +172,7 @@ export function createFramework(libraryPath: string) {
 export async function createXCframework({
   frameworkPaths,
   outputPath,
+  autoLink,
 }: XCframeworkOptions) {
   // Delete any existing xcframework to prevent the error:
   // - A library with the identifier 'macos-arm64' already exists.
@@ -189,13 +191,15 @@ export async function createXCframework({
       outputMode: "buffered",
     }
   );
-  // Write a file to mark the xcframework is a Node-API module
-  // TODO: Consider including this in the Info.plist file instead
-  fs.writeFileSync(
-    path.join(outputPath, "react-native-node-api-module"),
-    "",
-    "utf8"
-  );
+  if (autoLink) {
+    // Write a file to mark the xcframework is a Node-API module
+    // TODO: Consider including this in the Info.plist file instead
+    fs.writeFileSync(
+      path.join(outputPath, "react-native-node-api-module"),
+      "",
+      "utf8"
+    );
+  }
 }
 
 /**

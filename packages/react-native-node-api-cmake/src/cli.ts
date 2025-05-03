@@ -72,6 +72,11 @@ const ndkVersionOption = new Option(
   "The NDK version to use for Android builds"
 ).default(DEFAULT_NDK_VERSION);
 
+const noAutoLinkOption = new Option(
+  "--no-auto-link",
+  "Don't mark the output as auto-linkable by react-native-node-api-modules"
+);
+
 const androidOption = new Option("--android", "Enable all Android triplets");
 const appleOption = new Option("--apple", "Enable all Apple triplets");
 
@@ -203,6 +208,7 @@ export const program = new Command("react-native-node-api-cmake")
           createXCframework({
             outputPath: xcframeworkOutputPath,
             frameworkPaths,
+            autoLink: globalContext.autoLink,
           }),
           {
             text: "Assembling XCFramework",
