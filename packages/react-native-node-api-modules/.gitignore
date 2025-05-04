@@ -10,14 +10,14 @@ include/
 **/android/build/
 
 # iOS build artifacts
-xcframeworks/
+/auto-linked/
 
 # Android build artifacts
 android/.cxx/
 android/build/
 
 # Everything in weak-node-api is generated, except for the configurations
-weak-node-api/build/
-weak-node-api/weak-node-api.xcframework
-weak-node-api/weak-node-api.android.node
-weak-node-api.cpp
+/weak-node-api/build/
+/weak-node-api/weak-node-api.xcframework
+/weak-node-api/weak-node-api.android.node
+/weak-node-api/weak-node-api.cpp

@@ -3,8 +3,8 @@ import path from "node:path";
 
 import { Command } from "@commander-js/extra-typings";
 import { spawn, SpawnFailure } from "bufout";
-import { prettyPath } from "./helpers";
 import { oraPromise } from "ora";
+import { prettyPath } from "../path-utils";
 
 const HERMES_PATH = path.resolve(__dirname, "../../../hermes");
 const HERMES_GIT_URL = "https://github.com/kraenhansen/hermes.git";

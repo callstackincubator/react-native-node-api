@@ -1,11 +1,32 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import fs from "node:fs";
+import fs, { readdirSync } from "node:fs";
+import { findDuplicates } from "./duplicates";
+import chalk from "chalk";
+import { packageDirectorySync } from "pkg-dir";
+import { readPackageSync } from "read-pkg";
+import { createRequire } from "node:module";
+
+// TODO: Change to .apple.node
+export const PLATFORMS = ["android", "apple"] as const;
+export type PlatformName = "android" | "apple";
+
+export const PLATFORM_EXTENSIONS = {
+  android: ".android.node",
+  // TODO: Change to .apple.node
+  apple: ".xcframework",
+} as const satisfies Record<PlatformName, string>;
+export type PlatformExtentions = (typeof PLATFORM_EXTENSIONS)[PlatformName];
 
 export type NamingStrategy = {
   stripPathSuffix: boolean;
 };
 
+/**
+ * @param modulePath The path to the module to check (must be extensionless or end in .node)
+ * @returns True if a platform specific prebuild exists for the module path.
+ * TODO: Consider checking for a specific platform extension.
+ */
 export function isNodeApiModule(modulePath: string): boolean {
   // Determine if we're trying to load a Node-API module
   // Strip optional .node extension
@@ -13,21 +34,25 @@ export function isNodeApiModule(modulePath: string): boolean {
     path.dirname(modulePath),
     path.basename(modulePath, ".node")
   );
-  return [
-    candidateBasePath + ".xcframework",
-    // TODO: Add Android support
-  ].some(fs.existsSync);
+  return Object.values(PLATFORM_EXTENSIONS)
+    .map((extension) => candidateBasePath + extension)
+    .some(fs.existsSync);
 }
 
 /**
- * Replaces any platform specific extensions with the common .node extension.
+ * Strip of any platform specific extensions from a module path.
  */
 export function stripExtension(modulePath: string) {
-  return path.format({
-    ...path.parse(modulePath),
-    base: undefined,
-    ext: undefined,
-  });
+  return [...Object.values(PLATFORM_EXTENSIONS), ".node"].reduce(
+    (modulePath, extension) => {
+      if (modulePath.endsWith(extension)) {
+        return modulePath.slice(0, -extension.length);
+      } else {
+        return modulePath;
+      }
+    },
+    modulePath
+  );
 }
 
 /**
@@ -91,26 +116,217 @@ export function escapePath(modulePath: string) {
   return modulePath.replace(/[^a-zA-Z0-9]/g, "-");
 }
 
-// export async function updateLibraryInstallPathInXCFramework(
-//   xcframeworkPath: string
-// ) {
-//   for (const file of fs.readdirSync(xcframeworkPath, {
-//     withFileTypes: true,
-//     recursive: true,
-//   })) {
-//     if (file.isDirectory() && path.extname(file.name) === ".framework") {
-//       const libraryName = path.basename(file.name, ".framework");
-//       const libraryPath = path.join(file.parentPath, file.name, libraryName);
-//       assert(fs.existsSync(libraryPath), `Expected library at: ${libraryPath}`);
-//       const newInstallName = getLibraryInstallName(xcframeworkPath);
-//       await spawn("install_name_tool", ["-id", newInstallName, libraryPath]);
-//     }
-//   }
-// }
-
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
   const { packageName, relativePath } = determineModuleContext(modulePath);
   return naming.stripPathSuffix
     ? packageName
     : `${packageName}--${escapePath(relativePath)}`;
+}
+
+export function prettyPath(p: string) {
+  return chalk.dim(
+    path.relative(process.cwd(), p) || chalk.italic("current directory")
+  );
+}
+
+export function resolvePackageRoot(
+  requireFromPackageRoot: NodeJS.Require,
+  packageName: string
+): string | undefined {
+  try {
+    const resolvedPath = requireFromPackageRoot.resolve(packageName);
+    return packageDirectorySync({ cwd: resolvedPath });
+  } catch {
+    // TODO: Add a debug log here
+    return undefined;
+  }
+}
+
+export function logModulePaths(
+  modulePaths: string[],
+  // TODO: Default to iterating and printing for all supported naming strategies
+  naming: NamingStrategy
+) {
+  const pathsPerName = new Map<string, string[]>();
+  for (const modulePath of modulePaths) {
+    const libraryName = getLibraryName(modulePath, naming);
+    const existingPaths = pathsPerName.get(libraryName) ?? [];
+    existingPaths.push(modulePath);
+    pathsPerName.set(libraryName, existingPaths);
+  }
+
+  const allModulePaths = modulePaths.map((modulePath) => modulePath);
+  const duplicatePaths = findDuplicates(allModulePaths);
+  for (const [libraryName, modulePaths] of pathsPerName) {
+    console.log(
+      chalk.greenBright(`${libraryName}`),
+      ...modulePaths.flatMap((modulePath) => {
+        const line = duplicatePaths.has(modulePath)
+          ? chalk.redBright(prettyPath(modulePath))
+          : prettyPath(modulePath);
+        return `\n ↳ ${line}`;
+      })
+    );
+  }
+}
+
+/**
+ * Search upwards from a directory to find a package.json and
+ * return a record mapping from each dependencies of that package to their path on disk.
+ */
+export function findPackageDependencyPaths(
+  fromPath: string
+): Record<string, string> {
+  const packageRoot = packageDirectorySync({ cwd: fromPath });
+  assert(packageRoot, `Could not find package root from ${fromPath}`);
+
+  const requireFromPackageRoot = createRequire(
+    path.join(packageRoot, "noop.js")
+  );
+
+  const { dependencies = {} } = readPackageSync({ cwd: packageRoot });
+
+  return Object.fromEntries(
+    Object.keys(dependencies)
+      .map((dependencyName) => {
+        const resolvedDependencyRoot = resolvePackageRoot(
+          requireFromPackageRoot,
+          dependencyName
+        );
+        return resolvedDependencyRoot
+          ? [dependencyName, resolvedDependencyRoot]
+          : undefined;
+      })
+      .filter((item) => typeof item !== "undefined")
+  );
+}
+
+export const MAGIC_FILENAME = "react-native-node-api-module";
+
+/**
+ * Default patterns to use when excluding paths from the search for Node-API modules.
+ */
+export const DEFAULT_EXCLUDE_PATTERNS = [
+  /\/react-native-node-api-modules\//,
+  /\/node_modules\//,
+  /\/.git\//,
+];
+
+export function hasPlatformExtension(
+  platform: PlatformName | Readonly<PlatformName[]>,
+  fileName: string
+): boolean {
+  if (typeof platform === "string") {
+    return fileName.endsWith(PLATFORM_EXTENSIONS[platform]);
+  } else {
+    return platform.some((p) => hasPlatformExtension(p, fileName));
+  }
+}
+
+export type FindNodeApiModuleOptions = {
+  fromPath: string;
+  excludePatterns?: RegExp[];
+  platform: PlatformName | Readonly<PlatformName[]>;
+};
+
+/**
+ * Recursively search into a directory for xcframeworks containing Node-API modules.
+ * TODO: Turn this asynchronous
+ */
+export function findNodeApiModulePaths(
+  options: FindNodeApiModuleOptions,
+  suffix = ""
+): string[] {
+  const {
+    fromPath,
+    platform,
+    excludePatterns = DEFAULT_EXCLUDE_PATTERNS,
+  } = options;
+  if (excludePatterns.some((pattern) => pattern.test(suffix))) {
+    return [];
+  }
+  const candidatePath = path.join(fromPath, suffix);
+  return readdirSync(candidatePath, { withFileTypes: true }).flatMap((file) => {
+    if (
+      file.isFile() &&
+      file.name === MAGIC_FILENAME &&
+      hasPlatformExtension(platform, candidatePath)
+    ) {
+      return [candidatePath];
+    } else if (file.isDirectory()) {
+      // Traverse into the child directory
+      return findNodeApiModulePaths(options, path.join(suffix, file.name));
+    }
+    return [];
+  });
+}
+
+/**
+ * Finds all dependencies of the app package and their xcframeworks.
+ */
+export function findNodeApiModulePathsByDependency({
+  fromPath,
+  includeSelf,
+  ...options
+}: FindNodeApiModuleOptions & {
+  includeSelf: boolean;
+}) {
+  // Find the location of each dependency
+  const packagePathsByName = findPackageDependencyPaths(fromPath);
+  if (includeSelf) {
+    const packageRoot = packageDirectorySync({ cwd: fromPath });
+    assert(packageRoot, `Could not find package root from ${fromPath}`);
+    const { name } = readPackageSync({ cwd: packageRoot });
+    packagePathsByName[name] = packageRoot;
+  }
+  // Find all their xcframeworks
+  return Object.fromEntries(
+    Object.entries(packagePathsByName)
+      .map(([dependencyName, dependencyPath]) => {
+        // Make all the xcframeworks relative to the dependency path
+        const modulePaths = findNodeApiModulePaths({
+          fromPath: dependencyPath,
+          ...options,
+        }).map((p) => path.relative(dependencyPath, p));
+        return [
+          dependencyName,
+          {
+            path: dependencyPath,
+            modulePaths,
+          },
+        ] as const;
+      })
+      // Remove any dependencies without module paths
+      .filter(([, { modulePaths }]) => modulePaths.length > 0)
+  );
+}
+
+export function getAutolinkPath(platform: PlatformName) {
+  const result = path.resolve(__dirname, "../../auto-linked", platform);
+  fs.mkdirSync(result, { recursive: true });
+  return result;
+}
+
+/**
+ * Get the latest modification time of all files in a directory and its subdirectories.
+ */
+export function getLatestMtime(fromPath: string): number {
+  const entries = fs.readdirSync(fromPath, {
+    withFileTypes: true,
+    recursive: true,
+  });
+
+  let latest = 0;
+
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      const fullPath = path.join(entry.parentPath, entry.name);
+      const stat = fs.statSync(fullPath);
+      if (stat.mtimeMs > latest) {
+        latest = stat.mtimeMs;
+      }
+    }
+  }
+
+  return latest;
 }

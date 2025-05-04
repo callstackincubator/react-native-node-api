@@ -7,7 +7,7 @@ require_relative "./scripts/patch-hermes"
 NODE_PATH ||= `which node`.strip
 CLI_COMMAND ||= "'#{NODE_PATH}' '#{File.join(__dir__, "dist/node/cli/run.js")}'"
 STRIP_PATH_SUFFIX ||= ENV['NODE_API_MODULES_STRIP_PATH_SUFFIX'] === "true"
-COPY_FRAMEWORKS_COMMAND ||= "#{CLI_COMMAND} xcframeworks copy --podfile '#{Pod::Config.instance.installation_root}' #{STRIP_PATH_SUFFIX ? '--strip-path-suffix' : ''}"
+COPY_FRAMEWORKS_COMMAND ||= "#{CLI_COMMAND} link --apple '#{Pod::Config.instance.installation_root}' #{STRIP_PATH_SUFFIX ? '--strip-path-suffix' : ''}"
 
 # We need to run this now to ensure the xcframeworks are copied vendored_frameworks are considered
 XCFRAMEWORKS_DIR ||= File.join(__dir__, "xcframeworks")
@@ -32,7 +32,7 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm}", "cpp/**/*.{hpp,cpp,c,h}", "include/*.h"
   s.public_header_files = "include/*.h"
 
-  s.vendored_frameworks = "xcframeworks/*.xcframework"
+  s.vendored_frameworks = "auto-linked/xcframeworks/*.xcframework"
   s.script_phase = {
     :name => 'Copy Node-API xcframeworks',
     :execution_position => :before_compile,
