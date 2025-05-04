@@ -172,7 +172,14 @@ async function run() {
   // Build for all supported platforms
   cp.spawnSync(
     "react-native-node-api-cmake",
-    ["--android", "--apple", "--no-auto-link", "--source", WEAK_NODE_API_PATH],
+    [
+      "--android",
+      "--apple",
+      "--no-auto-link",
+      "--no-weak-node-api-linkage",
+      "--source",
+      WEAK_NODE_API_PATH,
+    ],
     { stdio: "inherit" }
   );
 }

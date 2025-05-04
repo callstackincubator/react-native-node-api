@@ -41,11 +41,13 @@ export const ANDROID_ARCHITECTURES = {
 type AndroidConfigureOptions = {
   triplet: AndroidTriplet;
   ndkVersion: string;
+  weakNodeApiLinkage: boolean;
 };
 
 export function getAndroidConfigureCmakeArgs({
   triplet,
   ndkVersion,
+  weakNodeApiLinkage,
 }: AndroidConfigureOptions) {
   const { ANDROID_HOME } = process.env;
   assert(typeof ANDROID_HOME === "string", "Missing env variable ANDROID_HOME");
@@ -59,13 +61,18 @@ export function getAndroidConfigureCmakeArgs({
     fs.existsSync(ndkPath),
     `Missing Android NDK v${ndkVersion} (at ${ndkPath}) - run: ${installNdkCommand}`
   );
-  // TODO: Link against a fake node library
+
+  // TODO: Link against a weak-node-api library
 
   const toolchainPath = path.join(
     ndkPath,
     "build/cmake/android.toolchain.cmake"
   );
   const architecture = ANDROID_ARCHITECTURES[triplet];
+
+  if (weakNodeApiLinkage) {
+    throw new Error("Weak Node-API linkage is not supported yet");
+  }
 
   const linkerFlags: string[] = [
     // `--no-version-undefined`,
@@ -104,7 +111,7 @@ export function getAndroidConfigureCmakeArgs({
     "-D",
     "ANDROID_STL=c++_shared",
     // Pass linker flags to avoid errors from undefined symbols
-    // TODO: Link against a fake libhermes to avoid this (or whatever other lib which will be providing the symbols)
+    // TODO: Link against a weak-node-api to avoid this (or whatever other lib which will be providing the symbols)
     // "-D",
     // `CMAKE_SHARED_LINKER_FLAGS="-Wl,--allow-shlib-undefined"`,
     "-D",

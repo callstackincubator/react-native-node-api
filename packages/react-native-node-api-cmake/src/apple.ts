@@ -102,20 +102,30 @@ export function createPlistContent(values: Record<string, string>) {
   ].join("\n");
 }
 
-export function getAppleConfigureCmakeArgs(triplet: AppleTriplet) {
+type AppleConfigureOptions = {
+  triplet: AppleTriplet;
+  weakNodeApiLinkage: boolean;
+};
+
+export function getAppleConfigureCmakeArgs({
+  triplet,
+  weakNodeApiLinkage,
+}: AppleConfigureOptions) {
   assert(isAppleTriplet(triplet));
   const sdkPath = getAppleSDKPath(triplet);
 
   // TODO: Make this Node-API version configurable
   // const nodeApiSymbols = getNodeApiSymbols("v10");
 
+  if (weakNodeApiLinkage) {
+    throw new Error("Weak Node-API linkage is not supported yet");
+  }
+
   const linkerFlags = [
     // Link against weak-node-api and remove this
     "-Wl,-undefined,dynamic_lookup",
     // Tread undefined symbols as errors
     // "-Wl,-undefined,error",
-    // Pass all Node-API symbols to the linker
-    // ...nodeApiSymbols.map((symbol) => `-Wl,-U,_${symbol}`),
   ];
 
   return [

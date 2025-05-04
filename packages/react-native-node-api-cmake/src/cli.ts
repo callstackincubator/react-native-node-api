@@ -55,6 +55,9 @@ const tripletOption = new Option(
   "Triplets to build for"
 ).choices(SUPPORTED_TRIPLETS);
 
+const androidOption = new Option("--android", "Enable all Android triplets");
+const appleOption = new Option("--apple", "Enable all Apple triplets");
+
 const buildPathOption = new Option(
   "--build <path>",
   "Specify the build directory to store the configured CMake project"
@@ -80,8 +83,10 @@ const noAutoLinkOption = new Option(
   "Don't mark the output as auto-linkable by react-native-node-api-modules"
 );
 
-const androidOption = new Option("--android", "Enable all Android triplets");
-const appleOption = new Option("--apple", "Enable all Apple triplets");
+const noWeakNodeApiLinkageOption = new Option(
+  "--no-weak-node-api-linkage",
+  "Don't pass the path of the weak-node-api library from react-native-node-api-modules"
+);
 
 export const program = new Command("react-native-node-api-cmake")
   .description("Build React Native Node API modules with CMake")
@@ -95,6 +100,7 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(cleanOption)
   .addOption(ndkVersionOption)
   .addOption(noAutoLinkOption)
+  .addOption(noWeakNodeApiLinkageOption)
   .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
       const buildPath = getBuildPath(globalContext);
@@ -310,12 +316,19 @@ function getTripletBuildPath(buildPath: string, triplet: SupportedTriplet) {
 
 function getTripletConfigureCmakeArgs(
   triplet: SupportedTriplet,
-  { ndkVersion }: Pick<GlobalContext, "ndkVersion">
+  {
+    ndkVersion,
+    weakNodeApiLinkage,
+  }: Pick<GlobalContext, "ndkVersion" | "weakNodeApiLinkage">
 ) {
   if (isAndroidTriplet(triplet)) {
-    return getAndroidConfigureCmakeArgs({ triplet, ndkVersion });
+    return getAndroidConfigureCmakeArgs({
+      triplet,
+      ndkVersion,
+      weakNodeApiLinkage,
+    });
   } else if (isAppleTriplet(triplet)) {
-    return getAppleConfigureCmakeArgs(triplet);
+    return getAppleConfigureCmakeArgs({ triplet, weakNodeApiLinkage });
   } else {
     throw new Error(`Support for '${triplet}' is not implemented yet`);
   }
@@ -332,7 +345,8 @@ function getBuildArgs(triplet: SupportedTriplet) {
 }
 
 async function configureProject(context: TripletScopedContext) {
-  const { triplet, tripletBuildPath, source, ndkVersion } = context;
+  const { triplet, tripletBuildPath, source, ndkVersion, weakNodeApiLinkage } =
+    context;
   const variables = getVariables(context);
   const variablesArgs = Object.entries(variables).flatMap(([key, value]) => [
     "-D",
@@ -347,7 +361,10 @@ async function configureProject(context: TripletScopedContext) {
       "-B",
       tripletBuildPath,
       ...variablesArgs,
-      ...getTripletConfigureCmakeArgs(triplet, { ndkVersion }),
+      ...getTripletConfigureCmakeArgs(triplet, {
+        ndkVersion,
+        weakNodeApiLinkage,
+      }),
     ],
     {
       outputMode: "buffered",
