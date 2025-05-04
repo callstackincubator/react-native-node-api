@@ -11,7 +11,8 @@
   "exports": {
     ".": "./dist/react-native/index.js",
     "./babel-plugin": "./dist/node/babel-plugin/index.js",
-    "./cli": "./dist/node/cli/run.js"
+    "./cli": "./dist/node/cli/run.js",
+    "./weak-node-api": "./weak-node-api"
   },
   "scripts": {
     "build": "tsc --build",

@@ -7,9 +7,15 @@ import { EventEmitter } from "node:events";
 import { Command, Option } from "@commander-js/extra-typings";
 import { spawn, SpawnFailure } from "bufout";
 import { oraPromise } from "ora";
+import chalk from "chalk";
 
-import { SUPPORTED_TRIPLETS, SupportedTriplet } from "./triplets.js";
-import { getNodeApiHeadersPath, getNodeAddonHeadersPath } from "./headers.js";
+import {
+  SUPPORTED_TRIPLETS,
+  SupportedTriplet,
+  AndroidTriplet,
+  isAndroidTriplet,
+  isAppleTriplet,
+} from "./triplets.js";
 import {
   createFramework,
   createXCframework,
@@ -17,17 +23,14 @@ import {
   determineXCFrameworkFilename,
   getAppleBuildArgs,
   getAppleConfigureCmakeArgs,
-  isAppleTriplet,
 } from "./apple.js";
-import chalk from "chalk";
 import {
   DEFAULT_ANDROID_TRIPLETS,
   getAndroidConfigureCmakeArgs,
-  isAndroidTriplet,
   determineAndroidLibsFilename,
   createAndroidLibsDirectory,
-  AndroidTriplet,
 } from "./android.js";
+import { getWeakNodeApiVariables } from "./weak-node-api.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -316,19 +319,15 @@ function getTripletBuildPath(buildPath: string, triplet: SupportedTriplet) {
 
 function getTripletConfigureCmakeArgs(
   triplet: SupportedTriplet,
-  {
-    ndkVersion,
-    weakNodeApiLinkage,
-  }: Pick<GlobalContext, "ndkVersion" | "weakNodeApiLinkage">
+  { ndkVersion }: Pick<GlobalContext, "ndkVersion" | "weakNodeApiLinkage">
 ) {
   if (isAndroidTriplet(triplet)) {
     return getAndroidConfigureCmakeArgs({
       triplet,
       ndkVersion,
-      weakNodeApiLinkage,
     });
   } else if (isAppleTriplet(triplet)) {
-    return getAppleConfigureCmakeArgs({ triplet, weakNodeApiLinkage });
+    return getAppleConfigureCmakeArgs({ triplet });
   } else {
     throw new Error(`Support for '${triplet}' is not implemented yet`);
   }
@@ -347,12 +346,6 @@ function getBuildArgs(triplet: SupportedTriplet) {
 async function configureProject(context: TripletScopedContext) {
   const { triplet, tripletBuildPath, source, ndkVersion, weakNodeApiLinkage } =
     context;
-  const variables = getVariables(context);
-  const variablesArgs = Object.entries(variables).flatMap(([key, value]) => [
-    "-D",
-    `${key}=${value}`,
-  ]);
-
   await spawn(
     "cmake",
     [
@@ -360,7 +353,7 @@ async function configureProject(context: TripletScopedContext) {
       source,
       "-B",
       tripletBuildPath,
-      ...variablesArgs,
+      ...getVariablesArgs(getVariables(context)),
       ...getTripletConfigureCmakeArgs(triplet, {
         ndkVersion,
         weakNodeApiLinkage,
@@ -391,15 +384,15 @@ async function buildProject(context: TripletScopedContext) {
 }
 
 function getVariables(context: TripletScopedContext): Record<string, string> {
-  const includePaths = [getNodeApiHeadersPath(), getNodeAddonHeadersPath()];
-  for (const includePath of includePaths) {
-    assert(
-      !includePath.includes(";"),
-      `Include path with a ';' is not supported: ${includePath}`
-    );
-  }
   return {
-    CMAKE_JS_INC: includePaths.join(";"),
+    ...(context.weakNodeApiLinkage && getWeakNodeApiVariables(context.triplet)),
     CMAKE_LIBRARY_OUTPUT_DIRECTORY: context.tripletOutputPath,
   };
+}
+
+function getVariablesArgs(variables: Record<string, string>) {
+  return Object.entries(variables).flatMap(([key, value]) => [
+    "-D",
+    `${key}=${value}`,
+  ]);
 }

@@ -2,19 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { type SupportedTriplet } from "./triplets.js";
-
-/**
- * https://developer.android.com/ndk/guides/other_build_systems
- */
-export const ANDROID_TRIPLETS = [
-  "aarch64-linux-android",
-  "armv7a-linux-androideabi",
-  "i686-linux-android",
-  "x86_64-linux-android",
-] as const;
-
-export type AndroidTriplet = (typeof ANDROID_TRIPLETS)[number];
+import { AndroidTriplet } from "./triplets.js";
 
 export const DEFAULT_ANDROID_TRIPLETS = [
   "aarch64-linux-android",
@@ -22,12 +10,6 @@ export const DEFAULT_ANDROID_TRIPLETS = [
   "i686-linux-android",
   "x86_64-linux-android",
 ] as const satisfies AndroidTriplet[];
-
-export function isAndroidTriplet(
-  triplet: SupportedTriplet
-): triplet is AndroidTriplet {
-  return ANDROID_TRIPLETS.includes(triplet as AndroidTriplet);
-}
 
 type AndroidArchitecture = "armeabi-v7a" | "arm64-v8a" | "x86" | "x86_64";
 
@@ -41,13 +23,11 @@ export const ANDROID_ARCHITECTURES = {
 type AndroidConfigureOptions = {
   triplet: AndroidTriplet;
   ndkVersion: string;
-  weakNodeApiLinkage: boolean;
 };
 
 export function getAndroidConfigureCmakeArgs({
   triplet,
   ndkVersion,
-  weakNodeApiLinkage,
 }: AndroidConfigureOptions) {
   const { ANDROID_HOME } = process.env;
   assert(typeof ANDROID_HOME === "string", "Missing env variable ANDROID_HOME");
@@ -62,17 +42,11 @@ export function getAndroidConfigureCmakeArgs({
     `Missing Android NDK v${ndkVersion} (at ${ndkPath}) - run: ${installNdkCommand}`
   );
 
-  // TODO: Link against a weak-node-api library
-
   const toolchainPath = path.join(
     ndkPath,
     "build/cmake/android.toolchain.cmake"
   );
   const architecture = ANDROID_ARCHITECTURES[triplet];
-
-  if (weakNodeApiLinkage) {
-    throw new Error("Weak Node-API linkage is not supported yet");
-  }
 
   const linkerFlags: string[] = [
     // `--no-version-undefined`,
@@ -88,8 +62,8 @@ export function getAndroidConfigureCmakeArgs({
     toolchainPath,
     "-D",
     "CMAKE_SYSTEM_NAME=Android",
-    "-D",
-    `CPACK_SYSTEM_NAME=Android-${architecture}`,
+    // "-D",
+    // `CPACK_SYSTEM_NAME=Android-${architecture}`,
     // "-D",
     // `CMAKE_INSTALL_PREFIX=${installPath}`,
     // "-D",

@@ -3,23 +3,9 @@ import cp from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import type { SupportedTriplet } from "./triplets.js";
 import { spawn } from "bufout";
 
-export const APPLE_TRIPLETS = [
-  "arm64;x86_64-apple-darwin",
-  "x86_64-apple-darwin",
-  "arm64-apple-darwin",
-  "arm64-apple-ios",
-  "arm64-apple-ios-sim",
-  "arm64-apple-tvos",
-  "arm64-apple-tvos-sim",
-  // "x86_64-apple-tvos",
-  "arm64-apple-visionos",
-  "arm64-apple-visionos-sim",
-] as const;
-
-export type AppleTriplet = (typeof APPLE_TRIPLETS)[number];
+import { AppleTriplet, isAppleTriplet } from "./triplets.js";
 
 export const DEFAULT_APPLE_TRIPLETS = [
   "arm64;x86_64-apple-darwin",
@@ -54,6 +40,21 @@ const XCODE_SDK_NAMES = {
   "arm64-apple-visionos-sim": "xrsimulator",
 } satisfies Record<AppleTriplet, XcodeSDKName>;
 
+type CMakeSystemName = "Darwin" | "iOS" | "tvOS" | "watchOS" | "visionOS";
+
+const CMAKE_SYSTEM_NAMES = {
+  "x86_64-apple-darwin": "Darwin",
+  "arm64-apple-darwin": "Darwin",
+  "arm64;x86_64-apple-darwin": "Darwin",
+  "arm64-apple-ios": "iOS",
+  "arm64-apple-ios-sim": "iOS",
+  "arm64-apple-tvos": "tvOS",
+  // "x86_64-apple-tvos": "appletvos",
+  "arm64-apple-tvos-sim": "tvOS",
+  "arm64-apple-visionos": "visionOS",
+  "arm64-apple-visionos-sim": "visionOS",
+} satisfies Record<AppleTriplet, CMakeSystemName>;
+
 type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
 
 export const APPLE_ARCHITECTURES = {
@@ -68,12 +69,6 @@ export const APPLE_ARCHITECTURES = {
   "arm64-apple-visionos": "arm64",
   "arm64-apple-visionos-sim": "arm64",
 } satisfies Record<AppleTriplet, AppleArchitecture>;
-
-export function isAppleTriplet(
-  triplet: SupportedTriplet
-): triplet is AppleTriplet {
-  return APPLE_TRIPLETS.includes(triplet as AppleTriplet);
-}
 
 export function getAppleSDKPath(triplet: AppleTriplet) {
   return cp
@@ -104,37 +99,19 @@ export function createPlistContent(values: Record<string, string>) {
 
 type AppleConfigureOptions = {
   triplet: AppleTriplet;
-  weakNodeApiLinkage: boolean;
 };
 
-export function getAppleConfigureCmakeArgs({
-  triplet,
-  weakNodeApiLinkage,
-}: AppleConfigureOptions) {
+export function getAppleConfigureCmakeArgs({ triplet }: AppleConfigureOptions) {
   assert(isAppleTriplet(triplet));
   const sdkPath = getAppleSDKPath(triplet);
-
-  // TODO: Make this Node-API version configurable
-  // const nodeApiSymbols = getNodeApiSymbols("v10");
-
-  if (weakNodeApiLinkage) {
-    throw new Error("Weak Node-API linkage is not supported yet");
-  }
-
-  const linkerFlags = [
-    // Link against weak-node-api and remove this
-    "-Wl,-undefined,dynamic_lookup",
-    // Tread undefined symbols as errors
-    // "-Wl,-undefined,error",
-  ];
+  const systemName = CMAKE_SYSTEM_NAMES[triplet];
 
   return [
     // Use the XCode as generator for Apple platforms
     "-G",
     "Xcode",
-    // Pass linker flags to avoid errors from undefined symbols
     "-D",
-    `CMAKE_SHARED_LINKER_FLAGS=${linkerFlags.join(" ")}`,
+    `CMAKE_SYSTEM_NAME=${systemName}`,
     // Set the SDK path for the target platform
     "-D",
     `CMAKE_OSX_SYSROOT=${sdkPath}`,
