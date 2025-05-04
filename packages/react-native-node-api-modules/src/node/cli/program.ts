@@ -21,8 +21,9 @@ import {
 
 import { command as vendorHermes } from "./hermes";
 import { stripPathSuffixOption } from "./options";
-import { linkModules, pruneLinkedModules } from "./link-modules";
+import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
 import { linkXcframework } from "./apple";
+import { linkAndroidDir } from "./android";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -31,9 +32,9 @@ export const program = new Command("react-native-node-api-modules").addCommand(
   vendorHermes
 );
 
-function getLinker(platform: PlatformName) {
+function getLinker(platform: PlatformName): ModuleLinker {
   if (platform === "android") {
-    throw new Error("Linker not implemented for Android");
+    return linkAndroidDir;
   } else if (platform === "apple") {
     return linkXcframework;
   } else {
@@ -98,7 +99,7 @@ program
         const platformDisplayName = getPlatformDisplayName(platform);
         const platformOutputPath = getAutolinkPath(platform);
         const modules = await oraPromise(
-          async () =>
+          () =>
             linkModules({
               platform,
               fromPath: path.resolve(pathArg),
@@ -113,10 +114,10 @@ program
             successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
               platformOutputPath
             )}`,
-            failText: (err) =>
+            failText: (error) =>
               `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
                 platformOutputPath
-              )}: ${err.message}`,
+              )}: ${error.message}`,
           }
         );
 
@@ -163,7 +164,7 @@ program
         }
 
         if (prune) {
-          await pruneLinkedModules("apple", modules);
+          await pruneLinkedModules(platform, modules);
         }
       }
     }
