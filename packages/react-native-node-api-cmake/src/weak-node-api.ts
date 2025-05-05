@@ -16,7 +16,7 @@ export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
   );
   assert(fs.existsSync(pathname), "Weak Node API path does not exist");
   if (isAppleTriplet(triplet)) {
-    const xcframeworkPath = path.join(pathname, "weak-node-api.xcframework");
+    const xcframeworkPath = path.join(pathname, "libweak-node-api.xcframework");
     assert(
       fs.existsSync(xcframeworkPath),
       `Expected an XCFramework at ${xcframeworkPath}`
@@ -25,9 +25,9 @@ export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
   } else if (isAndroidTriplet(triplet)) {
     const libraryPath = path.join(
       pathname,
-      "weak-node-api.android.node",
+      "libweak-node-api.android.node",
       ANDROID_ARCHITECTURES[triplet],
-      "weak-node-api"
+      "libweak-node-api.so"
     );
     assert(fs.existsSync(libraryPath), `Expected library at ${libraryPath}`);
     return libraryPath;

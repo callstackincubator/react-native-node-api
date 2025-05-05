@@ -135,7 +135,7 @@ export async function createAndroidLibsDirectory({
     const arch = ANDROID_ARCHITECTURES[triplet as AndroidTriplet];
     const archOutputPath = path.join(outputPath, arch);
     await fs.promises.mkdir(archOutputPath, { recursive: true });
-    const libraryName = path.basename(libraryPath, path.extname(libraryPath));
+    const libraryName = path.basename(libraryPath);
     const libraryOutputPath = path.join(archOutputPath, libraryName);
     await fs.promises.copyFile(libraryPath, libraryOutputPath);
   }
