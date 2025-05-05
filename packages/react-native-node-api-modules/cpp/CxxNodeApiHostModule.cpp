@@ -53,7 +53,7 @@ bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
   std::string libraryPath =
       "@rpath/" + libraryName + ".framework/" + libraryName;
 #elif defined(__ANDROID__)
-  std::string libraryPath = libraryName
+  std::string libraryPath = "lib" + libraryName + ".so";
 #else
   abort()
 #endif
