@@ -1,4 +1,5 @@
 import java.nio.file.Paths
+import groovy.json.JsonSlurper
 
 buildscript {
   ext.getExtOrDefault = {name ->
@@ -64,7 +65,7 @@ android {
 
     externalNativeBuild {
       cmake {
-        targets "node-api-host"
+        targets "node-api-host", "weak-node-api"
         cppFlags "-frtti -fexceptions -Wall -fstack-protector-all"
         arguments "-DANDROID_STL=c++_shared"
         abiFilters (*reactNativeArchitectures())
@@ -122,20 +123,6 @@ android {
     doNotStrip "**/libhermes.so"
   }
 
-  // sourceSets {
-  //   main {
-  //     jniLibs.srcDirs = [ 'src/main/jniLibs' ]
-  //   }
-  // }
-
-  // sourceSets {
-  //   main {
-  //     java.srcDirs += [
-  //       "generated/java",
-  //       "generated/jni"
-  //     ]
-  //   }
-  // }
 }
 
 repositories {
@@ -156,4 +143,22 @@ react {
   libraryName = "NodeApiModules"
   codegenJavaPackageName = "com.callstack.node_api_modules"
 }
+
+// Custom task to fetch jniLibs paths via CLI
+task linkNodeApiModules {
+  doLast {
+    exec {
+      // TODO: Support --strip-path-suffix
+      commandLine 'npx', 'react-native-node-api-modules', 'link', '--android', rootProject.rootDir.absolutePath
+      standardOutput = System.out
+      errorOutput = System.err
+      // Enable color output
+      environment "FORCE_COLOR", "1"
+    }
+    
+    android.sourceSets.main.jniLibs.srcDirs += file("../auto-linked/android").listFiles()
+  }
+}
+
+preBuild.dependsOn linkNodeApiModules
 
