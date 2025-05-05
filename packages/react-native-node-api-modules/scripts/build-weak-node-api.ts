@@ -111,9 +111,9 @@ ${returnType} ${name}(${argumentTypes
         }
     }
 
-    return real_func(${argumentTypes
-      .map((t, index) => `arg${index}`)
-      .join(", ")});  // Call the real function
+    ${returnType === "void" ? "" : "return "}real_func(${argumentTypes
+    .map((t, index) => `arg${index}`)
+    .join(", ")});  // Call the real function
     #else
     ${stubbedReturnStatement}
     #endif
@@ -131,7 +131,6 @@ export function generateFakeNodeApiSource(version: NodeApiVersion) {
     "#include <dlfcn.h>", // dlopen(), dlsym()
     "#include <stdio.h>", // fprintf()
     "#include <stdlib.h>", // abort()
-    "#define NODE_API_REEXPORT",
   ];
   const root = getNodeApiHeaderAST(version);
   assert.equal(root.kind, "TranslationUnitDecl");

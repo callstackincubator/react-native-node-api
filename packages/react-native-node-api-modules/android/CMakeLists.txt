@@ -16,11 +16,22 @@ target_include_directories(node-api-host PRIVATE
 find_package(ReactAndroid REQUIRED CONFIG)
 find_package(hermes-engine REQUIRED CONFIG)
 
-
 target_link_libraries(node-api-host
   # android
   ReactAndroid::reactnative
   ReactAndroid::jsi
   hermes-engine::libhermes
   # react_codegen_NodeApiHostSpec
+)
+
+add_subdirectory(../weak-node-api weak-node-api)
+
+target_compile_definitions(weak-node-api
+  PRIVATE
+  # NAPI_VERSION=8
+  NODE_API_REEXPORT=1
+)
+target_link_libraries(weak-node-api
+  node-api-host
+  hermes-engine::libhermes
 )
