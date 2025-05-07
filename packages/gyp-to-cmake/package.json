@@ -4,6 +4,10 @@
   "type": "module",
   "version": "0.1.0",
   "description": "Convert binding.gyp files to CMakeLists.txt",
+  "files": [
+    "bin",
+    "dist"
+  ],
   "bin": {
     "gyp-to-cmake": "./bin/gyp-to-cmake.js"
   },

@@ -6,6 +6,10 @@
   "bin": {
     "react-native-node-api-cmake": "./bin/react-native-node-api-cmake.js"
   },
+  "files": [
+    "bin",
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "tsx src/run.ts",
