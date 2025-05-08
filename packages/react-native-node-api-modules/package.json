@@ -9,7 +9,10 @@
     "react-native-node-api-modules": "./bin/react-native-node-api-modules.mjs"
   },
   "exports": {
-    ".": "./dist/react-native/index.js",
+    ".": {
+      "node": "./dist/node/index.js",
+      "react-native": "./dist/react-native/index.js"
+    },
     "./babel-plugin": "./dist/node/babel-plugin/index.js",
     "./cli": "./dist/node/cli/run.js",
     "./weak-node-api": "./weak-node-api"

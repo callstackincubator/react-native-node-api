@@ -6,7 +6,8 @@ import {
   isAndroidTriplet,
   isAppleTriplet,
   SupportedTriplet,
-} from "./triplets.js";
+} from "react-native-node-api-modules";
+
 import { ANDROID_ARCHITECTURES } from "./android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
 

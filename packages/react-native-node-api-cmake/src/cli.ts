@@ -10,27 +10,28 @@ import { oraPromise } from "ora";
 import chalk from "chalk";
 
 import {
-  SUPPORTED_TRIPLETS,
-  SupportedTriplet,
-  AndroidTriplet,
-  isAndroidTriplet,
-  isAppleTriplet,
-} from "./triplets.js";
-import {
-  createFramework,
-  createXCframework,
   DEFAULT_APPLE_TRIPLETS,
-  determineXCFrameworkFilename,
   getAppleBuildArgs,
   getAppleConfigureCmakeArgs,
 } from "./apple.js";
 import {
   DEFAULT_ANDROID_TRIPLETS,
   getAndroidConfigureCmakeArgs,
-  determineAndroidLibsFilename,
-  createAndroidLibsDirectory,
 } from "./android.js";
 import { getWeakNodeApiVariables } from "./weak-node-api.js";
+
+import {
+  SUPPORTED_TRIPLETS,
+  SupportedTriplet,
+  AndroidTriplet,
+  isAndroidTriplet,
+  isAppleTriplet,
+  determineAndroidLibsFilename,
+  createAndroidLibsDirectory,
+  createAppleFramework,
+  createXCframework,
+  determineXCFrameworkFilename,
+} from "react-native-node-api-modules";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -206,13 +207,12 @@ export const program = new Command("react-native-node-api-cmake")
             }
           });
         });
-        const frameworkPaths = libraryPaths.map(createFramework);
+        const frameworkPaths = libraryPaths.map(createAppleFramework);
         const xcframeworkFilename =
           determineXCFrameworkFilename(frameworkPaths);
 
         // Create the xcframework
         const xcframeworkOutputPath = path.resolve(
-          // Defaults to storing the xcframework next to the CMakeLists.txt file
           globalContext.out || globalContext.source,
           xcframeworkFilename
         );
@@ -263,7 +263,6 @@ export const program = new Command("react-native-node-api-cmake")
           Object.values(libraryPathByTriplet)
         );
         const androidLibsOutputPath = path.resolve(
-          // Defaults to storing the xcframework next to the CMakeLists.txt file
           globalContext.out || globalContext.source,
           androidLibsFilename
         );

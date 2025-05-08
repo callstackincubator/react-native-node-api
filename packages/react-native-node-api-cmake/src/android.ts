@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { AndroidTriplet } from "./triplets.js";
+import { AndroidTriplet } from "react-native-node-api-modules";
 
 export const DEFAULT_ANDROID_TRIPLETS = [
   "aarch64-linux-android",
@@ -93,65 +93,4 @@ export function getAndroidConfigureCmakeArgs({
       .map((flag) => `-Wl,${flag}`)
       .join(" ")}`,
   ];
-}
-
-/**
- * Determine the filename of the Android libs directory based on the framework paths.
- * Ensuring that all framework paths have the same base name.
- */
-export function determineAndroidLibsFilename(frameworkPaths: string[]) {
-  const frameworkNames = frameworkPaths.map((p) =>
-    path.basename(p, path.extname(p))
-  );
-  const candidates = new Set<string>(frameworkNames);
-  assert(
-    candidates.size === 1,
-    "Expected all frameworks to have the same name"
-  );
-  const [name] = candidates;
-  return `${name}.android.node`;
-}
-
-type AndroidLibsDirectoryOptions = {
-  outputPath: string;
-  libraryPathByTriplet: Record<AndroidTriplet, string>;
-  autoLink: boolean;
-};
-
-export async function createAndroidLibsDirectory({
-  outputPath,
-  libraryPathByTriplet,
-  autoLink,
-}: AndroidLibsDirectoryOptions) {
-  // Delete and recreate any existing output directory
-  await fs.promises.rm(outputPath, { recursive: true, force: true });
-  await fs.promises.mkdir(outputPath, { recursive: true });
-  for (const [triplet] of Object.entries(libraryPathByTriplet)) {
-    const libraryPath = libraryPathByTriplet[triplet as AndroidTriplet];
-    assert(
-      fs.existsSync(libraryPath),
-      `Library not found: ${libraryPath} for triplet ${triplet}`
-    );
-    const arch = ANDROID_ARCHITECTURES[triplet as AndroidTriplet];
-    const archOutputPath = path.join(outputPath, arch);
-    await fs.promises.mkdir(archOutputPath, { recursive: true });
-    // Strip the ".node" extension from the library name
-    const libraryName = path.basename(libraryPath, ".node");
-    const soSuffixedName =
-      path.extname(libraryName) === ".so" ? libraryName : `${libraryName}.so`;
-    const finalLibraryName = libraryName.startsWith("lib")
-      ? soSuffixedName
-      : `lib${soSuffixedName}`;
-    const libraryOutputPath = path.join(archOutputPath, finalLibraryName);
-    await fs.promises.copyFile(libraryPath, libraryOutputPath);
-    // TODO: Update the install path in the library file
-  }
-  if (autoLink) {
-    // Write a file to mark the Android libs directory is a Node-API module
-    await fs.promises.writeFile(
-      path.join(outputPath, "react-native-node-api-module"),
-      "",
-      "utf8"
-    );
-  }
 }
