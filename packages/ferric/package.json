@@ -1,0 +1,20 @@
+{
+  "name": "ferric-modules",
+  "version": "0.1.0",
+  "description": "Rust Node-API Modules for React Native",
+  "type": "module",
+  "bin": {
+    "ferric": "./bin/ferric.js"
+  },
+  "scripts": {
+    "start": "tsx src/run.ts"
+  },
+  "dependencies": {
+    "@napi-rs/cli": "3.0.0-alpha.78",
+    "@commander-js/extra-typings": "^13.1.0",
+    "bufout": "^0.3.1",
+    "chalk": "^5.4.1",
+    "commander": "^13.1.0",
+    "ora": "^8.2.0"
+  }
+}

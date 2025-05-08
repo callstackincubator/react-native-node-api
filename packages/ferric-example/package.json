@@ -1,0 +1,12 @@
+{
+  "name": "ferric-example",
+  "version": "0.0.0",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "ferric build --android --apple"
+  },
+  "devDependencies": {
+    "ferric-modules": "^0.1.0"
+  }
+}
