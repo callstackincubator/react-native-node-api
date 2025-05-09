@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import cp from "node:child_process";
 
 import { spawn } from "bufout";
 
@@ -75,12 +76,11 @@ export function createAppleFramework(libraryPath: string) {
   // TODO: Consider copying the library instead of renaming it
   fs.renameSync(libraryPath, newLibraryPath);
   // Update the name of the library
-  // Leaving this out for now, since it will be renamed when copied anyway
-  // cp.spawnSync("install_name_tool", [
-  //   "-id",
-  //   `@rpath/${libraryName}.framework/${libraryName}`,
-  //   newLibraryPath,
-  // ]);
+  cp.spawnSync("install_name_tool", [
+    "-id",
+    `@rpath/${libraryName}.framework/${libraryName}`,
+    newLibraryPath,
+  ]);
   return frameworkPath;
 }
 
