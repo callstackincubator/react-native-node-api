@@ -100,13 +100,13 @@ export function generateNodeApiFunctionStubBody({
     if (!real_func) {
         void* handle = dlopen("${libraryPath}", RTLD_LAZY | RTLD_GLOBAL);
         if (!handle) {
-            fprintf(stderr, "Failed to load ${libraryPath}: %s\\n", dlerror());
+            fprintf(stderr, "Failed to load ${libraryPath} while deferring ${name}: %s\\n", dlerror());
             ${fallbackReturnStatement}
         }
 
         real_func = (${name}_t)dlsym(handle, "${name}");
         if (!real_func) {
-            fprintf(stderr, "Failed to find symbol: %s\\n", dlerror());
+            fprintf(stderr, "Failed to find symbol while deferring ${name}: %s\\n", dlerror());
             ${fallbackReturnStatement}
         }
     }
@@ -122,9 +122,11 @@ typedef ${returnType} (*${name}_t)(${argumentTypes.join(", ")});
 ${returnType} ${name}(${argumentTypes
     .map((type, index) => `${type} arg${index}`)
     .join(", ")})  {
+    fprintf(stdout, "Calling ${name} [weak-node-api]\\n");
     #ifdef NODE_API_REEXPORT
     ${generateNodeApiFunctionStubBody(decl)}
     #else
+    fprintf(stderr, "Returning generic error for ${name}\\n");
     ${fallbackReturnStatement}
     #endif
 }`;
