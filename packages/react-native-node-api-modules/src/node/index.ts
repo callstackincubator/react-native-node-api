@@ -20,3 +20,5 @@ export {
   createUniversalAppleLibrary,
   determineXCFrameworkFilename,
 } from "./prebuilds/apple.js";
+
+export { determineLibraryFilename, prettyPath } from "./path-utils.js";

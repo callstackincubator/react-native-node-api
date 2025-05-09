@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { AndroidTriplet } from "./triplets.js";
+import { determineLibraryFilename } from "../path-utils.js";
 
 export const DEFAULT_ANDROID_TRIPLETS = [
   "aarch64-linux-android",
@@ -24,17 +25,9 @@ export const ANDROID_ARCHITECTURES = {
  * Determine the filename of the Android libs directory based on the framework paths.
  * Ensuring that all framework paths have the same base name.
  */
-export function determineAndroidLibsFilename(frameworkPaths: string[]) {
-  const frameworkNames = frameworkPaths.map((p) =>
-    path.basename(p, path.extname(p))
-  );
-  const candidates = new Set<string>(frameworkNames);
-  assert(
-    candidates.size === 1,
-    "Expected all frameworks to have the same name"
-  );
-  const [name] = candidates;
-  return `${name}.android.node`;
+export function determineAndroidLibsFilename(libraryPaths: string[]) {
+  const libraryName = determineLibraryFilename(libraryPaths);
+  return `${libraryName}.android.node`;
 }
 
 type AndroidLibsDirectoryOptions = {

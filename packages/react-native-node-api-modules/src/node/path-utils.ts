@@ -307,6 +307,20 @@ export function findNodeApiModulePathsByDependency({
   );
 }
 
+/**
+ * Determine the library filename based on the library paths.
+ * Ensuring that all framework paths have the same base name.
+ */
+export function determineLibraryFilename(libraryPaths: string[]) {
+  const libraryNames = libraryPaths.map((p) =>
+    path.basename(p, path.extname(p))
+  );
+  const candidates = new Set<string>(libraryNames);
+  assert(candidates.size === 1, "Expected all libraries to have the same name");
+  const [name] = candidates;
+  return name;
+}
+
 export function getAutolinkPath(platform: PlatformName) {
   const result = path.resolve(__dirname, "../../auto-linked", platform);
   fs.mkdirSync(result, { recursive: true });

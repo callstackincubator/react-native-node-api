@@ -1,4 +1,5 @@
 import path from "node:path";
+import fs from "node:fs";
 
 import { Command, Option } from "@commander-js/extra-typings";
 import chalk from "chalk";
@@ -13,6 +14,8 @@ import {
   determineXCFrameworkFilename,
   createXCframework,
   createUniversalAppleLibrary,
+  determineLibraryFilename,
+  prettyPath,
 } from "react-native-node-api-modules";
 
 import { UsageError } from "./errors.js";
@@ -26,6 +29,22 @@ import {
   ensureInstalledTargets,
   filterTargetsByPlatform,
 } from "./targets.js";
+import { generateTypeScriptDeclarations } from "./napi-rs.js";
+
+type EntrypointOptions = {
+  outputPath: string;
+  libraryName: string;
+};
+async function generateEntrypoint({
+  outputPath,
+  libraryName,
+}: EntrypointOptions) {
+  await fs.promises.writeFile(
+    outputPath,
+    "module.exports = require('./" + libraryName + ".node');",
+    "utf8"
+  );
+}
 
 const ANDROID_TRIPLET_PER_TARGET: Record<AndroidTargetName, AndroidTriplet> = {
   "aarch64-linux-android": "aarch64-linux-android",
@@ -94,9 +113,9 @@ export const buildCommand = new Command("build")
         const androidTargets = filterTargetsByPlatform(targets, "android");
 
         const targetsDescription =
-          targets.size === 1
-            ? `${targets.size} target`
-            : `${targets.size} targets`;
+          targets.size +
+          (targets.size === 1 ? " target" : " targets") +
+          chalk.dim(" (" + [...targets].join(", ") + ")");
         const [appleLibraries, androidLibraries] = await oraPromise(
           Promise.all([
             Promise.all(
@@ -127,8 +146,44 @@ export const buildCommand = new Command("build")
           }
         );
 
-        // TODO: Call napi.rs to generate the .d.ts
-        // TODO: Generate an entrypoint
+        const libraryName = determineLibraryFilename([
+          ...androidLibraries.map(([, outputPath]) => outputPath),
+        ]);
+
+        const declarationsFilename = `${libraryName}.d.ts`;
+        const declarationsPath = path.join(outputPath, declarationsFilename);
+        await oraPromise(
+          generateTypeScriptDeclarations({
+            outputFilename: declarationsFilename,
+            createPath: process.cwd(),
+            outputPath,
+          }),
+          {
+            text: "Generating TypeScript declarations",
+            successText: `Generated TypeScript declarations ${prettyPath(
+              declarationsPath
+            )}`,
+            failText: (error) =>
+              `Failed to generate TypeScript declarations: ${error.message}`,
+          }
+        );
+
+        const entrypointPath = path.join(outputPath, `${libraryName}.js`);
+
+        await oraPromise(
+          generateEntrypoint({
+            libraryName,
+            outputPath: entrypointPath,
+          }),
+          {
+            text: `Generating entrypoint`,
+            successText: `Generated entrypoint into ${prettyPath(
+              entrypointPath
+            )}`,
+            failText: (error) =>
+              `Failed to generate entrypoint: ${error.message}`,
+          }
+        );
 
         if (androidLibraries.length > 0) {
           const libraryPathByTriplet = Object.fromEntries(
@@ -154,8 +209,8 @@ export const buildCommand = new Command("build")
             }),
             {
               text: "Assembling Android libs directory",
-              successText: `Android libs directory assembled into ${chalk.dim(
-                path.relative(process.cwd(), androidLibsOutputPath)
+              successText: `Android libs directory assembled into ${prettyPath(
+                androidLibsOutputPath
               )}`,
               failText: ({ message }) =>
                 `Failed to assemble Android libs directory: ${message}`,
