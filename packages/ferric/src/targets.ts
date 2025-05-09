@@ -51,6 +51,10 @@ export type AppleTargetName = (typeof APPLE_TARGETS)[number];
 export const ALL_TARGETS = [...ANDROID_TARGETS, ...APPLE_TARGETS] as const;
 export type TargetName = (typeof ALL_TARGETS)[number];
 
+/**
+ * Ensure the targets are installed into the Rust toolchain
+ * We do this up-front because the error message and fix is very unclear from the failure when missing.
+ */
 export function ensureInstalledTargets(expectedTargets: Set<TargetName>) {
   const installedTargets = getInstalledTargets();
   const missingTargets = new Set([

@@ -26,7 +26,6 @@ import {
   ensureInstalledTargets,
   filterTargetsByPlatform,
 } from "./targets.js";
-import { error } from "node:console";
 
 const ANDROID_TRIPLET_PER_TARGET: Record<AndroidTargetName, AndroidTriplet> = {
   "aarch64-linux-android": "aarch64-linux-android",
@@ -90,7 +89,7 @@ export const buildCommand = new Command("build")
         }
         ensureCargo();
         ensureInstalledTargets(targets);
-        // TODO: Ensure the iOS and Android targets are installed
+
         const appleTargets = filterTargetsByPlatform(targets, "apple");
         const androidTargets = filterTargetsByPlatform(targets, "android");
 
@@ -192,8 +191,6 @@ export const buildCommand = new Command("build")
             }
           );
         }
-
-        // TODO: Handle Apple and constructing an XCFramework
       } catch (error) {
         if (error instanceof SpawnFailure) {
           error.flushOutput("both");
