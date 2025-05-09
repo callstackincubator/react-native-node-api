@@ -22,21 +22,38 @@ export type NamingStrategy = {
   stripPathSuffix: boolean;
 };
 
+// Cache mapping package directory to package name across calls
+const packageNameCache = new Map<string, string>();
+
 /**
  * @param modulePath The path to the module to check (must be extensionless or end in .node)
  * @returns True if a platform specific prebuild exists for the module path.
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
-  // Determine if we're trying to load a Node-API module
-  // Strip optional .node extension
-  const candidateBasePath = path.resolve(
-    path.dirname(modulePath),
-    path.basename(modulePath, ".node")
-  );
-  return Object.values(PLATFORM_EXTENSIONS)
-    .map((extension) => candidateBasePath + extension)
-    .some(fs.existsSync);
+  // Batch-scan directory, warn on unreadable modules, and detect accessible ones
+  const dir = path.dirname(modulePath);
+  const baseName = path.basename(modulePath, ".node");
+  let entries: string[];
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    // Cannot read directory: treat as no module
+    return false;
+  }
+  const exts = Object.values(PLATFORM_EXTENSIONS);
+  let hasReadable = false;
+  for (const ext of exts) {
+    const fileName = baseName + ext;
+    if (!entries.includes(fileName)) continue;
+    try {
+      fs.accessSync(path.join(dir, fileName), fs.constants.R_OK);
+      hasReadable = true;
+    } catch {
+      console.warn("skipping unreadable module " + fileName);
+    }
+  }
+  return hasReadable;
 }
 
 /**
@@ -78,34 +95,39 @@ export function determineModuleContext(
   modulePath: string,
   originalPath = modulePath
 ): ModuleContext {
-  const candidatePackageJsonPath = path.join(modulePath, "package.json");
-  const parentDirectoryPath = path.dirname(modulePath);
-  if (fs.existsSync(candidatePackageJsonPath)) {
-    const packageJsonContent = fs.readFileSync(
-      candidatePackageJsonPath,
-      "utf8"
-    );
-    const packageJson = JSON.parse(packageJsonContent) as unknown;
-    assert(
-      typeof packageJson === "object" && packageJson !== null,
-      "Expected package.json to be an object"
-    );
-    assert(
-      "name" in packageJson && typeof packageJson.name === "string",
-      "Expected package.json to have a name"
-    );
-    return {
-      packageName: packageJson.name,
-      relativePath: normalizeModulePath(
-        path.relative(modulePath, originalPath)
-      ),
-    };
-  } else if (parentDirectoryPath === modulePath) {
-    // We've reached the root of the filesystem
-    throw new Error("Could not find containing package");
-  } else {
-    return determineModuleContext(parentDirectoryPath, originalPath);
+  // (uses module-level packageNameCache)
+  // Start from given path (file or directory)
+  const startPath = modulePath;
+
+  // Recursive helper to locate package.json upward
+  function recurse(currentPath: string): ModuleContext {
+    const pkgJsonPath = path.join(currentPath, "package.json");
+    const parentDir = path.dirname(currentPath);
+    if (fs.existsSync(pkgJsonPath)) {
+      // Resolve real path of package directory for caching
+      let pkgDir = currentPath;
+      try { pkgDir = fs.realpathSync(currentPath); } catch {}
+      let pkgName: string;
+      if (packageNameCache.has(pkgDir)) {
+        pkgName = packageNameCache.get(pkgDir)!;
+      } else {
+        const content = fs.readFileSync(pkgJsonPath, "utf8");
+        const json = JSON.parse(content) as { name: string };
+        assert(typeof json.name === "string", "Expected package.json to have a name");
+        pkgName = json.name;
+        packageNameCache.set(pkgDir, pkgName);
+      }
+      const relPath = normalizeModulePath(
+        path.relative(currentPath, originalPath)
+      );
+      return { packageName: pkgName, relativePath: relPath };
+    }
+    if (parentDir === currentPath) {
+      throw new Error("Could not find containing package");
+    }
+    return recurse(parentDir);
   }
+  return recurse(startPath);
 }
 
 export function normalizeModulePath(modulePath: string) {

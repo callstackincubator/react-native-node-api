@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import path from "node:path";
+import fs from "node:fs";
 
 import {
   determineModuleContext,
@@ -23,6 +25,78 @@ describe("isNodeApiModule", () => {
     assert(isNodeApiModule(path.join(tempDirectoryPath, "addon")));
     assert(isNodeApiModule(path.join(tempDirectoryPath, "addon.node")));
   });
+
+  it("returns false when directory cannot be read due to permissions", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "addon.android.node": "",
+    });
+    // remove read permissions on directory
+    fs.chmodSync(tempDirectoryPath, 0);
+    try {
+      assert.equal(
+        isNodeApiModule(path.join(tempDirectoryPath, "addon")),
+        false
+      );
+    } finally {
+      fs.chmodSync(tempDirectoryPath, 0o700);
+    }
+  });
+
+  it("returns false when module file exists but is not readable", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "addon.android.node": "",
+    });
+    const candidate = path.join(tempDirectoryPath, "addon.android.node");
+    // remove read permission on file
+    fs.chmodSync(candidate, 0);
+    try {
+      assert.equal(
+        isNodeApiModule(path.join(tempDirectoryPath, "addon")),
+        false
+      );
+    } finally {
+      fs.chmodSync(candidate, 0o600);
+    }
+  });
+
+  it("returns false when parent directory does not exist", () => {
+    // Path to a non-existent directory
+    const fakePath = path.join(process.cwd(), "no-such-dir", "addon");
+    assert.equal(isNodeApiModule(fakePath), false);
+  });
+
+  it("recognize .xcframeworks", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "addon.xcframework/addon.node": "// This is supposed to be a binary file",
+    });
+    assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "addon")), true);
+    assert.equal(
+      isNodeApiModule(path.join(tempDirectoryPath, "addon.node")),
+      true
+    );
+    assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "nope")), false);
+  });
+
+  it("returns true and warns when one module unreadable but another readable", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "addon.android.node": "",
+      "addon.xcframework": "",
+    });
+    const unreadable = path.join(tempDirectoryPath, "addon.android.node");
+    // only android module is unreadable
+    fs.chmodSync(unreadable, 0);
+    const warnings: string[] = [];
+    const origWarn = console.warn;
+    console.warn = (msg: string) => warnings.push(msg);
+    try {
+      const result = isNodeApiModule(path.join(tempDirectoryPath, "addon"));
+      assert.equal(result, true);
+      assert.deepEqual(warnings, ["skipping unreadable module addon.android.node"]);
+    } finally {
+      console.warn = origWarn;
+      fs.chmodSync(unreadable, 0o600);
+    }
+  });
 });
 
 describe("stripExtension", () => {
@@ -43,20 +117,6 @@ describe("replaceExtensionWithNode", () => {
       replaceWithNodeExtension("./addon.xcframework"),
       "./addon.node"
     );
-  });
-});
-
-describe("isNodeApiModule", () => {
-  it("recognize .xcframeworks", (context) => {
-    const tempDirectoryPath = setupTempDirectory(context, {
-      "addon.xcframework/addon.node": "// This is supposed to be a binary file",
-    });
-    assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "addon")), true);
-    assert.equal(
-      isNodeApiModule(path.join(tempDirectoryPath, "addon.node")),
-      true
-    );
-    assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "nope")), false);
   });
 });
 
@@ -241,5 +301,37 @@ describe("findNodeApiModulePaths", () => {
     assert.deepEqual(result, [
       path.join(tempDir, "node_modules/root.xcframework"),
     ]);
+  });
+});
+
+describe("determineModuleContext", () => {
+  it("should read package.json only once across multiple module paths for the same package", (context) => {
+    const tempDir = setupTempDirectory(context, {
+      "package.json": `{ "name": "cached-pkg" }`,
+      "subdir1/file1.node": "",     
+      "subdir2/file2.node": "",
+      "subdir1/file1.xcframework": ""
+    });
+    let readCount = 0;
+    // inject mock fs.readFileSync to count number of package.json file reads
+    const fsa: any = fs;
+    const origSync = fsa.readFileSync;
+    fsa.readFileSync = (pathArg: string, encoding?: string): any => {
+      if (typeof pathArg === 'string' && pathArg.endsWith("package.json")) {
+        readCount++;
+      }
+      return origSync(pathArg, encoding);
+    };
+
+    try {
+      const ctx1 = determineModuleContext(path.join(tempDir, "subdir1/file1.node"));
+      const ctx2 = determineModuleContext(path.join(tempDir, "subdir2/file2.node"));
+      assert.equal(ctx1.packageName, "cached-pkg");
+      assert.equal(ctx2.packageName, "cached-pkg");
+      assert.equal(readCount, 1);
+    } finally {
+      // restore original method
+      (fs as any).readFileSync = origSync;
+    }
   });
 });
