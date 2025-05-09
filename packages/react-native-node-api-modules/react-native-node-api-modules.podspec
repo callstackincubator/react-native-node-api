@@ -32,7 +32,7 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm}", "cpp/**/*.{hpp,cpp,c,h}", "include/*.h"
   s.public_header_files = "include/*.h"
 
-  s.vendored_frameworks = "auto-linked/xcframeworks/*.xcframework"
+  s.vendored_frameworks = "auto-linked/apple/*.xcframework", "weak-node-api/libweak-node-api.xcframework"
   s.script_phase = {
     :name => 'Copy Node-API xcframeworks',
     :execution_position => :before_compile,

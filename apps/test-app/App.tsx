@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Button } from "react-native";
 
 // import { requireNodeAddon } from "react-native-node-api-modules";
 import nodeAddonExamples from "react-native-node-addon-examples";
+// import * as ferricExample from "ferric-example";
 
 function App(): React.JSX.Element {
   return (
@@ -20,6 +21,15 @@ function App(): React.JSX.Element {
           ))}
         </View>
       ))}
+      <View key="ferric-example" style={styles.suite}>
+        <Text>ferric-example</Text>
+        <Button
+          title={"Ferric Example: sum(1, 3)"}
+          onPress={() =>
+            console.log("1+3 = " + require("ferric-example").sum(1, 3))
+          }
+        />
+      </View>
     </View>
   );
 }
