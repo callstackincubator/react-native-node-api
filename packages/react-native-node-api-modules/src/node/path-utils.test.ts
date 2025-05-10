@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it, mock as themock } from "node:test";
+import { describe, it } from "node:test";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -301,7 +301,7 @@ describe("determineModuleContext", () => {
     });
     let readCount = 0;
     const orig = fs.readFileSync;
-    themock.method(fs, "readFileSync", (...args: Parameters<typeof fs.readFileSync>) => {
+    context.mock.method(fs, "readFileSync", (...args: Parameters<typeof fs.readFileSync>) => {
       const [pathArg] = args;
       if (typeof pathArg === "string" && pathArg.endsWith("package.json")) {
         readCount++;
