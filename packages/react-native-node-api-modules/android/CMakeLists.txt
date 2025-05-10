@@ -6,11 +6,13 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(ReactAndroid REQUIRED CONFIG)
 find_package(hermes-engine REQUIRED CONFIG)
 
-add_subdirectory(../weak-node-api weak-node-api)
-
-target_compile_definitions(weak-node-api
-  PRIVATE
-  NAPI_VERSION=8
+add_library(weak-node-api SHARED IMPORTED)
+set_target_properties(weak-node-api PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/../weak-node-api/libweak-node-api.android.node/${ANDROID_ABI}/libweak-node-api.so"
+)
+target_include_directories(weak-node-api INTERFACE
+  ../weak-node-api
+  ../weak-node-api/include
 )
 
 add_library(node-api-host SHARED
@@ -21,8 +23,6 @@ add_library(node-api-host SHARED
 
 target_include_directories(node-api-host PRIVATE
   ../cpp
-  ../weak-node-api
-  ../weak-node-api/include
 )
 
 target_link_libraries(node-api-host
