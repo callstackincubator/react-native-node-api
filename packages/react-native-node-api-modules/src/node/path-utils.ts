@@ -107,10 +107,8 @@ export function determineModuleContext(
       // Resolve real path of package directory for caching
       let pkgDir = currentPath;
       try { pkgDir = fs.realpathSync(currentPath); } catch {}
-      let pkgName: string;
-      if (packageNameCache.has(pkgDir)) {
-        pkgName = packageNameCache.get(pkgDir)!;
-      } else {
+      let pkgName = packageNameCache.get(pkgDir);
+      if (!pkgName) {
         const content = fs.readFileSync(pkgJsonPath, "utf8");
         const json = JSON.parse(content) as { name: string };
         assert(typeof json.name === "string", "Expected package.json to have a name");
