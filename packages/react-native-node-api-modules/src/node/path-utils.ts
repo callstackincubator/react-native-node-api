@@ -26,12 +26,12 @@ export type NamingStrategy = {
 const packageNameCache = new Map<string, string>();
 
 /**
- * @param modulePath The path to the module to check (must be extensionless or end in .node)
- * @returns True if a platform specific prebuild exists for the module path.
+ * @param modulePath  Batch-scans the path to the module to check (must be extensionless or end in .node)
+ * @returns True if a platform specific prebuild exists for the module path, warns on unreadable modules.
+ * @throws If the parent directory cannot be read, or if a detected module is unreadable.
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
-  // Batch-scan directory, warn on unreadable modules, and detect accessible ones
   const dir = path.dirname(modulePath);
   const baseName = path.basename(modulePath, ".node");
   let entries: string[];
@@ -50,7 +50,7 @@ export function isNodeApiModule(modulePath: string): boolean {
       fs.accessSync(path.join(dir, fileName), fs.constants.R_OK);
       hasReadable = true;
     } catch {
-      console.warn("skipping unreadable module " + fileName);
+      throw new Error("skipping unreadable module " + fileName);
     }
   }
   return hasReadable;

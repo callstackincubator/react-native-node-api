@@ -41,7 +41,7 @@ describe("isNodeApiModule", () => {
     }
   });
 
-  it("returns false when module file exists but is not readable", (context) => {
+  it("throws when module file exists but is not readable", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "addon.android.node": "",
     });
@@ -49,10 +49,7 @@ describe("isNodeApiModule", () => {
     // remove read permission on file
     fs.chmodSync(candidate, 0);
     try {
-      assert.equal(
-        isNodeApiModule(path.join(tempDirectoryPath, "addon")),
-        false
-      );
+      assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /skipping unreadable module addon\.android\.node/);
     } finally {
       fs.chmodSync(candidate, 0o600);
     }
@@ -76,7 +73,7 @@ describe("isNodeApiModule", () => {
     assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "nope")), false);
   });
 
-  it("returns true and warns when one module unreadable but another readable", (context) => {
+  it("throws when one module unreadable but another readable", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "addon.android.node": "",
       "addon.xcframework": "",
@@ -84,11 +81,7 @@ describe("isNodeApiModule", () => {
     const unreadable = path.join(tempDirectoryPath, "addon.android.node");
     // only android module is unreadable
     fs.chmodSync(unreadable, 0);
-    const warnings: string[] = [];
-    themock.method(console, 'warn', (msg: string) => warnings.push(msg));
-    const result = isNodeApiModule(path.join(tempDirectoryPath, "addon"));
-    assert.equal(result, true);
-    assert.deepEqual(warnings, ["skipping unreadable module addon.android.node"]);
+    assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /skipping unreadable module addon\.android\.node/);
     fs.chmodSync(unreadable, 0o600);
   });
 });
