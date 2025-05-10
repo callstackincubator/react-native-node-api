@@ -245,17 +245,16 @@ export const program = new Command("react-native-node-api-cmake")
               `Expected a directory at ${tripletOutputPath}`
             );
             // Expect binary file(s), either .node or .so
-            const result = readdirSync(tripletOutputPath).map((file) => {
-              const filePath = path.join(tripletOutputPath, file);
-              if (file.endsWith(".so") || file.endsWith(".node")) {
-                return filePath;
-              } else {
-                throw new Error(
-                  `Expected a .node or .so file, but found ${file}`
-                );
-              }
-            });
-            assert.equal(result.length, 1, "Expected exactly library file");
+            const result = readdirSync(tripletOutputPath, {
+              withFileTypes: true,
+            })
+              .filter(
+                (dirent) =>
+                  dirent.isFile() &&
+                  (dirent.name.endsWith(".so") || dirent.name.endsWith(".node"))
+              )
+              .map((dirent) => path.join(dirent.parentPath, dirent.name));
+            assert.equal(result.length, 1, "Expected exactly one library file");
             return [triplet, result[0]] as const;
           })
         ) as Record<AndroidTriplet, string>;
