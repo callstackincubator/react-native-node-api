@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 version = "2"
 default-features = false
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
-features = ["napi8"]
+features = ["napi3"]
 
 [dependencies.napi-derive]
 version = "2"
