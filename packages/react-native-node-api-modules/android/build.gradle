@@ -48,6 +48,7 @@ android {
     sourceSets {
       main {
         manifest.srcFile "src/main/AndroidManifestNew.xml"
+        // jniLibs.srcDirs "../weak-node-api/libweak-node-api.android.node"
       }
     }
   }
