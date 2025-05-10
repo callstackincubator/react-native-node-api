@@ -50,7 +50,7 @@ export function isNodeApiModule(modulePath: string): boolean {
       fs.accessSync(path.join(dir, fileName), fs.constants.R_OK);
       hasReadable = true;
     } catch {
-      throw new Error("skipping unreadable module " + fileName);
+      throw new Error("Found an unreadable module at " + fileName);
     }
   }
   return hasReadable;
