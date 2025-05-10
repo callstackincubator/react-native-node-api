@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, mock as themock } from "node:test";
 import path from "node:path";
 import fs from "node:fs";
 
@@ -86,16 +85,11 @@ describe("isNodeApiModule", () => {
     // only android module is unreadable
     fs.chmodSync(unreadable, 0);
     const warnings: string[] = [];
-    const origWarn = console.warn;
-    console.warn = (msg: string) => warnings.push(msg);
-    try {
-      const result = isNodeApiModule(path.join(tempDirectoryPath, "addon"));
-      assert.equal(result, true);
-      assert.deepEqual(warnings, ["skipping unreadable module addon.android.node"]);
-    } finally {
-      console.warn = origWarn;
-      fs.chmodSync(unreadable, 0o600);
-    }
+    themock.method(console, 'warn', (msg: string) => warnings.push(msg));
+    const result = isNodeApiModule(path.join(tempDirectoryPath, "addon"));
+    assert.equal(result, true);
+    assert.deepEqual(warnings, ["skipping unreadable module addon.android.node"]);
+    fs.chmodSync(unreadable, 0o600);
   });
 });
 
@@ -313,25 +307,19 @@ describe("determineModuleContext", () => {
       "subdir1/file1.xcframework": ""
     });
     let readCount = 0;
-    // inject mock fs.readFileSync to count number of package.json file reads
-    const fsa: any = fs;
-    const origSync = fsa.readFileSync;
-    fsa.readFileSync = (pathArg: string, encoding?: string): any => {
-      if (typeof pathArg === 'string' && pathArg.endsWith("package.json")) {
+    const orig = fs.readFileSync;
+    themock.method(fs, "readFileSync", (...args: Parameters<typeof fs.readFileSync>) => {
+      const [pathArg] = args;
+      if (typeof pathArg === "string" && pathArg.endsWith("package.json")) {
         readCount++;
       }
-      return origSync(pathArg, encoding);
-    };
+      return orig(...args);
+    });
 
-    try {
-      const ctx1 = determineModuleContext(path.join(tempDir, "subdir1/file1.node"));
-      const ctx2 = determineModuleContext(path.join(tempDir, "subdir2/file2.node"));
-      assert.equal(ctx1.packageName, "cached-pkg");
-      assert.equal(ctx2.packageName, "cached-pkg");
-      assert.equal(readCount, 1);
-    } finally {
-      // restore original method
-      (fs as any).readFileSync = origSync;
-    }
+    const ctx1 = determineModuleContext(path.join(tempDir, "subdir1/file1.node"));
+    const ctx2 = determineModuleContext(path.join(tempDir, "subdir2/file2.node"));
+    assert.equal(ctx1.packageName, "cached-pkg");
+    assert.equal(ctx2.packageName, "cached-pkg");
+    assert.equal(readCount, 1);
   });
 });

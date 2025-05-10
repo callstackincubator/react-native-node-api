@@ -106,7 +106,7 @@ export function determineModuleContext(
     if (fs.existsSync(pkgJsonPath)) {
       // Resolve real path of package directory for caching
       let pkgDir = currentPath;
-      try { pkgDir = fs.realpathSync(currentPath); } catch {}
+      try { pkgDir = fs.realpathSync(currentPath); } catch { /* ignore realpath errors */ }
       let pkgName: string;
       if (packageNameCache.has(pkgDir)) {
         pkgName = packageNameCache.get(pkgDir)!;
