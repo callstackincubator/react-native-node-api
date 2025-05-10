@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import fs, { readdirSync } from "node:fs";
+import fs from "node:fs";
 import { findDuplicates } from "./duplicates";
 import chalk from "chalk";
 import { packageDirectorySync } from "pkg-dir";
@@ -95,38 +95,26 @@ export function determineModuleContext(
   modulePath: string,
   originalPath = modulePath
 ): ModuleContext {
-  // (uses module-level packageNameCache)
-  // Start from given path (file or directory)
-  const startPath = modulePath;
-
-  // Recursive helper to locate package.json upward
-  function recurse(currentPath: string): ModuleContext {
-    const pkgJsonPath = path.join(currentPath, "package.json");
-    const parentDir = path.dirname(currentPath);
-    if (fs.existsSync(pkgJsonPath)) {
-      // Resolve real path of package directory for caching
-      const pkgDir = fs.realpathSync(currentPath);
-      let pkgName: string;
-      if (packageNameCache.has(pkgDir)) {
-        pkgName = packageNameCache.get(pkgDir)!;
-      } else {
-        const content = fs.readFileSync(pkgJsonPath, "utf8");
-        const json = JSON.parse(content) as { name: string };
-        assert(typeof json.name === "string", "Expected package.json to have a name");
-        pkgName = json.name;
-        packageNameCache.set(pkgDir, pkgName);
-      }
-      const relPath = normalizeModulePath(
-        path.relative(currentPath, originalPath)
-      );
-      return { packageName: pkgName, relativePath: relPath };
-    }
-    if (parentDir === currentPath) {
-      throw new Error("Could not find containing package");
-    }
-    return recurse(parentDir);
+  // Locate nearest package directory
+  const pkgDir = packageDirectorySync({ cwd: modulePath });
+  if (!pkgDir) {
+    throw new Error("Could not find containing package");
   }
-  return recurse(startPath);
+  // Read and cache package name
+  let pkgName: string;
+  if (packageNameCache.has(pkgDir)) {
+    pkgName = packageNameCache.get(pkgDir)!;
+  } else {
+    const pkg = readPackageSync({ cwd: pkgDir });
+    assert(typeof pkg.name === "string", "Expected package.json to have a name");
+    pkgName = pkg.name;
+    packageNameCache.set(pkgDir, pkgName);
+  }
+  // Compute module-relative path
+  const relPath = normalizeModulePath(
+    path.relative(pkgDir, originalPath)
+  );
+  return { packageName: pkgName, relativePath: relPath };
 }
 
 export function normalizeModulePath(modulePath: string) {
@@ -267,7 +255,7 @@ export function findNodeApiModulePaths(
     return [];
   }
   const candidatePath = path.join(fromPath, suffix);
-  return readdirSync(candidatePath, { withFileTypes: true }).flatMap((file) => {
+  return fs.readdirSync(candidatePath, { withFileTypes: true }).flatMap((file) => {
     if (
       file.isFile() &&
       file.name === MAGIC_FILENAME &&
