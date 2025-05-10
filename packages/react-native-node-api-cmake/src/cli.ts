@@ -181,17 +181,17 @@ export const program = new Command("react-native-node-api-cmake")
       );
       if (appleTriplets.length > 0) {
         const libraryPaths = appleTriplets.flatMap(({ tripletOutputPath }) => {
-          const configSpecifcPath = path.join(
+          const configSpecificPath = path.join(
             tripletOutputPath,
             globalContext.configuration
           );
           assert(
-            existsSync(configSpecifcPath),
-            `Expected a directory at ${configSpecifcPath}`
+            existsSync(configSpecificPath),
+            `Expected a directory at ${configSpecificPath}`
           );
           // Expect binary file(s), either .node or .dylib
-          return readdirSync(configSpecifcPath).map((file) => {
-            const filePath = path.join(configSpecifcPath, file);
+          return readdirSync(configSpecificPath).map((file) => {
+            const filePath = path.join(configSpecificPath, file);
             if (filePath.endsWith(".dylib")) {
               return filePath;
             } else if (file.endsWith(".node")) {
