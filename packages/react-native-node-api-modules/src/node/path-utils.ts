@@ -101,10 +101,8 @@ export function determineModuleContext(
     throw new Error("Could not find containing package");
   }
   // Read and cache package name
-  let pkgName: string;
-  if (packageNameCache.has(pkgDir)) {
-    pkgName = packageNameCache.get(pkgDir)!;
-  } else {
+  let pkgName = packageNameCache.get(pkgDir);
+  if (!pkgName) {
     const pkg = readPackageSync({ cwd: pkgDir });
     assert(typeof pkg.name === "string", "Expected package.json to have a name");
     pkgName = pkg.name;
