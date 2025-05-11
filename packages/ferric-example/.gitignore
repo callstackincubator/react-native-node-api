@@ -5,5 +5,5 @@ Cargo.lock
 /*.android.node/
 
 # Generated files
-/libferric_example.d.ts
-/libferric_example.js
+/ferric_example.d.ts
+/ferric_example.js

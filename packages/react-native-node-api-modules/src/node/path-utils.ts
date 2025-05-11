@@ -313,7 +313,8 @@ export function findNodeApiModulePathsByDependency({
  */
 export function determineLibraryFilename(libraryPaths: string[]) {
   const libraryNames = libraryPaths.map((p) =>
-    path.basename(p, path.extname(p))
+    // Strip the "lib" prefix and any file extension
+    path.basename(p, path.extname(p)).replace(/^lib/, "")
   );
   const candidates = new Set<string>(libraryNames);
   assert(candidates.size === 1, "Expected all libraries to have the same name");
