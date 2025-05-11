@@ -4,12 +4,7 @@ import path from "node:path";
 import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
 
-import {
-  getLibraryName,
-  isNodeApiModule,
-  replaceWithNodeExtension,
-  NamingStrategy,
-} from "../path-utils";
+import { getLibraryName, isNodeApiModule, NamingStrategy } from "../path-utils";
 
 type PluginOptions = {
   stripPathSuffix?: boolean;
@@ -30,10 +25,7 @@ export function replaceWithRequireNodeAddon(
   modulePath: string,
   naming: NamingStrategy
 ) {
-  const requireCallArgument = getLibraryName(
-    replaceWithNodeExtension(modulePath),
-    naming
-  );
+  const requireCallArgument = getLibraryName(modulePath, naming);
   p.replaceWith(
     t.callExpression(
       t.memberExpression(

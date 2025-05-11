@@ -13,7 +13,6 @@ import java.util.HashMap
 class NodeApiModulesPackage : BaseReactPackage() {
   init {
     SoLoader.loadLibrary("node-api-host")
-    SoLoader.loadLibrary("weak-node-api")
   }
 
   override fun getModule(name: String, reactContext: ReactApplicationContext): NativeModule? {

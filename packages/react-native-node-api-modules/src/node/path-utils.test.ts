@@ -49,7 +49,10 @@ describe("isNodeApiModule", () => {
     // remove read permission on file
     fs.chmodSync(candidate, 0);
     try {
-      assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /Found an unreadable module addon\.android\.node/);
+      assert.throws(
+        () => isNodeApiModule(path.join(tempDirectoryPath, "addon")),
+        /Found an unreadable module addon\.android\.node/
+      );
     } finally {
       fs.chmodSync(candidate, 0o600);
     }
@@ -81,7 +84,10 @@ describe("isNodeApiModule", () => {
     const unreadable = path.join(tempDirectoryPath, "addon.android.node");
     // only android module is unreadable
     fs.chmodSync(unreadable, 0);
-    assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /Found an unreadable module addon\.android\.node/);
+    assert.throws(
+      () => isNodeApiModule(path.join(tempDirectoryPath, "addon")),
+      /Found an unreadable module addon\.android\.node/
+    );
     fs.chmodSync(unreadable, 0o600);
   });
 });
@@ -108,12 +114,9 @@ describe("replaceExtensionWithNode", () => {
 });
 
 describe("determineModuleContext", () => {
-  it("works", (context) => {
+  it("strips the file extension", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
-      // Two sub-packages with the same name
-      "sub-package-a/package.json": `{ "name": "my-sub-package" }`,
-      "sub-package-b/package.json": `{ "name": "my-sub-package" }`,
     });
 
     {
@@ -123,12 +126,35 @@ describe("determineModuleContext", () => {
       assert.equal(packageName, "my-package");
       assert.equal(relativePath, "some-dir/some-file");
     }
+  });
+
+  it("strips a lib prefix", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "my-package" }`,
+    });
+
+    {
+      const { packageName, relativePath } = determineModuleContext(
+        path.join(tempDirectoryPath, "some-dir/libsome-file.node")
+      );
+      assert.equal(packageName, "my-package");
+      assert.equal(relativePath, "some-dir/some-file");
+    }
+  });
+
+  it("resolves the correct package name", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "root-package" }`,
+      // Two sub-packages with the same name
+      "sub-package-a/package.json": `{ "name": "my-sub-package-a" }`,
+      "sub-package-b/package.json": `{ "name": "my-sub-package-b" }`,
+    });
 
     {
       const { packageName, relativePath } = determineModuleContext(
         path.join(tempDirectoryPath, "sub-package-a/some-file.node")
       );
-      assert.equal(packageName, "my-sub-package");
+      assert.equal(packageName, "my-sub-package-a");
       assert.equal(relativePath, "some-file");
     }
 
@@ -136,7 +162,7 @@ describe("determineModuleContext", () => {
       const { packageName, relativePath } = determineModuleContext(
         path.join(tempDirectoryPath, "sub-package-b/some-file.node")
       );
-      assert.equal(packageName, "my-sub-package");
+      assert.equal(packageName, "my-sub-package-b");
       assert.equal(relativePath, "some-file");
     }
   });
@@ -295,22 +321,30 @@ describe("determineModuleContext", () => {
   it("should read package.json only once across multiple module paths for the same package", (context) => {
     const tempDir = setupTempDirectory(context, {
       "package.json": `{ "name": "cached-pkg" }`,
-      "subdir1/file1.node": "",     
+      "subdir1/file1.node": "",
       "subdir2/file2.node": "",
-      "subdir1/file1.xcframework": ""
+      "subdir1/file1.xcframework": "",
     });
     let readCount = 0;
     const orig = fs.readFileSync;
-    context.mock.method(fs, "readFileSync", (...args: Parameters<typeof fs.readFileSync>) => {
-      const [pathArg] = args;
-      if (typeof pathArg === "string" && pathArg.endsWith("package.json")) {
-        readCount++;
+    context.mock.method(
+      fs,
+      "readFileSync",
+      (...args: Parameters<typeof fs.readFileSync>) => {
+        const [pathArg] = args;
+        if (typeof pathArg === "string" && pathArg.endsWith("package.json")) {
+          readCount++;
+        }
+        return orig(...args);
       }
-      return orig(...args);
-    });
+    );
 
-    const ctx1 = determineModuleContext(path.join(tempDir, "subdir1/file1.node"));
-    const ctx2 = determineModuleContext(path.join(tempDir, "subdir2/file2.node"));
+    const ctx1 = determineModuleContext(
+      path.join(tempDir, "subdir1/file1.node")
+    );
+    const ctx2 = determineModuleContext(
+      path.join(tempDir, "subdir2/file2.node")
+    );
     assert.equal(ctx1.packageName, "cached-pkg");
     assert.equal(ctx2.packageName, "cached-pkg");
     assert.equal(readCount, 1);

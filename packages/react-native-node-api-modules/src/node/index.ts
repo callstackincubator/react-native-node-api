@@ -21,4 +21,4 @@ export {
   determineXCFrameworkFilename,
 } from "./prebuilds/apple.js";
 
-export { determineLibraryFilename, prettyPath } from "./path-utils.js";
+export { determineLibraryBasename, prettyPath } from "./path-utils.js";

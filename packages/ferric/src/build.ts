@@ -14,7 +14,7 @@ import {
   determineXCFrameworkFilename,
   createXCframework,
   createUniversalAppleLibrary,
-  determineLibraryFilename,
+  determineLibraryBasename,
   prettyPath,
 } from "react-native-node-api-modules";
 
@@ -146,7 +146,7 @@ export const buildCommand = new Command("build")
           }
         );
 
-        const libraryName = determineLibraryFilename([
+        const libraryName = determineLibraryBasename([
           ...androidLibraries.map(([, outputPath]) => outputPath),
         ]);
 

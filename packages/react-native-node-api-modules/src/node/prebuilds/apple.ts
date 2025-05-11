@@ -7,7 +7,7 @@ import cp from "node:child_process";
 import { spawn } from "bufout";
 
 import { AppleTriplet } from "./triplets.js";
-import { determineLibraryFilename } from "../path-utils.js";
+import { determineLibraryBasename } from "../path-utils.js";
 
 type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
 
@@ -123,7 +123,7 @@ export async function createXCframework({
  * Ensuring that all framework paths have the same base name.
  */
 export function determineXCFrameworkFilename(frameworkPaths: string[]) {
-  const name = determineLibraryFilename(frameworkPaths);
+  const name = determineLibraryBasename(frameworkPaths);
   return `${name}.xcframework`;
 }
 

@@ -41,7 +41,7 @@ export function isNodeApiModule(modulePath: string): boolean {
     // Cannot read directory: treat as no module
     return false;
   }
-  return Object.values(PLATFORM_EXTENSIONS).some(extension => {
+  return Object.values(PLATFORM_EXTENSIONS).some((extension) => {
     const fileName = baseName + extension;
     if (!entries.includes(fileName)) {
       return false;
@@ -103,25 +103,32 @@ export function determineModuleContext(
   let pkgName = packageNameCache.get(pkgDir);
   if (!pkgName) {
     const pkg = readPackageSync({ cwd: pkgDir });
-    assert(typeof pkg.name === "string", "Expected package.json to have a name");
+    assert(
+      typeof pkg.name === "string",
+      "Expected package.json to have a name"
+    );
     pkgName = pkg.name;
     packageNameCache.set(pkgDir, pkgName);
   }
   // Compute module-relative path
-  const relPath = normalizeModulePath(
-    path.relative(pkgDir, originalPath)
-  );
+  const relPath = normalizeModulePath(path.relative(pkgDir, originalPath));
   return { packageName: pkgName, relativePath: relPath };
 }
 
 export function normalizeModulePath(modulePath: string) {
-  return path.normalize(stripExtension(modulePath));
+  const dirname = path.normalize(path.dirname(modulePath));
+  const basename = path.basename(modulePath);
+  const strippedBasename = stripExtension(basename).replace(/^lib/, "");
+  return path.join(dirname, strippedBasename);
 }
 
 export function escapePath(modulePath: string) {
   return modulePath.replace(/[^a-zA-Z0-9]/g, "-");
 }
 
+/**
+ * Get the name of the library which will be used when the module is linked in.
+ */
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
   const { packageName, relativePath } = determineModuleContext(modulePath);
   return naming.stripPathSuffix
@@ -252,19 +259,21 @@ export function findNodeApiModulePaths(
     return [];
   }
   const candidatePath = path.join(fromPath, suffix);
-  return fs.readdirSync(candidatePath, { withFileTypes: true }).flatMap((file) => {
-    if (
-      file.isFile() &&
-      file.name === MAGIC_FILENAME &&
-      hasPlatformExtension(platform, candidatePath)
-    ) {
-      return [candidatePath];
-    } else if (file.isDirectory()) {
-      // Traverse into the child directory
-      return findNodeApiModulePaths(options, path.join(suffix, file.name));
-    }
-    return [];
-  });
+  return fs
+    .readdirSync(candidatePath, { withFileTypes: true })
+    .flatMap((file) => {
+      if (
+        file.isFile() &&
+        file.name === MAGIC_FILENAME &&
+        hasPlatformExtension(platform, candidatePath)
+      ) {
+        return [candidatePath];
+      } else if (file.isDirectory()) {
+        // Traverse into the child directory
+        return findNodeApiModulePaths(options, path.join(suffix, file.name));
+      }
+      return [];
+    });
 }
 
 /**
@@ -308,10 +317,10 @@ export function findNodeApiModulePathsByDependency({
 }
 
 /**
- * Determine the library filename based on the library paths.
- * Ensuring that all framework paths have the same base name.
+ * Determine the library basename (no file extension nor "lib" prefix) based on the library paths.
+ * Errors if all framework paths doesn't produce the same basename.
  */
-export function determineLibraryFilename(libraryPaths: string[]) {
+export function determineLibraryBasename(libraryPaths: string[]) {
   const libraryNames = libraryPaths.map((p) =>
     // Strip the "lib" prefix and any file extension
     path.basename(p, path.extname(p)).replace(/^lib/, "")

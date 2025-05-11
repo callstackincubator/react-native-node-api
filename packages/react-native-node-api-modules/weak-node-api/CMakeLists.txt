@@ -6,6 +6,12 @@ add_library(${PROJECT_NAME} SHARED
   ${CMAKE_JS_SRC}
 )
 
+# Stripping the prefix from the library name
+# to make sure the name of the XCFramework will match the name of the library
+if(APPLE)
+  set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+endif()
+
 target_include_directories(${PROJECT_NAME}
   PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include

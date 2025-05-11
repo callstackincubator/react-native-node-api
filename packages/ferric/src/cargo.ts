@@ -128,7 +128,7 @@ export function getWeakNodeApiFrameworkPath(target: AppleTargetName) {
   assert(fs.existsSync(WEAK_NODE_API_PATH), "Expected weak-node-api to exist");
   return joinPathAndAssertExistence(
     WEAK_NODE_API_PATH,
-    "libweak-node-api.xcframework",
+    "weak-node-api.xcframework",
     APPLE_XCFRAMEWORK_CHILDS_PER_TARGET[target]
   );
 }
@@ -137,7 +137,7 @@ export function getWeakNodeApiAndroidLibraryPath(target: AndroidTargetName) {
   assert(fs.existsSync(WEAK_NODE_API_PATH), "Expected weak-node-api to exist");
   return joinPathAndAssertExistence(
     WEAK_NODE_API_PATH,
-    "libweak-node-api.android.node",
+    "weak-node-api.android.node",
     ANDROID_ARCH_PR_TARGET[target]
   );
 }
@@ -205,7 +205,7 @@ export function getTargetEnvironmentVariables({
   } else if (isAppleTarget(target)) {
     const weakNodeApiFrameworkPath = getWeakNodeApiFrameworkPath(target);
     return {
-      RUSTFLAGS: `-L framework=${weakNodeApiFrameworkPath} -l framework=libweak-node-api`,
+      RUSTFLAGS: `-L framework=${weakNodeApiFrameworkPath} -l framework=weak-node-api`,
     };
   } else {
     throw new Error(`Unexpected target: ${target}`);
