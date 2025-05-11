@@ -17,6 +17,7 @@ target_include_directories(weak-node-api INTERFACE
 
 add_library(node-api-host SHARED
   src/main/cpp/OnLoad.cpp
+  ../cpp/Logger.cpp
   ../cpp/CxxNodeApiHostModule.cpp
   ../cpp/WeakNodeApiInjector.cpp
 )
@@ -27,6 +28,7 @@ target_include_directories(node-api-host PRIVATE
 
 target_link_libraries(node-api-host
   # android
+  log
   ReactAndroid::reactnative
   ReactAndroid::jsi
   hermes-engine::libhermes

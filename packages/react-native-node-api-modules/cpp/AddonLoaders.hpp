@@ -1,9 +1,13 @@
 #pragma once
+#include "Logger.hpp"
+
 #include <assert.h>
 
 #if defined(__APPLE__) || defined(__ANDROID__)
 #include <dlfcn.h>
 #include <stdio.h>
+
+using callstack::nodeapihost::log_debug;
 
 struct PosixLoader {
   using Module = void *;
@@ -11,10 +15,11 @@ struct PosixLoader {
 
   static Module loadLibrary(const char *filePath) {
     assert(NULL != filePath);
+
     Module result = dlopen(filePath, RTLD_NOW | RTLD_LOCAL);
     if (NULL == result) {
-      fprintf(stderr, "NapiHost: Failed to load library '%s': %s", filePath,
-              dlerror());
+      log_debug("NapiHost: Failed to load library '%s': %s", filePath,
+                dlerror());
     }
     return result;
   }

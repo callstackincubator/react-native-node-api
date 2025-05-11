@@ -1,4 +1,5 @@
 #include "CxxNodeApiHostModule.hpp"
+#include "Logger.hpp"
 
 using namespace facebook;
 
@@ -58,10 +59,14 @@ bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
   abort()
 #endif
 
+  log_debug("[%s] Loading addon by '%s'", libraryName.c_str(),
+            libraryPath.c_str());
+
   typename LoaderPolicy::Symbol initFn = NULL;
   typename LoaderPolicy::Module library =
       LoaderPolicy::loadLibrary(libraryPath.c_str());
   if (NULL != library) {
+    log_debug("[%s] Loaded addon", libraryName.c_str());
     addon.moduleHandle = library;
 
     // Generate a name allowing us to reference the exports object from JSI
@@ -73,12 +78,20 @@ bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
 
     initFn = LoaderPolicy::getSymbol(library, "napi_register_module_v1");
     if (NULL != initFn) {
+      log_debug("[%s] Found napi_register_module_v1 (%p)", libraryName.c_str(),
+                initFn);
       addon.init = (napi_addon_register_func)initFn;
+    } else {
+      log_debug("[%s] Failed to find napi_register_module_v1. Expecting the "
+                "addon to call napi_module_register to register itself.",
+                libraryName.c_str());
     }
     // TODO: Read "node_api_module_get_api_version_v1" to support the addon
     // declaring its Node-API version
     // @see
     // https://github.com/callstackincubator/react-native-node-api-modules/issues/4
+  } else {
+    log_debug("[%s] Failed to load library", libraryName.c_str());
   }
   return NULL != initFn;
 }
