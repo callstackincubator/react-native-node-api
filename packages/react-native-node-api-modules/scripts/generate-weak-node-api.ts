@@ -23,6 +23,7 @@ export function generateHeader(functions: FunctionDecl[]) {
         `${returnType} (*${name})(${argumentTypes.join(", ")});`
     ),
     "};",
+    "typedef void(*inject_host_t)(const NodeApiHost&);",
     "void inject_host(const NodeApiHost& host);",
     "} // namespace node_api::internal",
   ].join("\n");
@@ -43,10 +44,11 @@ export function generateSource(functions: FunctionDecl[]) {
     "};",
     "} // namespace node_api::internal",
     "using node_api::internal::g_host;",
+    ``,
     // Generate function calling into the host
     ...functions.flatMap(({ returnType, name, argumentTypes }) => {
       return [
-        `__attribute__((weak)) ${returnType} ${name}(${argumentTypes
+        `extern "C" ${returnType} ${name}(${argumentTypes
           .map((type, index) => `${type} arg${index}`)
           .join(", ")}) {`,
         `if (g_host.${name} == nullptr) {`,
