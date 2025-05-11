@@ -49,7 +49,7 @@ describe("isNodeApiModule", () => {
     // remove read permission on file
     fs.chmodSync(candidate, 0);
     try {
-      assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /skipping unreadable module addon\.android\.node/);
+      assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /Found an unreadable module addon\.android\.node/);
     } finally {
       fs.chmodSync(candidate, 0o600);
     }
@@ -81,7 +81,7 @@ describe("isNodeApiModule", () => {
     const unreadable = path.join(tempDirectoryPath, "addon.android.node");
     // only android module is unreadable
     fs.chmodSync(unreadable, 0);
-    assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /skipping unreadable module addon\.android\.node/);
+    assert.throws(() => isNodeApiModule(path.join(tempDirectoryPath, "addon")), /Found an unreadable module addon\.android\.node/);
     fs.chmodSync(unreadable, 0o600);
   });
 });

@@ -41,19 +41,18 @@ export function isNodeApiModule(modulePath: string): boolean {
     // Cannot read directory: treat as no module
     return false;
   }
-  const exts = Object.values(PLATFORM_EXTENSIONS);
-  let hasReadable = false;
-  for (const ext of exts) {
-    const fileName = baseName + ext;
-    if (!entries.includes(fileName)) continue;
+  return Object.values(PLATFORM_EXTENSIONS).some(extension => {
+    const fileName = baseName + extension;
+    if (!entries.includes(fileName)) {
+      return false;
+    }
     try {
       fs.accessSync(path.join(dir, fileName), fs.constants.R_OK);
-      hasReadable = true;
-    } catch {
-      throw new Error("Found an unreadable module at " + fileName);
+      return true;
+    } catch (cause) {
+      throw new Error(`Found an unreadable module ${fileName}: ${cause}`);
     }
-  }
-  return hasReadable;
+  });
 }
 
 /**
