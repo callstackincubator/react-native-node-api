@@ -117,12 +117,6 @@ android {
     sourceCompatibility JavaVersion.VERSION_1_8
     targetCompatibility JavaVersion.VERSION_1_8
   }
-
-  packagingOptions {
-    // TODO: I don't think this works - I needed to add this in the react-native package too.
-    doNotStrip "**/libhermes.so"
-  }
-
 }
 
 repositories {
