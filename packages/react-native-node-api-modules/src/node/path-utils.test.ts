@@ -9,7 +9,6 @@ import {
   findPackageDependencyPaths,
   getLibraryName,
   isNodeApiModule,
-  replaceWithNodeExtension,
   stripExtension,
 } from "./path-utils.js";
 import { setupTempDirectory } from "./test-utils.js";
@@ -98,18 +97,7 @@ describe("stripExtension", () => {
     assert.equal(stripExtension("./addon.node"), "./addon");
     assert.equal(stripExtension("./addon.android.node"), "./addon");
     // assert.equal(stripExtension("./addon.apple.node"), "./addon");
-    assert.equal(stripExtension("./addon.xcframework"), "./addon");
-  });
-});
-
-describe("replaceExtensionWithNode", () => {
-  it("replaces extension with .node", () => {
-    assert.equal(replaceWithNodeExtension("./addon"), "./addon.node");
-    assert.equal(replaceWithNodeExtension("./addon.node"), "./addon.node");
-    assert.equal(
-      replaceWithNodeExtension("./addon.xcframework"),
-      "./addon.node"
-    );
+    assert.equal(stripExtension("./addon.apple.node"), "./addon");
   });
 });
 

@@ -70,17 +70,6 @@ export function stripExtension(modulePath: string) {
   );
 }
 
-/**
- * Replaces any platform specific extensions with the common .node extension.
- */
-export function replaceWithNodeExtension(modulePath: string) {
-  return path.format({
-    ...path.parse(modulePath),
-    base: undefined,
-    ext: ".node",
-  });
-}
-
 export type ModuleContext = {
   packageName: string;
   relativePath: string;
