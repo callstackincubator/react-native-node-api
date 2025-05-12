@@ -13,8 +13,7 @@ export type PlatformName = "android" | "apple";
 
 export const PLATFORM_EXTENSIONS = {
   android: ".android.node",
-  // TODO: Change to .apple.node
-  apple: ".xcframework",
+  apple: ".apple.node",
 } as const satisfies Record<PlatformName, string>;
 export type PlatformExtentions = (typeof PLATFORM_EXTENSIONS)[PlatformName];
 

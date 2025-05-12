@@ -66,6 +66,11 @@ const ndkVersionOption = new Option(
   "--ndk-version <version>",
   "The NDK version to use for Android builds"
 ).default(DEFAULT_NDK_VERSION);
+const xcframeworkExtensionOption = new Option(
+  "--xcframework-extension",
+  "Don't rename the xcframework to .apple.node"
+).default(false);
+
 const outputPathOption = new Option(
   "--output <path>",
   "Writing outputs to this directory"
@@ -85,6 +90,7 @@ export const buildCommand = new Command("build")
   .addOption(ndkVersionOption)
   .addOption(outputPathOption)
   .addOption(configurationOption)
+  .addOption(xcframeworkExtensionOption)
   .action(
     async ({
       target: targetArg,
@@ -93,6 +99,7 @@ export const buildCommand = new Command("build")
       ndkVersion,
       output: outputPath,
       configuration,
+      xcframeworkExtension,
     }) => {
       try {
         const targets = new Set([...targetArg]);
@@ -221,8 +228,10 @@ export const buildCommand = new Command("build")
         if (appleLibraries.length > 0) {
           const libraryPaths = await combineLibraries(appleLibraries);
           const frameworkPaths = libraryPaths.map(createAppleFramework);
-          const xcframeworkFilename =
-            determineXCFrameworkFilename(frameworkPaths);
+          const xcframeworkFilename = determineXCFrameworkFilename(
+            frameworkPaths,
+            xcframeworkExtension ? ".xcframework" : ".apple.node"
+          );
 
           // Create the xcframework
           const xcframeworkOutputPath = path.resolve(

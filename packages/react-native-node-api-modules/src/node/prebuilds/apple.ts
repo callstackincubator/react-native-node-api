@@ -95,18 +95,28 @@ export async function createXCframework({
   // Ideally, it would only be necessary to delete the specific platform+arch, to allow selectively building from source.
   fs.rmSync(outputPath, { recursive: true, force: true });
 
+  // Xcodebuild requires the output path to end with ".xcframework"
+  const xcodeOutputPath =
+    path.extname(outputPath) === ".xcframework"
+      ? outputPath
+      : `${outputPath}.xcframework`;
+
   await spawn(
     "xcodebuild",
     [
       "-create-xcframework",
       ...frameworkPaths.flatMap((p) => ["-framework", p]),
       "-output",
-      outputPath,
+      xcodeOutputPath,
     ],
     {
       outputMode: "buffered",
     }
   );
+  if (xcodeOutputPath !== outputPath) {
+    // Rename the xcframework to the original output path
+    await fs.promises.rename(xcodeOutputPath, outputPath);
+  }
   if (autoLink) {
     // Write a file to mark the xcframework is a Node-API module
     // TODO: Consider including this in the Info.plist file instead
@@ -122,9 +132,12 @@ export async function createXCframework({
  * Determine the filename of the xcframework based on the framework paths.
  * Ensuring that all framework paths have the same base name.
  */
-export function determineXCFrameworkFilename(frameworkPaths: string[]) {
+export function determineXCFrameworkFilename(
+  frameworkPaths: string[],
+  extension: ".xcframework" | ".apple.node" = ".xcframework"
+) {
   const name = determineLibraryBasename(frameworkPaths);
-  return `${name}.xcframework`;
+  return `${name}${extension}`;
 }
 
 export async function createUniversalAppleLibrary(libraryPaths: string[]) {

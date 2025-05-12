@@ -91,6 +91,11 @@ const noWeakNodeApiLinkageOption = new Option(
   "Don't pass the path of the weak-node-api library from react-native-node-api-modules"
 );
 
+const xcframeworkExtensionOption = new Option(
+  "--xcframework-extension",
+  "Don't rename the xcframework to .apple.node"
+).default(false);
+
 export const program = new Command("react-native-node-api-cmake")
   .description("Build React Native Node API modules with CMake")
   .addOption(sourcePathOption)
@@ -104,6 +109,7 @@ export const program = new Command("react-native-node-api-cmake")
   .addOption(ndkVersionOption)
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption)
+  .addOption(xcframeworkExtensionOption)
   .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
       const buildPath = getBuildPath(globalContext);
@@ -212,8 +218,10 @@ export const program = new Command("react-native-node-api-cmake")
           })
         );
         const frameworkPaths = libraryPaths.map(createAppleFramework);
-        const xcframeworkFilename =
-          determineXCFrameworkFilename(frameworkPaths);
+        const xcframeworkFilename = determineXCFrameworkFilename(
+          frameworkPaths,
+          globalContext.xcframeworkExtension ? ".xcframework" : ".apple.node"
+        );
 
         // Create the xcframework
         const xcframeworkOutputPath = path.resolve(
