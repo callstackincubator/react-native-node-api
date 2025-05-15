@@ -1,6 +1,12 @@
 {
   "name": "react-native-node-addon-examples",
   "private": true,
+  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "directory": "packages/node-addon-examples"
+  },
   "scripts": {
     "copy-examples": "tsx scripts/copy-examples.mts",
     "gyp-to-cmake": "gyp-to-cmake ./examples",

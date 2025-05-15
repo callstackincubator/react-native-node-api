@@ -2,6 +2,12 @@
   "name": "ferric-modules",
   "version": "0.1.0",
   "description": "Rust Node-API Modules for React Native",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "directory": "packages/ferric"
+  },
   "type": "module",
   "bin": {
     "ferric": "./bin/ferric.js"

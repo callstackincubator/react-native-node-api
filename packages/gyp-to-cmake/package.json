@@ -1,9 +1,15 @@
 {
   "name": "gyp-to-cmake",
-  "private": true,
-  "type": "module",
   "version": "0.1.0",
+  "private": true,
   "description": "Convert binding.gyp files to CMakeLists.txt",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "directory": "packages/gyp-to-cmake"
+  },
+  "type": "module",
   "files": [
     "bin",
     "dist"

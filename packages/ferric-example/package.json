@@ -1,6 +1,13 @@
 {
   "name": "ferric-example",
+  "private": true,
   "version": "0.1.0",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "directory": "packages/ferric-example"
+  },
   "main": "libferric_example.js",
   "types": "libferric_example.d.ts",
   "scripts": {
