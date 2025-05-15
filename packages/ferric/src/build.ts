@@ -30,6 +30,7 @@ import {
   filterTargetsByPlatform,
 } from "./targets.js";
 import { generateTypeScriptDeclarations } from "./napi-rs.js";
+import { getBlockComment } from "./banner.js";
 
 type EntrypointOptions = {
   outputPath: string;
@@ -41,7 +42,11 @@ async function generateEntrypoint({
 }: EntrypointOptions) {
   await fs.promises.writeFile(
     outputPath,
-    "module.exports = require('./" + libraryName + ".node');",
+    [
+      "/* eslint-disable */",
+      getBlockComment(),
+      `module.exports = require('./${libraryName}.node');`,
+    ].join("\n\n") + "\n",
     "utf8"
   );
 }
