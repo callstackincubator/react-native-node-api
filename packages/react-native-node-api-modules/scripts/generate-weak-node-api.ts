@@ -18,8 +18,10 @@ export function generateHeader(functions: FunctionDecl[]) {
     // Generate the struct of function pointers
     "struct WeakNodeApiHost {",
     ...functions.map(
-      ({ returnType, name, argumentTypes }) =>
-        `${returnType} (*${name})(${argumentTypes.join(", ")});`
+      ({ returnType, noReturn, name, argumentTypes }) =>
+        `${returnType} ${
+          noReturn ? " __attribute__((noreturn))" : ""
+        }(*${name})(${argumentTypes.join(", ")});`
     ),
     "};",
     "typedef void(*InjectHostFunction)(const WeakNodeApiHost&);",
@@ -41,9 +43,11 @@ export function generateSource(functions: FunctionDecl[]) {
     "};",
     ``,
     // Generate function calling into the host
-    ...functions.flatMap(({ returnType, name, argumentTypes }) => {
+    ...functions.flatMap(({ returnType, noReturn, name, argumentTypes }) => {
       return [
-        `extern "C" ${returnType} ${name}(${argumentTypes
+        `extern "C" ${returnType} ${
+          noReturn ? " __attribute__((noreturn))" : ""
+        }${name}(${argumentTypes
           .map((type, index) => `${type} arg${index}`)
           .join(", ")}) {`,
         `if (g_host.${name} == nullptr) {`,

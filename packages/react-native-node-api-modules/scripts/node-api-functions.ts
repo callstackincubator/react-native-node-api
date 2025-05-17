@@ -59,6 +59,7 @@ export type FunctionDecl = {
   name: string;
   kind: "engine" | "runtime";
   returnType: string;
+  noReturn: boolean;
   argumentTypes: string[];
   libraryPath: string;
   fallbackReturnStatement: string;
@@ -108,6 +109,7 @@ export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
       nodeApiFunctions.push({
         name,
         returnType,
+        noReturn: node.type.qualType.includes("__attribute__((noreturn))"),
         kind: engineSymbols.has(name) ? "engine" : "runtime",
         argumentTypes: argumentTypes
           .split(",")
