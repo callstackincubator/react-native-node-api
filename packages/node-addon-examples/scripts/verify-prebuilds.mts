@@ -16,7 +16,13 @@ const EXPECTED_XCFRAMEWORK_PLATFORMS = [
   "xros-arm64-simulator",
 ];
 
-async function verifyAndroidDirectory(dirent: fs.Dirent) {
+async function verifyAndroidPrebuild(dirent: fs.Dirent) {
+  console.log(
+    "Verifying Android prebuild",
+    dirent.name,
+    "in",
+    dirent.parentPath
+  );
   for (const arch of EXPECTED_ANDROID_ARCHS) {
     const archDir = path.join(dirent.parentPath, dirent.name, arch);
     for (const file of await fs.promises.readdir(archDir, {
@@ -31,7 +37,8 @@ async function verifyAndroidDirectory(dirent: fs.Dirent) {
   }
 }
 
-async function verifyXcframework(dirent: fs.Dirent) {
+async function verifyApplePrebuild(dirent: fs.Dirent) {
+  console.log("Verifying Apple prebuild", dirent.name, "in", dirent.parentPath);
   for (const arch of EXPECTED_XCFRAMEWORK_PLATFORMS) {
     const archDir = path.join(dirent.parentPath, dirent.name, arch);
     for (const file of await fs.promises.readdir(archDir, {
@@ -75,16 +82,17 @@ async function verifyXcframework(dirent: fs.Dirent) {
   }
 }
 
-for (const dirent of await fs.promises.readdir(EXAMPLES_DIR, {
+for await (const dirent of fs.promises.glob("**/*.*.node", {
+  cwd: EXAMPLES_DIR,
   withFileTypes: true,
-  recursive: true,
 })) {
-  if (!dirent.isDirectory()) {
-    continue;
-  }
   if (dirent.name.endsWith(".android.node")) {
-    await verifyAndroidDirectory(dirent);
-  } else if (dirent.name.endsWith(".xcframework")) {
-    await verifyXcframework(dirent);
+    await verifyAndroidPrebuild(dirent);
+  } else if (dirent.name.endsWith(".apple.node")) {
+    await verifyApplePrebuild(dirent);
+  } else {
+    throw new Error(
+      `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`
+    );
   }
 }
