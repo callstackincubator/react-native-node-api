@@ -25,26 +25,23 @@ export function generateSource(functions: FunctionDecl[]) {
     #endif
 
     namespace callstack::nodeapihost {
-    
-    using node_api::internal::InjectHostFunction;
-    using node_api::internal::NodeApiHost;
 
     void injectIntoWeakNodeApi() {
     void *module = dlopen(WEAK_NODE_API_LIBRARY_NAME, RTLD_NOW | RTLD_LOCAL);
-    if (NULL == module) {
+    if (nullptr == module) {
       log_debug("NapiHost: Failed to load weak-node-api: %s", dlerror());
       abort();
     }
 
-    auto inject_host = (InjectHostFunction)dlsym(
-        module, "_ZN8node_api8internal11inject_hostERKNS0_11NodeApiHostE");
-    if (NULL == inject_host) {
-      log_debug("NapiHost: Failed to find 'inject_host' function: %s", dlerror());
+    auto inject_weak_node_api_host = (InjectHostFunction)dlsym(
+    module, "inject_weak_node_api_host");
+    if (nullptr == inject_weak_node_api_host) {
+      log_debug("NapiHost: Failed to find 'inject_weak_node_api_host' function: %s", dlerror());
       abort();
     }
 
     log_debug("Injecting WeakNodeApiHost");
-    inject_host(NodeApiHost {
+    inject_weak_node_api_host(WeakNodeApiHost {
       ${functions
         .filter(({ kind }) => kind === "engine")
         .flatMap(({ name }) => `.${name} = ${name},`)
