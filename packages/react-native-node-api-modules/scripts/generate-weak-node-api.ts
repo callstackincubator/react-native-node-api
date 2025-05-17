@@ -23,9 +23,7 @@ export function generateHeader(functions: FunctionDecl[]) {
         `${returnType} (*${name})(${argumentTypes.join(", ")});`
     ),
     "};",
-    "typedef void(*inject_host_t)(const NodeApiHost&);",
-    "void inject_host(const NodeApiHost& host);",
-    "} // namespace node_api::internal",
+    "typedef void(*InjectHostFunction)(const NodeApiHost&);",
   ].join("\n");
 }
 

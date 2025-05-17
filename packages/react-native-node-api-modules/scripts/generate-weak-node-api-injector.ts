@@ -26,7 +26,7 @@ export function generateSource(functions: FunctionDecl[]) {
 
     namespace callstack::nodeapihost {
     
-    using node_api::internal::inject_host_t;
+    using node_api::internal::InjectHostFunction;
     using node_api::internal::NodeApiHost;
 
     void injectIntoWeakNodeApi() {
@@ -36,7 +36,7 @@ export function generateSource(functions: FunctionDecl[]) {
       abort();
     }
 
-    auto inject_host = (inject_host_t)dlsym(
+    auto inject_host = (InjectHostFunction)dlsym(
         module, "_ZN8node_api8internal11inject_hostERKNS0_11NodeApiHostE");
     if (NULL == inject_host) {
       log_debug("NapiHost: Failed to find 'inject_host' function: %s", dlerror());
