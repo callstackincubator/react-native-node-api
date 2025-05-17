@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import fs from "node:fs/promises";
-import { existsSync, readdirSync, renameSync } from "node:fs";
+import fs from "node:fs";
 import { EventEmitter } from "node:events";
 
 import { Command, Option } from "@commander-js/extra-typings";
@@ -109,7 +108,7 @@ export const program = new Command("react-native-node-api-cmake")
     try {
       const buildPath = getBuildPath(globalContext);
       if (globalContext.clean) {
-        await fs.rm(buildPath, { recursive: true, force: true });
+        await fs.promises.rm(buildPath, { recursive: true, force: true });
       }
       const triplets = new Set<SupportedTriplet>(tripletValues);
       if (globalContext.apple) {
@@ -162,7 +161,7 @@ export const program = new Command("react-native-node-api-cmake")
           tripletContext.map(async (context) => {
             // Delete any stale build artifacts before building
             // This is important, since we might rename the output files
-            await fs.rm(context.tripletOutputPath, {
+            await fs.promises.rm(context.tripletOutputPath, {
               recursive: true,
               force: true,
             });
@@ -181,32 +180,37 @@ export const program = new Command("react-native-node-api-cmake")
         isAppleTriplet(triplet)
       );
       if (appleTriplets.length > 0) {
-        const libraryPaths = appleTriplets.flatMap(({ tripletOutputPath }) => {
-          const configSpecificPath = path.join(
-            tripletOutputPath,
-            globalContext.configuration
-          );
-          assert(
-            existsSync(configSpecificPath),
-            `Expected a directory at ${configSpecificPath}`
-          );
-          // Expect binary file(s), either .node or .dylib
-          return readdirSync(configSpecificPath).map((file) => {
-            const filePath = path.join(configSpecificPath, file);
-            if (filePath.endsWith(".dylib")) {
-              return filePath;
-            } else if (file.endsWith(".node")) {
-              // Rename the file to .dylib for xcodebuild to accept it
-              const newFilePath = filePath.replace(/\.node$/, ".dylib");
-              renameSync(filePath, newFilePath);
-              return newFilePath;
-            } else {
-              throw new Error(
-                `Expected a .node or .dylib file, but found ${file}`
-              );
-            }
-          });
-        });
+        const libraryPaths = await Promise.all(
+          appleTriplets.map(async ({ tripletOutputPath }) => {
+            const configSpecificPath = path.join(
+              tripletOutputPath,
+              globalContext.configuration
+            );
+            assert(
+              fs.existsSync(configSpecificPath),
+              `Expected a directory at ${configSpecificPath}`
+            );
+            // Expect binary file(s), either .node or .dylib
+            const files = await fs.promises.readdir(configSpecificPath);
+            const result = files.map(async (file) => {
+              const filePath = path.join(configSpecificPath, file);
+              if (filePath.endsWith(".dylib")) {
+                return filePath;
+              } else if (file.endsWith(".node")) {
+                // Rename the file to .dylib for xcodebuild to accept it
+                const newFilePath = filePath.replace(/\.node$/, ".dylib");
+                await fs.promises.rename(filePath, newFilePath);
+                return newFilePath;
+              } else {
+                throw new Error(
+                  `Expected a .node or .dylib file, but found ${file}`
+                );
+              }
+            });
+            assert.equal(result.length, 1, "Expected exactly one library file");
+            return await result[0];
+          })
+        );
         const frameworkPaths = libraryPaths.map(createAppleFramework);
         const xcframeworkFilename =
           determineXCFrameworkFilename(frameworkPaths);
@@ -239,24 +243,32 @@ export const program = new Command("react-native-node-api-cmake")
       );
       if (androidTriplets.length > 0) {
         const libraryPathByTriplet = Object.fromEntries(
-          androidTriplets.map(({ tripletOutputPath, triplet }) => {
-            assert(
-              existsSync(tripletOutputPath),
-              `Expected a directory at ${tripletOutputPath}`
-            );
-            // Expect binary file(s), either .node or .so
-            const result = readdirSync(tripletOutputPath, {
-              withFileTypes: true,
+          await Promise.all(
+            androidTriplets.map(async ({ tripletOutputPath, triplet }) => {
+              assert(
+                fs.existsSync(tripletOutputPath),
+                `Expected a directory at ${tripletOutputPath}`
+              );
+              // Expect binary file(s), either .node or .so
+              const dirents = await fs.promises.readdir(tripletOutputPath, {
+                withFileTypes: true,
+              });
+              const result = dirents
+                .filter(
+                  (dirent) =>
+                    dirent.isFile() &&
+                    (dirent.name.endsWith(".so") ||
+                      dirent.name.endsWith(".node"))
+                )
+                .map((dirent) => path.join(dirent.parentPath, dirent.name));
+              assert.equal(
+                result.length,
+                1,
+                "Expected exactly one library file"
+              );
+              return [triplet, result[0]] as const;
             })
-              .filter(
-                (dirent) =>
-                  dirent.isFile() &&
-                  (dirent.name.endsWith(".so") || dirent.name.endsWith(".node"))
-              )
-              .map((dirent) => path.join(dirent.parentPath, dirent.name));
-            assert.equal(result.length, 1, "Expected exactly one library file");
-            return [triplet, result[0]] as const;
-          })
+          )
         ) as Record<AndroidTriplet, string>;
         const androidLibsFilename = determineAndroidLibsFilename(
           Object.values(libraryPathByTriplet)
