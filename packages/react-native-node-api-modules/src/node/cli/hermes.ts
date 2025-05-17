@@ -26,8 +26,17 @@ export const command = new Command("vendor-hermes")
       const appPackageRoot = packageDirectorySync({ cwd: from });
       assert(appPackageRoot, "Failed to find package root");
       const hermesPath = path.join(HOST_PACKAGE_ROOT, "hermes");
-      if (force) {
-        fs.rmSync(hermesPath, { recursive: true, force: true });
+      if (force && fs.existsSync(hermesPath)) {
+        await oraPromise(
+          fs.promises.rm(hermesPath, { recursive: true, force: true }),
+          {
+            text: "Removing existing Hermes clone",
+            successText: "Removed existing Hermes clone",
+            failText: (error) =>
+              `Failed to remove existing Hermes clone: ${error.message}`,
+            isEnabled: !silent,
+          }
+        );
       }
       if (!fs.existsSync(hermesPath)) {
         await oraPromise(
