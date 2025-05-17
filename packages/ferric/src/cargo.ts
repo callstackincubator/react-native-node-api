@@ -169,7 +169,12 @@ export function getTargetEnvironmentVariables({
     const weakNodeApiPath = getWeakNodeApiAndroidLibraryPath(target);
 
     return {
-      RUSTFLAGS: `-L ${weakNodeApiPath} -l weak-node-api`,
+      CARGO_ENCODED_RUSTFLAGS: [
+        "-L",
+        weakNodeApiPath,
+        "-l",
+        "weak-node-api",
+      ].join(String.fromCharCode(0x1f)),
       CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: joinPathAndAssertExistence(
         toolchainBinPath,
         `aarch64-linux-android${androidApiLevel}-clang`
@@ -205,7 +210,12 @@ export function getTargetEnvironmentVariables({
   } else if (isAppleTarget(target)) {
     const weakNodeApiFrameworkPath = getWeakNodeApiFrameworkPath(target);
     return {
-      RUSTFLAGS: `-L framework=${weakNodeApiFrameworkPath} -l framework=weak-node-api`,
+      CARGO_ENCODED_RUSTFLAGS: [
+        "-L",
+        `framework=${weakNodeApiFrameworkPath}`,
+        "-l",
+        "framework=weak-node-api",
+      ].join(String.fromCharCode(0x1f)),
     };
   } else {
     throw new Error(`Unexpected target: ${target}`);
