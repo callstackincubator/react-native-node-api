@@ -31,6 +31,7 @@
     "!android/build",
     "ios",
     "include",
+    "babel-plugin.js",
     "scripts/patch-hermes.rb",
     "weak-node-api/**",
     "!weak-node-api/build/",
