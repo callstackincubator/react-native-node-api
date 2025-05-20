@@ -3,6 +3,8 @@ import path from "node:path";
 
 import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
+import { packageDirectorySync } from "pkg-dir";
+import { readPackageSync } from "read-pkg";
 
 import { getLibraryName, isNodeApiModule, NamingStrategy } from "../path-utils";
 
@@ -20,12 +22,65 @@ function assertOptions(opts: unknown): asserts opts is PluginOptions {
   }
 }
 
-export function replaceWithRequireNodeAddon(
+// This function should work with both CommonJS and ECMAScript modules,
+// (pretending that addons are supported with ES module imports), hence it
+// must accept following import specifiers:
+//   - "Relative specifiers" (e.g. `./build/Release/addon.node`)
+//   - "Bare specifiers", in particular
+//     - to an entry point (e.g. `@callstack/example-addon`)
+//     - any specific exported feature within
+//   - "Absolute specifiers" like `node:fs/promise` and URLs.
+//
+// This function should also respect the Package entry points defined in the
+// respective "package.json" file using "main" or "exports" and "imports"
+// fields (including conditional exports and subpath imports).
+// - https://nodejs.org/api/packages.html#package-entry-points
+// - https://nodejs.org/api/packages.html#subpath-imports
+function tryResolveModulePath(id: string, from: string): string | undefined {
+  if (id.includes(":")) {
+    // This must be a prefixed "Absolute specifier". We assume its a built-in
+    // module and pass it through without any changes. For security reasons,
+    // we don't support URLs to dynamic libraries (like Node-API addons).
+    return undefined;
+  } else {
+    // TODO: Stay compatible with https://nodejs.org/api/modules.html#all-together
+    try {
+      return require.resolve(id, { paths: [from] });
+    } catch {
+      return undefined;
+    }
+  }
+}
+
+const nodeBindingsSubdirs = [
+  "./",
+  "./build/Release",
+  "./build/Debug",
+  "./build",
+  "./out/Release",
+  "./out/Debug",
+  "./Release",
+  "./Debug",
+];
+function findNodeAddonForBindings(id: string, fromDir: string) {
+
+}
+
+export function replaceWithRequireNodeAddon3(
   p: NodePath,
-  modulePath: string,
-  naming: NamingStrategy
+  resolvedPath: string,
+  requiredFrom: string
 ) {
-  const requireCallArgument = getLibraryName(modulePath, naming);
+  const pkgRoot = packageDirectorySync({ cwd: resolvedPath });
+  if (pkgRoot === undefined) {
+    throw new Error("Unable to locate package directory!");
+  }
+
+  const subpath = path.relative(pkgRoot, resolvedPath);
+  const dottedSubpath = subpath.startsWith("./") ? subpath : `./${subpath}`;
+  const fromRelative = path.relative(pkgRoot, requiredFrom); // TODO: might escape package
+  const { name } = readPackageSync({ cwd: pkgRoot });
+
   p.replaceWith(
     t.callExpression(
       t.memberExpression(
@@ -34,7 +89,8 @@ export function replaceWithRequireNodeAddon(
         ]),
         t.identifier("requireNodeAddon")
       ),
-      [t.stringLiteral(requireCallArgument)]
+      [dottedSubpath, name, fromRelative]
+        .map(t.stringLiteral),
     )
   );
 }
@@ -64,20 +120,23 @@ export function plugin(): PluginObj {
             const [argument] = p.parent.arguments;
             if (argument.type === "StringLiteral") {
               const id = argument.value;
-              const relativePath = path.join(from, id);
-              // TODO: Support traversing the filesystem to find the Node-API module
-              if (isNodeApiModule(relativePath)) {
-                replaceWithRequireNodeAddon(p.parentPath, relativePath, {
-                  stripPathSuffix,
-                });
+              const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
+              // Support traversing the filesystem to find the Node-API module.
+              // Currently, we check the most common directories from `bindings`.
+              for (const subdir of nodeBindingsSubdirs) {
+                const resolvedPath = path.join(from, subdir, idWithExt);
+                if (isNodeApiModule(resolvedPath)) {
+                  replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, this.filename);
+                  break;
+                }
               }
             }
-          } else if (
-            !path.isAbsolute(id) &&
-            isNodeApiModule(path.join(from, id))
-          ) {
-            const relativePath = path.join(from, id);
-            replaceWithRequireNodeAddon(p, relativePath, { stripPathSuffix });
+          } else {
+            // This should handle "bare specifiers" and "private imports" that start with `#`
+            const resolvedPath = tryResolveModulePath(id, from);
+            if (!!resolvedPath && isNodeApiModule(resolvedPath)) {
+              replaceWithRequireNodeAddon3(p, resolvedPath, this.filename);
+            }
           }
         }
       },
