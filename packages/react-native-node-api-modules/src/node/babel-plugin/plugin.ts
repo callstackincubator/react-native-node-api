@@ -63,7 +63,16 @@ const nodeBindingsSubdirs = [
   "./Debug",
 ];
 function findNodeAddonForBindings(id: string, fromDir: string) {
-
+  const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
+  // Support traversing the filesystem to find the Node-API module.
+  // Currently, we check the most common directories like `bindings` does.
+  for (const subdir of nodeBindingsSubdirs) {
+    const resolvedPath = path.join(fromDir, subdir, idWithExt);
+    if (isNodeApiModule(resolvedPath)) {
+      return resolvedPath;
+    }
+  }
+  return undefined;
 }
 
 export function replaceWithRequireNodeAddon3(
@@ -120,15 +129,9 @@ export function plugin(): PluginObj {
             const [argument] = p.parent.arguments;
             if (argument.type === "StringLiteral") {
               const id = argument.value;
-              const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
-              // Support traversing the filesystem to find the Node-API module.
-              // Currently, we check the most common directories from `bindings`.
-              for (const subdir of nodeBindingsSubdirs) {
-                const resolvedPath = path.join(from, subdir, idWithExt);
-                if (isNodeApiModule(resolvedPath)) {
-                  replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, this.filename);
-                  break;
-                }
+              const resolvedPath = findNodeAddonForBindings(id, from);
+              if (resolvedPath !== undefined) {
+                replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, this.filename);
               }
             }
           } else {
