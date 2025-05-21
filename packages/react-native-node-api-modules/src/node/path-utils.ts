@@ -247,6 +247,13 @@ export function findNodeApiModulePaths(
     return [];
   }
   const candidatePath = path.join(fromPath, suffix);
+  // Normalize path separators for consistent pattern matching on all platforms
+  const normalizedSuffix = suffix.split(path.sep).join('/');
+  
+  if (excludePatterns.some((pattern) => pattern.test(normalizedSuffix))) {
+    return [];
+  }
+  
   return fs
     .readdirSync(candidatePath, { withFileTypes: true })
     .flatMap((file) => {
