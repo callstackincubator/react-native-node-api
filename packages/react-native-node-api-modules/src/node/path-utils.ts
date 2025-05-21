@@ -53,20 +53,33 @@ export function isNodeApiModule(modulePath: string): boolean {
       fs.accessSync(filePath, fs.constants.F_OK);
       
       // Then check if it's readable (behavior differs by platform)
-      if (process.platform === 'win32') {
-        // On Windows, we need to try to open the file to check read permissions
-        const fd = fs.openSync(filePath, 'r');
-        fs.closeSync(fd);
-        return true;
-      } else {
-        // On Unix-like systems, we can use R_OK to check read permissions
-        fs.accessSync(filePath, fs.constants.R_OK);
-        return true;
+      if (!isReadableSync(filePath)) {
+        throw new Error(`Found an unreadable module ${fileName}`);
       }
     } catch (e) {
       throw new Error(`Found an unreadable module ${fileName}: ${e}`);
     }
+    return true;
   });
+}
+
+/**
+ * Check if a path is readable according to permission bits.
+ * On Windows, tests store POSIX S_IWUSR bit in stats.mode.
+ * On Unix-like, uses fs.accessSync for R_OK.
+ */
+function isReadableSync(p: string): boolean {
+  try {
+    if (process.platform === "win32") {
+      const stats = fs.statSync(p);
+      return !!(stats.mode & fs.constants.S_IWUSR);
+    } else {
+      fs.accessSync(p, fs.constants.R_OK);
+      return true;
+    }
+  } catch {
+    return false;
+  }
 }
 
 /**
