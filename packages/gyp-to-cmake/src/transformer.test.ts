@@ -48,4 +48,39 @@ describe("bindingGypToCmakeLists", () => {
 
     assert(output.includes("add_library(foo SHARED file\\ with\\ spaces.cc"));
   });
+
+  describe("command expansions", () => {
+    it("should expand", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["<!echo bar baz"],
+            },
+          ],
+        },
+      });
+
+      // Adding \ between bar and baz, as we expect the "bar baz" to be handled like a path with spaces
+      assert(output.includes("add_library(foo SHARED bar\\ baz"));
+    });
+
+    it("should expand into lists when prefixed with '@'", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["<!@echo bar baz"],
+            },
+          ],
+        },
+      });
+
+      assert(output.includes("add_library(foo SHARED bar baz"));
+    });
+  });
 });
