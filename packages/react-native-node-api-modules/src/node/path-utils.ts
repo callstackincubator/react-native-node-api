@@ -55,13 +55,9 @@ export function isNodeApiModule(modulePath: string): boolean {
       // Then check if it's readable (behavior differs by platform)
       if (process.platform === 'win32') {
         // On Windows, we need to try to open the file to check read permissions
-        try {
-          const fd = fs.openSync(filePath, 'r');
-          fs.closeSync(fd);
-          return true;
-        } catch (e) {
-          throw new Error(`Found an unreadable module ${fileName}: ${e}`);
-        }
+        const fd = fs.openSync(filePath, 'r');
+        fs.closeSync(fd);
+        return true;
       } else {
         // On Unix-like systems, we can use R_OK to check read permissions
         fs.accessSync(filePath, fs.constants.R_OK);
