@@ -45,11 +45,30 @@ export function isNodeApiModule(modulePath: string): boolean {
     if (!entries.includes(fileName)) {
       return false;
     }
+    
+    const filePath = path.join(dir, fileName);
+    
     try {
-      fs.accessSync(path.join(dir, fileName), fs.constants.R_OK);
-      return true;
-    } catch (cause) {
-      throw new Error(`Found an unreadable module ${fileName}: ${cause}`);
+      // First, check if file exists (works the same on all platforms)
+      fs.accessSync(filePath, fs.constants.F_OK);
+      
+      // Then check if it's readable (behavior differs by platform)
+      if (process.platform === 'win32') {
+        // On Windows, we need to try to open the file to check read permissions
+        try {
+          const fd = fs.openSync(filePath, 'r');
+          fs.closeSync(fd);
+          return true;
+        } catch (e) {
+          throw new Error(`Found an unreadable module ${fileName}: ${e}`);
+        }
+      } else {
+        // On Unix-like systems, we can use R_OK to check read permissions
+        fs.accessSync(filePath, fs.constants.R_OK);
+        return true;
+      }
+    } catch (e) {
+      throw new Error(`Found an unreadable module ${fileName}: ${e}`);
     }
   });
 }
