@@ -31,10 +31,10 @@ const packageNameCache = new Map<string, string>();
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
-  // HACK: Take a shortcut (if applicable)
-  if (modulePath.endsWith('.node')) {
+  {
+    // HACK: Take a shortcut (if applicable): existing `.node` files are addons
     try {
-      fs.accessSync(modulePath);
+      fs.accessSync(modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`);
       return true;
     } catch {}
   }
