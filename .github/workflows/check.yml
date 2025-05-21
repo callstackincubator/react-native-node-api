@@ -29,6 +29,18 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test --workspace gyp-to-cmake --workspace react-native-node-api-cmake --workspace react-native-node-api-modules
+  test-windows:
+    name: Run tests on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/jod
+      - run: npm ci
+      - run: npm run build
+      - run: npm test --workspace gyp-to-cmake --workspace react-native-node-api-cmake --workspace react-native-node-api-modules
+
   test-macos:
     name: Run tests which requires MacOS
     runs-on: macos-latest
