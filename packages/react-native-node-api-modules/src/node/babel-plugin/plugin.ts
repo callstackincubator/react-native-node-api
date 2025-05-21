@@ -6,7 +6,7 @@ import * as t from "@babel/types";
 import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 
-import { getLibraryName, isNodeApiModule, NamingStrategy } from "../path-utils";
+import { isNodeApiModule } from "../path-utils";
 
 type PluginOptions = {
   stripPathSuffix?: boolean;
@@ -109,7 +109,6 @@ export function plugin(): PluginObj {
     visitor: {
       CallExpression(p) {
         assertOptions(this.opts);
-        const { stripPathSuffix = false } = this.opts;
         if (typeof this.filename !== "string") {
           // This transformation only works when the filename is known
           return;
