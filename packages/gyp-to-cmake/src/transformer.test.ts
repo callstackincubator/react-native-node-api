@@ -83,4 +83,28 @@ describe("bindingGypToCmakeLists", () => {
       assert(output.includes("add_library(foo SHARED bar baz"));
     });
   });
+
+  describe("defines", () => {
+    it("should add defines as target-specific compile definitions", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["foo.cc"],
+              defines: ["FOO", "BAR=value"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes(
+          "target_compile_definitions(foo PRIVATE FOO BAR=value)"
+        ),
+        `Expected output to include target_compile_definitions:\n${output}`
+      );
+    });
+  });
 });

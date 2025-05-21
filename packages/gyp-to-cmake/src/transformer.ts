@@ -17,7 +17,7 @@ function isCmdExpansion(value: string) {
   return trimmedValue.startsWith("<!");
 }
 
-function escapePath(source: string) {
+function escapeSpaces(source: string) {
   return source.replace(/ /g, "\\ ");
 }
 
@@ -54,25 +54,30 @@ export function bindingGypToCmakeLists({
     //"cmake_policy(SET CMP0042 NEW)",
     `project(${projectName})`,
     "",
-    `add_compile_definitions(-DNAPI_VERSION=${napiVersion})`,
+    // Declaring a project-wide NAPI_VERSION as a fallback for targets that don't explicitly set it
+    `add_compile_definitions(NAPI_VERSION=${napiVersion})`,
   ];
 
   for (const target of gyp.targets) {
     const { target_name: targetName } = target;
 
     // TODO: Handle "conditions"
-    // TODO: Handle "defines"
     // TODO: Handle "cflags"
     // TODO: Handle "ldflags"
 
     const escapedJoinedSources = target.sources
       .flatMap(mapExpansion)
-      .map(escapePath)
+      .map(escapeSpaces)
       .join(" ");
 
     const escapedJoinedIncludes = (target.include_dirs || [])
       .flatMap(mapExpansion)
-      .map(escapePath)
+      .map(escapeSpaces)
+      .join(" ");
+
+    const escapedJoinedDefines = (target.defines || [])
+      .flatMap(mapExpansion)
+      .map(escapeSpaces)
       .join(" ");
 
     lines.push(
@@ -81,7 +86,12 @@ export function bindingGypToCmakeLists({
       `set_target_properties(${targetName} PROPERTIES PREFIX "" SUFFIX ".node")`,
       `target_include_directories(${targetName} PRIVATE ${escapedJoinedIncludes} \${CMAKE_JS_INC})`,
       `target_link_libraries(${targetName} PRIVATE \${CMAKE_JS_LIB})`,
-      `target_compile_features(${targetName} PRIVATE cxx_std_17)`
+      `target_compile_features(${targetName} PRIVATE cxx_std_17)`,
+      ...(escapedJoinedDefines
+        ? [
+            `target_compile_definitions(${targetName} PRIVATE ${escapedJoinedDefines})`,
+          ]
+        : [])
       // or
       // `set_target_properties(${targetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
     );

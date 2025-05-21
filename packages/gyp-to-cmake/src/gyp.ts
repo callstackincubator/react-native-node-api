@@ -7,6 +7,7 @@ export type GypTarget = {
   target_name: string;
   sources: string[];
   include_dirs?: string[];
+  defines?: string[];
 };
 
 export type GypBinding = {
