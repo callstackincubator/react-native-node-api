@@ -31,6 +31,13 @@ const packageNameCache = new Map<string, string>();
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
+  {
+    // HACK: Take a shortcut (if applicable): existing `.node` files are addons
+    try {
+      fs.accessSync(modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`);
+      return true;
+    } catch {}
+  }
   const dir = path.dirname(modulePath);
   const baseName = path.basename(modulePath, ".node");
   let entries: string[];
