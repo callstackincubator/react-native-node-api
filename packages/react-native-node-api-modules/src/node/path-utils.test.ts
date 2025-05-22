@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import path from "node:path";
 import fs from "node:fs";
+import fswin from "fswin";
 
 import {
   determineModuleContext,
@@ -12,6 +13,40 @@ import {
   stripExtension,
 } from "./path-utils.js";
 import { setupTempDirectory } from "./test-utils.js";
+
+function removeReadPermissions(p: string) {
+  if (process.platform === "win32") {
+    // Windows: simulate unreadable by setting file to offline
+    const attributes = {
+      IS_READ_ONLY: true,
+      IS_OFFLINE: true,
+      IS_TEMPORARY: true,
+    };
+
+    const result = fswin.setAttributesSync(p, attributes);
+    if (!result) console.error('!!!!! can not set attributes');
+  } else {
+    // Unix-like: clear all perms
+    fs.chmodSync(p, 0);
+  }
+}
+
+function restoreReadPermissions(p: string) {
+  if (process.platform === "win32") {
+    // Windows: simulate unreadable by setting file to offline
+    const attributes = {
+      IS_READ_ONLY: false,
+      IS_OFFLINE: false,
+      IS_TEMPORARY: false,
+    };
+
+    const result = fswin.setAttributesSync(p, attributes);
+    if (!result) console.error('!!!!! can not set attributes');
+  } else {
+    // Unix-like: clear all perms
+    fs.chmodSync(p, 0o700);
+  }
+}
 
 describe("isNodeApiModule", () => {
   it("returns true for .node", (context) => {
@@ -28,14 +63,14 @@ describe("isNodeApiModule", () => {
       "addon.android.node": "",
     });
     // remove read permissions on directory
-    fs.chmodSync(tempDirectoryPath, 0);
+    removeReadPermissions(tempDirectoryPath);
     try {
       assert.equal(
         isNodeApiModule(path.join(tempDirectoryPath, "addon")),
         false
       );
     } finally {
-      fs.chmodSync(tempDirectoryPath, 0o700);
+      restoreReadPermissions(tempDirectoryPath);
     }
   });
 
@@ -45,14 +80,14 @@ describe("isNodeApiModule", () => {
     });
     const candidate = path.join(tempDirectoryPath, "addon.android.node");
     // remove read permission on file
-    fs.chmodSync(candidate, 0);
+    removeReadPermissions(candidate);
     try {
       assert.throws(
         () => isNodeApiModule(path.join(tempDirectoryPath, "addon")),
         /Found an unreadable module addon\.android\.node/
       );
     } finally {
-      fs.chmodSync(candidate, 0o600);
+      restoreReadPermissions(candidate);
     }
   });
 
@@ -81,12 +116,12 @@ describe("isNodeApiModule", () => {
     });
     const unreadable = path.join(tempDirectoryPath, "addon.android.node");
     // only android module is unreadable
-    fs.chmodSync(unreadable, 0);
+    removeReadPermissions(unreadable);
     assert.throws(
       () => isNodeApiModule(path.join(tempDirectoryPath, "addon")),
       /Found an unreadable module addon\.android\.node/
     );
-    fs.chmodSync(unreadable, 0o600);
+    restoreReadPermissions(unreadable);
   });
 });
 
