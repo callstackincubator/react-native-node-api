@@ -10,6 +10,7 @@ import { packageDirectorySync } from "pkg-dir";
 import { getLatestMtime, prettyPath } from "../path-utils";
 
 const HOST_PACKAGE_ROOT = path.resolve(__dirname, "../../..");
+// FIXME: make this configurable with reasonable fallback before public release
 const HERMES_GIT_URL = "https://github.com/kraenhansen/hermes.git";
 const HERMES_GIT_TAG = "node-api-for-react-native-0.79.0";
 
