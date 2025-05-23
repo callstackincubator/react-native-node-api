@@ -29,7 +29,7 @@ function removeReadPermissions(p: string) {
   };
 
   const result = fswin.setAttributesSync(p, attributes);
-  if (!result) console.error('!!!!! can not set attributes to remove read permissions');
+  if (!result) throw new Error("can not set attributes to remove read permissions");
 }
 
 function restoreReadPermissions(p: string) {
@@ -46,7 +46,7 @@ function restoreReadPermissions(p: string) {
   };
 
   const result = fswin.setAttributesSync(p, attributes);
-  if (!result) console.error('!!!!! can not set attributes to restore read permissions');
+  if (!result) throw new Error("can not set attributes to restore read permissions");
 }
 
 describe("isNodeApiModule", () => {
