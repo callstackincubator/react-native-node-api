@@ -15,37 +15,38 @@ import {
 import { setupTempDirectory } from "./test-utils.js";
 
 function removeReadPermissions(p: string) {
-  if (process.platform === "win32") {
-    // Windows: simulate unreadable by setting file to offline
-    const attributes = {
-      IS_READ_ONLY: true,
-      IS_OFFLINE: true,
-      IS_TEMPORARY: true,
-    };
-
-    const result = fswin.setAttributesSync(p, attributes);
-    if (!result) console.error('!!!!! can not set attributes');
-  } else {
+  if (process.platform !== "win32") {
     // Unix-like: clear all perms
     fs.chmodSync(p, 0);
+    return;
   }
+
+  // Windows: simulate unreadable by setting file to offline
+  const attributes = {
+    IS_READ_ONLY: true,
+    IS_OFFLINE: true,
+    IS_TEMPORARY: true,
+  };
+
+  const result = fswin.setAttributesSync(p, attributes);
+  if (!result) console.error('!!!!! can not set attributes to remove read permissions');
 }
 
 function restoreReadPermissions(p: string) {
-  if (process.platform === "win32") {
-    // Windows: simulate unreadable by setting file to offline
-    const attributes = {
-      IS_READ_ONLY: false,
-      IS_OFFLINE: false,
-      IS_TEMPORARY: false,
-    };
-
-    const result = fswin.setAttributesSync(p, attributes);
-    if (!result) console.error('!!!!! can not set attributes');
-  } else {
+  if (process.platform !== "win32") {
     // Unix-like: clear all perms
     fs.chmodSync(p, 0o700);
+    return;
   }
+
+  const attributes = {
+    IS_READ_ONLY: false,
+    IS_OFFLINE: false,
+    IS_TEMPORARY: false,
+  };
+
+  const result = fswin.setAttributesSync(p, attributes);
+  if (!result) console.error('!!!!! can not set attributes to restore read permissions');
 }
 
 describe("isNodeApiModule", () => {
@@ -58,11 +59,11 @@ describe("isNodeApiModule", () => {
     assert(isNodeApiModule(path.join(tempDirectoryPath, "addon.node")));
   });
 
-  it("returns false when directory cannot be read due to permissions", (context) => {
+  // there is no way to set ACLs on directories in Node.js on Windows with brittle powershell commands
+  (process.platform === "win32" ? it.skip : it)("returns false when directory cannot be read due to permissions", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "addon.android.node": "",
     });
-    // remove read permissions on directory
     removeReadPermissions(tempDirectoryPath);
     try {
       assert.equal(
@@ -79,7 +80,6 @@ describe("isNodeApiModule", () => {
       "addon.android.node": "",
     });
     const candidate = path.join(tempDirectoryPath, "addon.android.node");
-    // remove read permission on file
     removeReadPermissions(candidate);
     try {
       assert.throws(
