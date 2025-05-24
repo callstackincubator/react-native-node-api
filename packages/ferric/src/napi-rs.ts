@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { spawn } from "bufout";
+import { NapiCli } from "@napi-rs/cli";
+
+const napiCli = new NapiCli();
+
 import { getBlockComment } from "./banner.js";
 
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..");
@@ -39,28 +42,18 @@ export async function generateTypeScriptDeclarations({
       "{}",
       "utf8"
     );
-    // Call into napi.rs to generate TypeScript declarations
-    const napiCliPath = new URL(
-      import.meta.resolve("@napi-rs/cli/scripts/index.js")
-    ).pathname;
-    await spawn(
-      // TODO: Resolve the CLI path (not using npx because we don't want to npx to mess up the cwd)
-      napiCliPath,
-      [
-        "build",
-        "--dts",
-        outputFilename,
-        "--cargo-cwd",
-        // This doesn't understand absolute paths
-        path.relative(tempPath, createPath),
-      ],
-      {
-        outputMode: "buffered",
-        cwd: tempPath,
-      }
-    );
-    // Override the banner
     const tempOutputPath = path.join(tempPath, outputFilename);
+    // Call into napi.rs to generate TypeScript declarations
+    // RUSTFLAGS: "-C link-arg=-undefined -C link-arg=dynamic_lookup",
+    const { task } = await napiCli.build({
+      verbose: false,
+      dts: outputFilename,
+      outputDir: tempPath,
+      cwd: createPath,
+      cargoOptions: ["--quiet"],
+    });
+    await task;
+    // Override the banner
     assert(
       fs.existsSync(tempOutputPath),
       `Expected napi.rs to emit ${tempOutputPath}`
