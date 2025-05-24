@@ -16,7 +16,7 @@
     "start": "tsx src/run.ts"
   },
   "dependencies": {
-    "@napi-rs/cli": "^2.18.4",
+    "@napi-rs/cli": "3.0.0-alpha.80",
     "@commander-js/extra-typings": "^13.1.0",
     "bufout": "^0.3.1",
     "chalk": "^5.4.1",
