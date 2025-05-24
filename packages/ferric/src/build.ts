@@ -158,45 +158,6 @@ export const buildCommand = new Command("build")
           }
         );
 
-        const libraryName = determineLibraryBasename([
-          ...androidLibraries.map(([, outputPath]) => outputPath),
-        ]);
-
-        const declarationsFilename = `${libraryName}.d.ts`;
-        const declarationsPath = path.join(outputPath, declarationsFilename);
-        await oraPromise(
-          generateTypeScriptDeclarations({
-            outputFilename: declarationsFilename,
-            createPath: process.cwd(),
-            outputPath,
-          }),
-          {
-            text: "Generating TypeScript declarations",
-            successText: `Generated TypeScript declarations ${prettyPath(
-              declarationsPath
-            )}`,
-            failText: (error) =>
-              `Failed to generate TypeScript declarations: ${error.message}`,
-          }
-        );
-
-        const entrypointPath = path.join(outputPath, `${libraryName}.js`);
-
-        await oraPromise(
-          generateEntrypoint({
-            libraryName,
-            outputPath: entrypointPath,
-          }),
-          {
-            text: `Generating entrypoint`,
-            successText: `Generated entrypoint into ${prettyPath(
-              entrypointPath
-            )}`,
-            failText: (error) =>
-              `Failed to generate entrypoint: ${error.message}`,
-          }
-        );
-
         if (androidLibraries.length > 0) {
           const libraryPathByTriplet = Object.fromEntries(
             androidLibraries.map(([target, outputPath]) => [
@@ -260,6 +221,46 @@ export const buildCommand = new Command("build")
             }
           );
         }
+
+        const libraryName = determineLibraryBasename([
+          ...androidLibraries.map(([, outputPath]) => outputPath),
+          ...appleLibraries.map(([, outputPath]) => outputPath),
+        ]);
+
+        const declarationsFilename = `${libraryName}.d.ts`;
+        const declarationsPath = path.join(outputPath, declarationsFilename);
+        await oraPromise(
+          generateTypeScriptDeclarations({
+            outputFilename: declarationsFilename,
+            createPath: process.cwd(),
+            outputPath,
+          }),
+          {
+            text: "Generating TypeScript declarations",
+            successText: `Generated TypeScript declarations ${prettyPath(
+              declarationsPath
+            )}`,
+            failText: (error) =>
+              `Failed to generate TypeScript declarations: ${error.message}`,
+          }
+        );
+
+        const entrypointPath = path.join(outputPath, `${libraryName}.js`);
+
+        await oraPromise(
+          generateEntrypoint({
+            libraryName,
+            outputPath: entrypointPath,
+          }),
+          {
+            text: `Generating entrypoint`,
+            successText: `Generated entrypoint into ${prettyPath(
+              entrypointPath
+            )}`,
+            failText: (error) =>
+              `Failed to generate entrypoint: ${error.message}`,
+          }
+        );
       } catch (error) {
         if (error instanceof SpawnFailure) {
           error.flushOutput("both");
