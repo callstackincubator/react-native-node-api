@@ -136,7 +136,7 @@ export function normalizeModulePath(modulePath: string) {
   const basename = path.basename(modulePath);
   const strippedBasename = stripExtension(basename).replace(/^lib/, "");
   // Replace backslashes with forward slashes for cross-platform compatibility
-  return path.join(dirname, strippedBasename).replace(/\\/g, "/");
+  return path.join(dirname, strippedBasename).replaceAll("\\", "/");
 }
 
 export function escapePath(modulePath: string) {
