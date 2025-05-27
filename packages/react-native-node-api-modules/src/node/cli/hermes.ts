@@ -1,31 +1,45 @@
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
 import { Command } from "@commander-js/extra-typings";
 import { spawn, SpawnFailure } from "bufout";
 import { oraPromise } from "ora";
-import { prettyPath } from "../path-utils";
+import { packageDirectorySync } from "pkg-dir";
 
-const HERMES_PATH = path.resolve(__dirname, "../../../hermes");
+import { getLatestMtime, prettyPath } from "../path-utils";
+
+const HOST_PACKAGE_ROOT = path.resolve(__dirname, "../../..");
+// FIXME: make this configurable with reasonable fallback before public release
 const HERMES_GIT_URL = "https://github.com/kraenhansen/hermes.git";
 const HERMES_GIT_TAG = "node-api-for-react-native-0.79.0";
-const REACT_NATIVE_DIR = path.dirname(
-  require.resolve("react-native/package.json")
-);
 
 export const command = new Command("vendor-hermes")
+  .argument("[from]", "Path to a file inside the app package", process.cwd())
   .option("--silent", "Don't print anything except the final path", false)
   .option(
     "--force",
     "Don't check timestamps of input files to skip unnecessary rebuilds",
     false
   )
-  .action(async ({ force, silent }) => {
+  .action(async (from, { force, silent }) => {
     try {
-      if (force) {
-        fs.rmSync(HERMES_PATH, { recursive: true, force: true });
+      const appPackageRoot = packageDirectorySync({ cwd: from });
+      assert(appPackageRoot, "Failed to find package root");
+      const hermesPath = path.join(HOST_PACKAGE_ROOT, "hermes");
+      if (force && fs.existsSync(hermesPath)) {
+        await oraPromise(
+          fs.promises.rm(hermesPath, { recursive: true, force: true }),
+          {
+            text: "Removing existing Hermes clone",
+            successText: "Removed existing Hermes clone",
+            failText: (error) =>
+              `Failed to remove existing Hermes clone: ${error.message}`,
+            isEnabled: !silent,
+          }
+        );
       }
-      if (!fs.existsSync(HERMES_PATH)) {
+      if (!fs.existsSync(hermesPath)) {
         await oraPromise(
           spawn(
             "git",
@@ -37,27 +51,41 @@ export const command = new Command("vendor-hermes")
               "--branch",
               HERMES_GIT_TAG,
               HERMES_GIT_URL,
-              HERMES_PATH,
+              hermesPath,
             ],
             {
               outputMode: "buffered",
             }
           ),
           {
-            text: `Cloning custom Hermes into ${prettyPath(HERMES_PATH)}`,
+            text: `Cloning custom Hermes into ${prettyPath(hermesPath)}`,
             successText: "Cloned custom Hermes",
             failText: (err) => `Failed to clone custom Hermes: ${err.message}`,
             isEnabled: !silent,
           }
         );
+      }
+      const hermesJsiPath = path.join(hermesPath, "API/jsi/jsi");
+      const reactNativePath = path.dirname(
+        require.resolve("react-native/package.json", {
+          // Ensures we'll be patching the React Native package actually used by the app
+          paths: [appPackageRoot],
+        })
+      );
+      const reactNativeJsiPath = path.join(
+        reactNativePath,
+        "ReactCommon/jsi/jsi/"
+      );
+
+      if (
+        fs.existsSync(reactNativeJsiPath) &&
+        (force ||
+          getLatestMtime(hermesJsiPath) > getLatestMtime(reactNativeJsiPath))
+      ) {
         await oraPromise(
-          fs.promises.cp(
-            path.join(HERMES_PATH, "API/jsi/jsi"),
-            path.join(REACT_NATIVE_DIR, "ReactCommon/jsi/jsi/"),
-            {
-              recursive: true,
-            }
-          ),
+          fs.promises.cp(hermesJsiPath, reactNativeJsiPath, {
+            recursive: true,
+          }),
           {
             text: `Copying JSI from Hermes to React Native`,
             successText: "Copied JSI from Hermes to React Native",
@@ -67,7 +95,7 @@ export const command = new Command("vendor-hermes")
           }
         );
       }
-      console.log(HERMES_PATH);
+      console.log(hermesPath);
     } catch (error) {
       if (error instanceof SpawnFailure) {
         error.flushOutput("both");
