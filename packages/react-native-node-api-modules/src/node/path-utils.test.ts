@@ -60,7 +60,7 @@ describe("isNodeApiModule", () => {
   });
 
   // there is no way to set ACLs on directories in Node.js on Windows with brittle powershell commands
-  (process.platform === "win32" ? it.skip : it)("returns false when directory cannot be read due to permissions", (context) => {
+  it("returns false when directory cannot be read due to permissions", { skip: process.platform === "win32" }, (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "addon.android.node": "",
     });
