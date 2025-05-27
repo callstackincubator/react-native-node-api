@@ -56,8 +56,8 @@ export function isNodeApiModule(modulePath: string): boolean {
       if (!isReadableSync(filePath)) {
         throw new Error(`Found an unreadable module ${fileName}`);
       }
-    } catch (e) {
-      throw new Error(`Found an unreadable module ${fileName}: ${e}`);
+    } catch (err) {
+      throw new Error(`Found an unreadable module ${fileName}`, { cause: err });
     }
     return true;
   });
