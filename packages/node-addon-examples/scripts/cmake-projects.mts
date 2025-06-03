@@ -1,7 +1,8 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-export const EXAMPLES_DIR = new URL("../examples", import.meta.url).pathname;
+export const EXAMPLES_DIR = fileURLToPath(new URL("../examples", import.meta.url));
 
 export function findCMakeProjects(dir = EXAMPLES_DIR): string[] {
   let results: string[] = [];

@@ -13,7 +13,8 @@
     "build": "tsx scripts/build-examples.mts",
     "copy-and-build": "npm run copy-examples && npm run gyp-to-cmake && npm run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
-    "test": "npm run copy-and-build && npm run verify"
+    "test": "tsx --test scripts/*.test.mts scripts/**/*.test.mts",
+    "test:integration": "npm run copy-and-build && npm run verify"
   },
   "devDependencies": {
     "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
