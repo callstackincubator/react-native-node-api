@@ -58,10 +58,8 @@ jobs:
         uses: android-actions/setup-android@v3
       # Version here should match the one in React Native template and packages/react-native-node-api-cmake/src/cli.ts
       - run: sdkmanager --install "ndk;27.1.12297006"
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v2
-        with:
-          version: "18.1"
+      # Add Android NDK's clang to PATH
+      - run: echo "$ANDROID_HOME/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
       - run: npm ci
       - run: npm run build
       - run: npm run copy-node-api-headers --workspace react-native-node-api-modules
