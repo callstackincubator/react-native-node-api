@@ -43,7 +43,7 @@
     "copy-node-api-headers": "tsx scripts/copy-node-api-headers.ts",
     "generate-weak-node-api": "tsx scripts/generate-weak-node-api.ts",
     "generate-weak-node-api-injector": "tsx scripts/generate-weak-node-api-injector.ts",
-    "build-weak-node-api": "npm run generate-weak-node-api && react-native-node-api-cmake --android --apple --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api",
+    "build-weak-node-api": "tsx scripts/build-weak-node-api.ts",
     "test": "tsx --test src/node/**/*.test.ts src/node/*.test.ts"
   },
   "keywords": [
