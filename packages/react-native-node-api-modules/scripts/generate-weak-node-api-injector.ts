@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import cp from "node:child_process";
+import { spawnSyncCrossPlatform } from "./platform-utils.js";
 
 import { FunctionDecl, getNodeApiFunctions } from "./node-api-functions";
 
@@ -20,6 +20,8 @@ export function generateSource(functions: FunctionDecl[]) {
     #define WEAK_NODE_API_LIBRARY_NAME "@rpath/weak-node-api.framework/weak-node-api"
     #elif defined(__ANDROID__)
     #define WEAK_NODE_API_LIBRARY_NAME "libweak-node-api.so"
+    #elif defined(_WIN32)
+    #define WEAK_NODE_API_LIBRARY_NAME "weak-node-api.dll"
     #else
     #error "WEAK_NODE_API_LIBRARY_NAME cannot be defined for this platform"
     #endif
@@ -58,7 +60,7 @@ async function run() {
   const source = generateSource(nodeApiFunctions);
   const sourcePath = path.join(CPP_SOURCE_PATH, "WeakNodeApiInjector.cpp");
   await fs.promises.writeFile(sourcePath, source, "utf-8");
-  cp.spawnSync("clang-format", ["-i", sourcePath], { stdio: "inherit" });
+  spawnSyncCrossPlatform("clang-format", ["-i", sourcePath], { stdio: "inherit" });
 }
 
 run().catch((err) => {

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import cp from "node:child_process";
+import { execFileSyncCrossPlatform } from "./platform-utils.js";
 
 import {
   type NodeApiVersion,
@@ -29,7 +29,7 @@ const clangAstDump = z.object({
  * @param version
  */
 export function getNodeApiHeaderAST(version: NodeApiVersion) {
-  const output = cp.execFileSync(
+  const output = execFileSyncCrossPlatform(
     "clang",
     [
       // Declare the Node API version
@@ -50,7 +50,7 @@ export function getNodeApiHeaderAST(version: NodeApiVersion) {
       // Emitting the AST can produce a lot of output
       maxBuffer: 1024 * 1024 * 10,
     }
-  );
+  ) as string;
   const parsed = JSON.parse(output);
   return clangAstDump.parse(parsed);
 }

@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import cp from "node:child_process";
+import { spawnSyncCrossPlatform } from "./platform-utils.js";
 
 import { FunctionDecl, getNodeApiFunctions } from "./node-api-functions";
 
@@ -74,12 +74,12 @@ async function run() {
   const header = generateHeader(nodeApiFunctions);
   const headerPath = path.join(WEAK_NODE_API_PATH, "weak_node_api.hpp");
   await fs.promises.writeFile(headerPath, header, "utf-8");
-  cp.spawnSync("clang-format", ["-i", headerPath], { stdio: "inherit" });
+  spawnSyncCrossPlatform("clang-format", ["-i", headerPath], { stdio: "inherit" });
 
   const source = generateSource(nodeApiFunctions);
   const sourcePath = path.join(WEAK_NODE_API_PATH, "weak_node_api.cpp");
   await fs.promises.writeFile(sourcePath, source, "utf-8");
-  cp.spawnSync("clang-format", ["-i", sourcePath], { stdio: "inherit" });
+  spawnSyncCrossPlatform("clang-format", ["-i", sourcePath], { stdio: "inherit" });
 }
 
 run().catch((err) => {
