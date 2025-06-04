@@ -11,9 +11,9 @@ describe("plugin", () => {
   it("transforms require calls, regardless", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
-      "addon-1.apple.node/addon-1.node":
+      "addon-1.node":
         "// This is supposed to be a binary file",
-      "addon-2.apple.node/addon-2.node":
+      "addon-2.node":
         "// This is supposed to be a binary file",
       "addon-1.js": `
         const addon = require('./addon-1.node');
