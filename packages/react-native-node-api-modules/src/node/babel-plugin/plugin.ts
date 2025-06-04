@@ -8,7 +8,7 @@ import { readPackageSync } from "read-pkg";
 
 import { isNodeApiModule } from "../path-utils";
 
-type PluginOptions = {
+export type PluginOptions = {
   stripPathSuffix?: boolean;
 };
 

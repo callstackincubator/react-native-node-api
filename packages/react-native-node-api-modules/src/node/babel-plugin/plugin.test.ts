@@ -4,9 +4,8 @@ import path from "node:path";
 
 import { transformFileSync } from "@babel/core";
 
-import { plugin } from "./plugin.js";
+import { plugin, type PluginOptions } from "./plugin.js";
 import { setupTempDirectory } from "../test-utils.js";
-import { getLibraryName } from "../path-utils.js";
 
 describe("plugin", () => {
   it("transforms require calls, regardless", (context) => {
@@ -38,66 +37,36 @@ describe("plugin", () => {
       `,
     });
 
-    const ADDON_1_REQUIRE_ARG = getLibraryName(
-      path.join(tempDirectoryPath, "addon-1"),
-      { stripPathSuffix: false }
-    );
-    const ADDON_2_REQUIRE_ARG = getLibraryName(
-      path.join(tempDirectoryPath, "addon-2"),
-      { stripPathSuffix: false }
-    );
+    const EXPECTED_PKG_NAME = "my-package";
 
-    {
+    type TestCaseParams = {
+      resolvedPath: string;
+      originalPath: string;
+      inputFile: string;
+      options?: PluginOptions;
+    };
+    const runTestCase = ({
+      resolvedPath,
+      originalPath,
+      inputFile,
+      options,
+    }: TestCaseParams) => {
       const result = transformFileSync(
-        path.join(tempDirectoryPath, "./addon-1.js"),
-        { plugins: [[plugin, { stripPathSuffix: false }]] }
+        path.join(tempDirectoryPath, inputFile),
+        { plugins: [[plugin, options]] }
       );
       assert(result);
       const { code } = result;
       assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
+        code && code.includes(`requireNodeAddon("${resolvedPath}", "${EXPECTED_PKG_NAME}", "${originalPath}")`),
         `Unexpected code: ${code}`
       );
-    }
+    };
 
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./addon-2.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_2_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
-
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./sub-directory/addon-1.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
-
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./addon-1-bindings.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
+    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "./addon-1.node", inputFile: "./addon-1.js" });
+    runTestCase({ resolvedPath: "./addon-2.node", originalPath: "./addon-2.node", inputFile: "./addon-2.js", options: { naming: "hash" } });
+    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "../addon-1.node", inputFile: "./sub-directory/addon-1.js", options: { naming: "hash" } });
+    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "addon-1", inputFile: "./addon-1-bindings.js", options: { naming: "hash" } });
 
     {
       const result = transformFileSync(
