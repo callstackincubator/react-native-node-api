@@ -27,6 +27,11 @@ describe("plugin", () => {
         const addon = require('../addon-1.node');
         console.log(addon);
       `,
+      "sub-directory-3/package.json": `{ "name": "sub-package" }`,
+      "sub-directory-3/addon-outside.js": `
+        const addon = require('../addon-2.node');
+        console.log(addon);
+      `,
       "addon-1-bindings.js": `
         const addon = require('bindings')('addon-1');
         console.log(addon);
@@ -66,6 +71,7 @@ describe("plugin", () => {
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "./addon-1.node", inputFile: "./addon-1.js" });
     runTestCase({ resolvedPath: "./addon-2.node", originalPath: "./addon-2.node", inputFile: "./addon-2.js" });
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "../addon-1.node", inputFile: "./sub-directory/addon-1.js" });
+    runTestCase({ resolvedPath: "./addon-2.node", originalPath: "../addon-2.node", inputFile: "./sub-directory-3/addon-outside.js" });
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "addon-1", inputFile: "./addon-1-bindings.js" });
 
     {
