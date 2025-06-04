@@ -3,10 +3,8 @@ import path from "node:path";
 
 import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
-import { packageDirectorySync } from "pkg-dir";
-import { readPackageSync } from "read-pkg";
 
-import { isNodeApiModule } from "../path-utils";
+import { determineModuleContext, isNodeApiModule } from "../path-utils";
 
 export type PluginOptions = {
   stripPathSuffix?: boolean;
@@ -78,17 +76,13 @@ function findNodeAddonForBindings(id: string, fromDir: string) {
 export function replaceWithRequireNodeAddon3(
   p: NodePath,
   resolvedPath: string,
+  originalPath: string,
   requiredFrom: string
 ) {
-  const pkgRoot = packageDirectorySync({ cwd: resolvedPath });
-  if (pkgRoot === undefined) {
-    throw new Error("Unable to locate package directory!");
-  }
-
-  const subpath = path.relative(pkgRoot, resolvedPath);
-  const dottedSubpath = subpath.startsWith("./") ? subpath : `./${subpath}`;
-  const fromRelative = path.relative(pkgRoot, requiredFrom); // TODO: might escape package
-  const { name } = readPackageSync({ cwd: pkgRoot });
+  const { packageName, relativePath } = determineModuleContext(resolvedPath);
+  const finalRelPath = relativePath.startsWith("./")
+      ? relativePath
+      : `./${relativePath}`;
 
   p.replaceWith(
     t.callExpression(
@@ -98,7 +92,7 @@ export function replaceWithRequireNodeAddon3(
         ]),
         t.identifier("requireNodeAddon")
       ),
-      [dottedSubpath, name, fromRelative]
+      [finalRelPath, packageName, originalPath]
         .map(t.stringLiteral),
     )
   );
@@ -130,14 +124,14 @@ export function plugin(): PluginObj {
               const id = argument.value;
               const resolvedPath = findNodeAddonForBindings(id, from);
               if (resolvedPath !== undefined) {
-                replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, this.filename);
+                replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, id, this.filename);
               }
             }
           } else {
             // This should handle "bare specifiers" and "private imports" that start with `#`
             const resolvedPath = tryResolveModulePath(id, from);
             if (!!resolvedPath && isNodeApiModule(resolvedPath)) {
-              replaceWithRequireNodeAddon3(p, resolvedPath, this.filename);
+              replaceWithRequireNodeAddon3(p, resolvedPath, id, this.filename);
             }
           }
         }
