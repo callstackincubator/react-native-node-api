@@ -76,8 +76,7 @@ function findNodeAddonForBindings(id: string, fromDir: string) {
 export function replaceWithRequireNodeAddon3(
   p: NodePath,
   resolvedPath: string,
-  originalPath: string,
-  requiredFrom: string
+  originalPath: string
 ) {
   const { packageName, relativePath } = determineModuleContext(resolvedPath);
   const finalRelPath = relativePath.startsWith("./")
@@ -124,14 +123,14 @@ export function plugin(): PluginObj {
               const id = argument.value;
               const resolvedPath = findNodeAddonForBindings(id, from);
               if (resolvedPath !== undefined) {
-                replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, id, this.filename);
+                replaceWithRequireNodeAddon3(p.parentPath, resolvedPath, id);
               }
             }
           } else {
             // This should handle "bare specifiers" and "private imports" that start with `#`
             const resolvedPath = tryResolveModulePath(id, from);
             if (!!resolvedPath && isNodeApiModule(resolvedPath)) {
-              replaceWithRequireNodeAddon3(p, resolvedPath, id, this.filename);
+              replaceWithRequireNodeAddon3(p, resolvedPath, id);
             }
           }
         }
