@@ -134,8 +134,21 @@ export function determineModuleContext(
     packageNameCache.set(pkgDir, pkgName);
   }
   // Compute module-relative path
-  const relPath = normalizeModulePath(path.relative(pkgDir, originalPath));
+  const relPath = path.relative(pkgDir, originalPath);
   return { packageName: pkgName, relativePath: relPath };
+}
+
+/**
+ * Traverse the filesystem upward to find a name for the package that which contains a file.
+ * This variant normalizes the module path.
+ */
+export function determineNormalizedModuleContext(
+  modulePath: string,
+  originalPath = modulePath
+): ModuleContext {
+  const { packageName, relativePath } = determineModuleContext(modulePath, originalPath);
+  const relPath = normalizeModulePath(relativePath);
+  return { packageName, relativePath: relPath };
 }
 
 export function normalizeModulePath(modulePath: string) {
@@ -154,7 +167,7 @@ export function escapePath(modulePath: string) {
  * Get the name of the library which will be used when the module is linked in.
  */
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
-  const { packageName, relativePath } = determineModuleContext(modulePath);
+  const { packageName, relativePath } = determineNormalizedModuleContext(modulePath);
   return naming.stripPathSuffix
     ? packageName
     : `${packageName}--${escapePath(relativePath)}`;
