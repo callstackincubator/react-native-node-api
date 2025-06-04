@@ -64,9 +64,9 @@ describe("plugin", () => {
     };
 
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "./addon-1.node", inputFile: "./addon-1.js" });
-    runTestCase({ resolvedPath: "./addon-2.node", originalPath: "./addon-2.node", inputFile: "./addon-2.js", options: { naming: "hash" } });
-    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "../addon-1.node", inputFile: "./sub-directory/addon-1.js", options: { naming: "hash" } });
-    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "addon-1", inputFile: "./addon-1-bindings.js", options: { naming: "hash" } });
+    runTestCase({ resolvedPath: "./addon-2.node", originalPath: "./addon-2.node", inputFile: "./addon-2.js" });
+    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "../addon-1.node", inputFile: "./sub-directory/addon-1.js" });
+    runTestCase({ resolvedPath: "./addon-1.node", originalPath: "addon-1", inputFile: "./addon-1-bindings.js" });
 
     {
       const result = transformFileSync(
