@@ -6,6 +6,7 @@ import fswin from "fswin";
 
 import {
   determineModuleContext,
+  determineNormalizedModuleContext,
   findNodeApiModulePaths,
   findPackageDependencyPaths,
   getLibraryName,
@@ -135,14 +136,14 @@ describe("stripExtension", () => {
   });
 });
 
-describe("determineModuleContext", () => {
+describe("determineNormalizedModuleContext", () => {
   it("strips the file extension", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
     });
 
     {
-      const { packageName, relativePath } = determineModuleContext(
+      const { packageName, relativePath } = determineNormalizedModuleContext(
         path.join(tempDirectoryPath, "some-dir/some-file.node")
       );
       assert.equal(packageName, "my-package");
@@ -156,14 +157,16 @@ describe("determineModuleContext", () => {
     });
 
     {
-      const { packageName, relativePath } = determineModuleContext(
+      const { packageName, relativePath } = determineNormalizedModuleContext(
         path.join(tempDirectoryPath, "some-dir/libsome-file.node")
       );
       assert.equal(packageName, "my-package");
       assert.equal(relativePath, "some-dir/some-file");
     }
   });
+});
 
+describe("determineModuleContext", () => {
   it("resolves the correct package name", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "root-package" }`,
@@ -177,7 +180,7 @@ describe("determineModuleContext", () => {
         path.join(tempDirectoryPath, "sub-package-a/some-file.node")
       );
       assert.equal(packageName, "my-sub-package-a");
-      assert.equal(relativePath, "some-file");
+      assert.equal(relativePath, "some-file.node");
     }
 
     {
@@ -185,7 +188,7 @@ describe("determineModuleContext", () => {
         path.join(tempDirectoryPath, "sub-package-b/some-file.node")
       );
       assert.equal(packageName, "my-sub-package-b");
-      assert.equal(relativePath, "some-file");
+      assert.equal(relativePath, "some-file.node");
     }
   });
 });
