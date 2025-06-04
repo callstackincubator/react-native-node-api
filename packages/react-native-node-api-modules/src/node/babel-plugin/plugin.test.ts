@@ -81,4 +81,34 @@ describe("plugin", () => {
       );
     }
   });
+
+  it("transforms require calls to packages with native entry point", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "node_modules/@scope/my-package/package.json":
+        `{ "name": "@scope/my-package", "main": "./build/Release/addon-1.node" }`,
+      "node_modules/@scope/my-package/build/Release/addon-1.node":
+        "// This is supposed to be a binary file",
+      "package.json": `{ "name": "my-consumer" }`,
+      "test.js": `
+        const addon = require('@scope/my-package');
+        console.log(addon);
+      `
+    });
+
+    const EXPECTED_PKG_NAME = "@scope/my-package";
+    const EXPECTED_PATH = "./build/Release/addon-1.node";
+
+    {
+      const result = transformFileSync(
+        path.join(tempDirectoryPath, "test.js"),
+        { plugins: [[plugin]] }
+      );
+      assert(result);
+      const { code } = result;
+      assert(
+        code && code.includes(`requireNodeAddon("${EXPECTED_PATH}", "${EXPECTED_PKG_NAME}", "${EXPECTED_PKG_NAME}")`),
+        `Unexpected code: ${code}`
+      );
+    };
+  });
 });
