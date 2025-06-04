@@ -60,7 +60,7 @@ const nodeBindingsSubdirs = [
   "./Release",
   "./Debug",
 ];
-function findNodeAddonForBindings(id: string, fromDir: string) {
+export function findNodeAddonForBindings(id: string, fromDir: string) {
   const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
   // Support traversing the filesystem to find the Node-API module.
   // Currently, we check the most common directories like `bindings` does.
