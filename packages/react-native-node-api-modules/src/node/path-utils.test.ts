@@ -167,7 +167,7 @@ describe("determineNormalizedModuleContext", () => {
 });
 
 describe("determineModuleContext", () => {
-  it("resolves the correct package name", (context) => {
+  it("resolves the correct unscoped package name", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "root-package" }`,
       // Two sub-packages with the same name
@@ -188,6 +188,31 @@ describe("determineModuleContext", () => {
         path.join(tempDirectoryPath, "sub-package-b/some-file.node")
       );
       assert.equal(packageName, "my-sub-package-b");
+      assert.equal(relativePath, "some-file.node");
+    }
+  });
+
+  it("resolves the correct scoped package name", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "root-package" }`,
+      // Two sub-packages with the same name
+      "sub-package-a/package.json": `{ "name": "@root-package/my-sub-package-a" }`,
+      "sub-package-b/package.json": `{ "name": "@root-package/my-sub-package-b" }`,
+    });
+
+    {
+      const { packageName, relativePath } = determineModuleContext(
+        path.join(tempDirectoryPath, "sub-package-a/some-file.node")
+      );
+      assert.equal(packageName, "@root-package/my-sub-package-a");
+      assert.equal(relativePath, "some-file.node");
+    }
+
+    {
+      const { packageName, relativePath } = determineModuleContext(
+        path.join(tempDirectoryPath, "sub-package-b/some-file.node")
+      );
+      assert.equal(packageName, "@root-package/my-sub-package-b");
       assert.equal(relativePath, "some-file.node");
     }
   });
