@@ -4,6 +4,7 @@ import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
   globalIgnores([".nx/**"]),
@@ -14,6 +15,7 @@ export default tseslint.config(
   globalIgnores(["packages/ferric-example/ferric_example.d.ts"]),
   eslint.configs.recommended,
   tseslint.configs.recommended,
+  eslintConfigPrettier,
   {
     files: [
       "apps/test-app/*.js",

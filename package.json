@@ -18,6 +18,8 @@
     "clean": "tsc --build --clean",
     "dev": "tsc --build --watch",
     "lint": "eslint .",
+    "prettier:check": "prettier --experimental-cli --check .",
+    "prettier:write": "prettier --experimental-cli --write .",
     "test": "npm run test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
     "bootstrap": "npm run build && npm run bootstrap --workspaces --if-present",
     "prerelease": "npm run build && npm run prerelease --workspaces --if-present",
@@ -41,15 +43,17 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@eslint/js": "^9.19.0",
+    "@prettier/plugin-oxc": "^0.0.4",
     "@reporters/github": "^1.7.2",
     "@tsconfig/node22": "^22.0.0",
     "@tsconfig/react-native": "3.0.5",
     "@types/node": "^22.13.0",
     "eslint": "^9.19.0",
+    "eslint-config-prettier": "^10.1.5",
     "globals": "^16.0.0",
+    "prettier": "^3.6.2",
     "react-native": "0.79.5",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.22.0",
-    "tsx": "^4.19.3"
+    "typescript-eslint": "^8.22.0"
   }
 }
