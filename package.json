@@ -13,6 +13,8 @@
     "clean": "tsc --build --clean",
     "dev": "tsc --build --watch",
     "lint": "eslint .",
+    "prettier:check": "prettier --check .",
+    "prettier:write": "prettier --write .",
     "test": "npm run test --workspace react-native-node-api-modules --workspace react-native-node-api-cmake --workspace gyp-to-cmake --workspace node-addon-examples"
   },
   "author": {
@@ -32,10 +34,12 @@
     "@tsconfig/react-native": "3.0.5",
     "@types/node": "^22.13.0",
     "eslint": "^9.19.0",
+    "eslint-config-prettier": "^10.1.5",
     "globals": "^16.0.0",
+    "prettier": "3.5.3",
     "react-native": "0.79.1",
+    "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.22.0",
-    "tsx": "^4.19.3"
+    "typescript-eslint": "^8.22.0"
   }
 }

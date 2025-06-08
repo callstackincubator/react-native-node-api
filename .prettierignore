@@ -1,0 +1,10 @@
+# Ignore artifacts
+dist
+build
+Pods
+target
+.cxx
+
+# Ignore hermes
+packages/react-native-node-api-modules/hermes
+packages/node-addon-examples/examples

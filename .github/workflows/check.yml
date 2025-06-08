@@ -18,6 +18,7 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run lint
+      - run: npm run prettier:check
   test-simple:
     name: Run tests which doesn't require MacOS
     runs-on: ubuntu-latest
