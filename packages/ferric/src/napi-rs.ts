@@ -44,7 +44,6 @@ export async function generateTypeScriptDeclarations({
     );
     const tempOutputPath = path.join(tempPath, outputFilename);
     // Call into napi.rs to generate TypeScript declarations
-    // RUSTFLAGS: "-C link-arg=-undefined -C link-arg=dynamic_lookup",
     const { task } = await napiCli.build({
       verbose: false,
       dts: outputFilename,
