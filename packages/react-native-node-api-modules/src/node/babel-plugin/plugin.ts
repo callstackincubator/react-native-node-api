@@ -4,7 +4,11 @@ import path from "node:path";
 import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
 
-import { determineModuleContext, isNodeApiModule } from "../path-utils";
+import {
+  determineModuleContext,
+  isNodeApiModule,
+  findNodeAddonForBindings,
+} from "../path-utils";
 
 export type PluginOptions = {
   stripPathSuffix?: boolean;
@@ -48,29 +52,6 @@ function tryResolveModulePath(id: string, from: string): string | undefined {
       return undefined;
     }
   }
-}
-
-const nodeBindingsSubdirs = [
-  "./",
-  "./build/Release",
-  "./build/Debug",
-  "./build",
-  "./out/Release",
-  "./out/Debug",
-  "./Release",
-  "./Debug",
-];
-export function findNodeAddonForBindings(id: string, fromDir: string) {
-  const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
-  // Support traversing the filesystem to find the Node-API module.
-  // Currently, we check the most common directories like `bindings` does.
-  for (const subdir of nodeBindingsSubdirs) {
-    const resolvedPath = path.join(fromDir, subdir, idWithExt);
-    if (isNodeApiModule(resolvedPath)) {
-      return resolvedPath;
-    }
-  }
-  return undefined;
 }
 
 export function replaceWithRequireNodeAddon3(

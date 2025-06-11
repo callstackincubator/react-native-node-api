@@ -404,3 +404,29 @@ export function getLatestMtime(fromPath: string): number {
 
   return latest;
 }
+
+// NOTE: List of paths influenced by `node-bindings` itself
+// https://github.com/TooTallNate/node-bindings/blob/v1.3.0/bindings.js#L21
+const nodeBindingsSubdirs = [
+  "./",
+  "./build/Release",
+  "./build/Debug",
+  "./build",
+  "./out/Release",
+  "./out/Debug",
+  "./Release",
+  "./Debug",
+];
+
+export function findNodeAddonForBindings(id: string, fromDir: string) {
+  const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
+  // Support traversing the filesystem to find the Node-API module.
+  // Currently, we check the most common directories like `bindings` does.
+  for (const subdir of nodeBindingsSubdirs) {
+    const resolvedPath = path.join(fromDir, subdir, idWithExt);
+    if (isNodeApiModule(resolvedPath)) {
+      return resolvedPath;
+    }
+  }
+  return undefined;
+}
