@@ -2,7 +2,7 @@
 
 This document codifies the naming and directory structure of prebuilt binaries, expected by the auto-linking mechanism.
 
-At the time of writing, our auto-linking host package (`react-native-node-api-modules`) support two kinds of prebuilds:
+At the time of writing, our auto-linking host package (`react-native-node-api`) support two kinds of prebuilds:
 
 ## `*.android.node` (for Android)
 
@@ -17,7 +17,7 @@ The name of all the `.so` library files:
 > [!NOTE]
 > The `SONAME` doesn't have to match and is not updated as the .so is copied into the host package.
 > This might cause trouble if you're trying to link with the library from other native code.
-> We're tracking [#14](https://github.com/callstackincubator/react-native-node-api-modules/issues/14) to fix this 🤞
+> We're tracking [#14](https://github.com/callstackincubator/react-native-node-api/issues/14) to fix this 🤞
 
 The directory must have a `react-native-node-api-module` file (the content doesn't matter), to signal that the directory is intended for auto-linking by the `react-native-node-api-module` package.
 

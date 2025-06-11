@@ -16,7 +16,7 @@ import {
   createUniversalAppleLibrary,
   determineLibraryBasename,
   prettyPath,
-} from "react-native-node-api-modules";
+} from "react-native-node-api";
 
 import { UsageError } from "./errors.js";
 import { ensureCargo, build } from "./cargo.js";

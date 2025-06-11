@@ -1,11 +1,11 @@
 {
   "name": "react-native-node-api",
   "version": "0.1.0",
-  "description": "Node-API Modules for React Native",
-  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "description": "Node-API for React Native",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
     "directory": "packages/react-native-node-api"
   },
   "main": "dist/react-native/index.js",

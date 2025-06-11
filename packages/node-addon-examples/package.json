@@ -1,10 +1,10 @@
 {
   "name": "react-native-node-addon-examples",
   "private": true,
-  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
     "directory": "packages/node-addon-examples"
   },
   "scripts": {

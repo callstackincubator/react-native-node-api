@@ -89,7 +89,7 @@ bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
     // TODO: Read "node_api_module_get_api_version_v1" to support the addon
     // declaring its Node-API version
     // @see
-    // https://github.com/callstackincubator/react-native-node-api-modules/issues/4
+    // https://github.com/callstackincubator/react-native-node-api/issues/4
   } else {
     log_debug("[%s] Failed to load library", libraryName.c_str());
   }
@@ -104,7 +104,7 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
   napi_status status = napi_ok;
   // TODO: Read the version from the addon
   // @see
-  // https://github.com/callstackincubator/react-native-node-api-modules/issues/4
+  // https://github.com/callstackincubator/react-native-node-api/issues/4
   napi_env env = reinterpret_cast<napi_env>(rt.createNodeApiEnv(8));
 
   // Create the "exports" object

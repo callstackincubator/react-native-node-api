@@ -15,12 +15,12 @@ The library has a require call to a `.node` file, which would normally not have 
 module.exports = require("./prebuild.node");
 ```
 
-Since the app developer has added the `react-native-node-api-modules/babel-plugin` to their Babel configuration, the require statement gets transformed when the app is being bundled by Metro, into a `requireNodeAddon` call on our TurboModule.
+Since the app developer has added the `react-native-node-api/babel-plugin` to their Babel configuration, the require statement gets transformed when the app is being bundled by Metro, into a `requireNodeAddon` call on our TurboModule.
 
 The generated code looks something like this:
 
 ```javascript
-module.exports = require("react-native-node-api-modules").requireNodeAddon(
+module.exports = require("react-native-node-api").requireNodeAddon(
   "calculator-lib--prebuild"
 );
 ```
@@ -37,13 +37,13 @@ In Node.js dynamic libraries sharing names can be disambiguated based off their 
 
 To work around this issue, we scan for and copy any library (including its entire xcframework structure with nested framework directories) from the dependency package into our host package when the app builds and reference these from its podspec (as vendored_frameworks). We use a special file in the xcframeworks containing Node-API modules. To avoid collisions we rename xcframework, framework and library files to a unique name, containing a hash. The hash is computed based off the package-name of the containing package and the relative path from the package root to the library file (with any platform specific file extensions replaced with the neutral ".node" extension).
 
-## Transformed code calls into `react-native-node-api-modules`, loading the platform specific dynamic library
+## Transformed code calls into `react-native-node-api`, loading the platform specific dynamic library
 
 The native implementation of `requireNodeAddon` is responsible for loading the dynamic library and allow the Node-API module to register its initialization function, either by exporting a `napi_register_module_v1` function or by calling the (deprecated) `napi_module_register` function.
 
 In any case the native code stores the initialization function in a data-structure.
 
-## `react-native-node-api-modules` creates a `node_env` and initialize the Node-API module
+## `react-native-node-api` creates a `node_env` and initialize the Node-API module
 
 The initialization function of a Node-API module expects a `node_env`, which we create by calling `createNodeApiEnv` on the `jsi::Runtime`.
 
@@ -52,11 +52,11 @@ The initialization function of a Node-API module expects a `node_env`, which we 
 An `exports` object is created for the Node-API module and both the `napi_env` and `exports` object is passed to the Node-API module's initialization function and the third party code is able to call the Node-API free functions:
 
 - The engine-specific functions (see [js_native_api.h](https://github.com/nodejs/node/blob/main/src/js_native_api.h)) are implemented by the `jsi::Runtime` (currently only Hermes supports this).
-- The runtime-specific functions (see [node_api.h](https://github.com/nodejs/node/blob/main/src/node_api.h)) are implemented by `react-native-node-api-modules`.
+- The runtime-specific functions (see [node_api.h](https://github.com/nodejs/node/blob/main/src/node_api.h)) are implemented by `react-native-node-api`.
 
 ## `my-app` regain control and call `add`
 
-When the `exports` object is populated by `calculator-lib`'s Node-API module, control is returned to `react-native-node-api-modules` which returns the `exports` object to JavaScript, with the `add` function defined on it.
+When the `exports` object is populated by `calculator-lib`'s Node-API module, control is returned to `react-native-node-api` which returns the `exports` object to JavaScript, with the `add` function defined on it.
 
 ```javascript
 import { add } from "calculator-lib";

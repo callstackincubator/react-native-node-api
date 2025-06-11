@@ -30,7 +30,7 @@ import {
   createAppleFramework,
   createXCframework,
   determineXCFrameworkFilename,
-} from "react-native-node-api-modules";
+} from "react-native-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -83,12 +83,12 @@ const ndkVersionOption = new Option(
 
 const noAutoLinkOption = new Option(
   "--no-auto-link",
-  "Don't mark the output as auto-linkable by react-native-node-api-modules"
+  "Don't mark the output as auto-linkable by react-native-node-api"
 );
 
 const noWeakNodeApiLinkageOption = new Option(
   "--no-weak-node-api-linkage",
-  "Don't pass the path of the weak-node-api library from react-native-node-api-modules"
+  "Don't pass the path of the weak-node-api library from react-native-node-api"
 );
 
 const xcframeworkExtensionOption = new Option(

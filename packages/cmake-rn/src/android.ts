@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { AndroidTriplet } from "react-native-node-api-modules";
+import { AndroidTriplet } from "react-native-node-api";
 
 export const DEFAULT_ANDROID_TRIPLETS = [
   "aarch64-linux-android",

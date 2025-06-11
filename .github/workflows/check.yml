@@ -28,7 +28,7 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run build
-      - run: npm test --workspace gyp-to-cmake --workspace cmake-rn --workspace react-native-node-api-modules
+      - run: npm test --workspace gyp-to-cmake --workspace cmake-rn --workspace react-native-node-api
   test-windows:
     name: Run tests on Windows
     runs-on: windows-latest
@@ -39,7 +39,7 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run build
-      - run: npm test --workspace gyp-to-cmake --workspace cmake-rn --workspace react-native-node-api-modules
+      - run: npm test --workspace gyp-to-cmake --workspace cmake-rn --workspace react-native-node-api
 
   test-macos:
     name: Run tests which requires MacOS
@@ -60,7 +60,7 @@ jobs:
       - run: sdkmanager --install "ndk;27.1.12297006"
       - run: npm ci
       - run: npm run build
-      - run: npm run copy-node-api-headers --workspace react-native-node-api-modules
-      - run: npm run build-weak-node-api --workspace react-native-node-api-modules
-      - run: npm run generate-weak-node-api-injector --workspace react-native-node-api-modules
+      - run: npm run copy-node-api-headers --workspace react-native-node-api
+      - run: npm run build-weak-node-api --workspace react-native-node-api
+      - run: npm run generate-weak-node-api-injector --workspace react-native-node-api
       - run: npm test --workspace react-native-node-addon-examples

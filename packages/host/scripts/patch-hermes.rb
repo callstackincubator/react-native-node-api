@@ -1,6 +1,6 @@
 Pod::UI.warn "!!! PATCHING HERMES WITH NODE-API SUPPORT !!!"
 
-VENDORED_HERMES_DIR ||= `npx react-native-node-api-modules vendor-hermes --silent '#{Pod::Config.instance.installation_root}'`.strip
+VENDORED_HERMES_DIR ||= `npx react-native-node-api vendor-hermes --silent '#{Pod::Config.instance.installation_root}'`.strip
 if Dir.exist?(VENDORED_HERMES_DIR)
   Pod::UI.info "Hermes vendored into #{VENDORED_HERMES_DIR.inspect}"
 else

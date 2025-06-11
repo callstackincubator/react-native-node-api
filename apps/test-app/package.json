@@ -25,7 +25,7 @@
     "react": "19.0.0",
     "react-native": "0.79.1",
     "react-native-node-addon-examples": "*",
-    "react-native-node-api-modules": "*",
+    "react-native-node-api": "*",
     "react-native-test-app": "^4.3.3"
   }
 }

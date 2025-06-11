@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { AppleTriplet, isAppleTriplet } from "react-native-node-api-modules";
+import { AppleTriplet, isAppleTriplet } from "react-native-node-api";
 
 export const DEFAULT_APPLE_TRIPLETS = [
   "arm64;x86_64-apple-darwin",

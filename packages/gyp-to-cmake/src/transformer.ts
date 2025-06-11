@@ -87,7 +87,7 @@ export function bindingGypToCmakeLists({
     );
   }
 
-  // Adding this post-amble from the template, although not used by react-native-node-api-modules
+  // Adding this post-amble from the template, although not used by react-native-node-api
   lines.push(
     "",
     "if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)",

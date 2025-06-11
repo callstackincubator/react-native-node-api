@@ -6,14 +6,14 @@ import {
   isAndroidTriplet,
   isAppleTriplet,
   SupportedTriplet,
-} from "react-native-node-api-modules";
+} from "react-native-node-api";
 
 import { ANDROID_ARCHITECTURES } from "./android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
 
 export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
   const { pathname } = new URL(
-    import.meta.resolve("react-native-node-api-modules/weak-node-api")
+    import.meta.resolve("react-native-node-api/weak-node-api")
   );
   assert(fs.existsSync(pathname), "Weak Node API path does not exist");
   if (isAppleTriplet(triplet)) {

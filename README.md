@@ -31,7 +31,7 @@ See the document on ["how it works"](./docs/HOW_IT_WORKS.md) for a detailed desc
 
 This mono-repository hosts the development of a few packages:
 
-### `packages/react-native-node-api-modules`
+### `packages/react-native-node-api`
 
 Responsible for adding Node-API support to your React Native application:
 

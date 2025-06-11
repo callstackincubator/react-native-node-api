@@ -45,7 +45,7 @@ export async function linkXcframework({
   const newLibraryName = getLibraryName(modulePath, naming);
   const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
   const tempPath = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), `react-native-node-api-modules-${newLibraryName}-`)
+    path.join(os.tmpdir(), `react-native-node-api-${newLibraryName}-`)
   );
   try {
     if (incremental && fs.existsSync(outputPath)) {

@@ -30,7 +30,7 @@ export function replaceWithRequireNodeAddon(
     t.callExpression(
       t.memberExpression(
         t.callExpression(t.identifier("require"), [
-          t.stringLiteral("react-native-node-api-modules"),
+          t.stringLiteral("react-native-node-api"),
         ]),
         t.identifier("requireNodeAddon")
       ),

@@ -45,13 +45,13 @@ export function isNodeApiModule(modulePath: string): boolean {
     if (!entries.includes(fileName)) {
       return false;
     }
-    
+
     const filePath = path.join(dir, fileName);
-    
+
     try {
       // First, check if file exists (works the same on all platforms)
       fs.accessSync(filePath, fs.constants.F_OK);
-      
+
       // Then check if it's readable (behavior differs by platform)
       if (!isReadableSync(filePath)) {
         throw new Error(`Found an unreadable module ${fileName}`);
@@ -237,7 +237,7 @@ export const MAGIC_FILENAME = "react-native-node-api-module";
  * Default patterns to use when excluding paths from the search for Node-API modules.
  */
 export const DEFAULT_EXCLUDE_PATTERNS = [
-  /\/react-native-node-api-modules\//,
+  /\/react-native-node-api\//,
   /\/node_modules\//,
   /\/.git\//,
 ];
@@ -277,12 +277,12 @@ export function findNodeApiModulePaths(
   }
   const candidatePath = path.join(fromPath, suffix);
   // Normalize path separators for consistent pattern matching on all platforms
-  const normalizedSuffix = suffix.split(path.sep).join('/');
-  
+  const normalizedSuffix = suffix.split(path.sep).join("/");
+
   if (excludePatterns.some((pattern) => pattern.test(normalizedSuffix))) {
     return [];
   }
-  
+
   return fs
     .readdirSync(candidatePath, { withFileTypes: true })
     .flatMap((file) => {

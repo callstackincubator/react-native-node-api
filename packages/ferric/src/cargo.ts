@@ -15,7 +15,7 @@ import {
 } from "./targets.js";
 
 const WEAK_NODE_API_PATH = new URL(
-  import.meta.resolve("react-native-node-api-modules/weak-node-api")
+  import.meta.resolve("react-native-node-api/weak-node-api")
 ).pathname;
 
 const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {

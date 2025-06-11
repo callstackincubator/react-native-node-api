@@ -1,5 +1,5 @@
 {
-  "name": "react-native-node-api-modules-root",
+  "name": "react-native-node-api-root",
   "description": "Node-API Modules for React Native",
   "type": "module",
   "private": true,
@@ -7,13 +7,13 @@
     "apps/*",
     "packages/*"
   ],
-  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules#readme",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api#readme",
   "scripts": {
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "dev": "tsc --build --watch",
     "lint": "eslint .",
-    "test": "npm run test --workspace react-native-node-api-modules --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples"
+    "test": "npm run test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples"
   },
   "author": {
     "name": "Callstack",

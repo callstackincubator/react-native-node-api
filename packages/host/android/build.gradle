@@ -143,7 +143,7 @@ task linkNodeApiModules {
   doLast {
     exec {
       // TODO: Support --strip-path-suffix
-      commandLine 'npx', 'react-native-node-api-modules', 'link', '--android', rootProject.rootDir.absolutePath
+      commandLine 'npx', 'react-native-node-api', 'link', '--android', rootProject.rootDir.absolutePath
       standardOutput = System.out
       errorOutput = System.err
       // Enable color output

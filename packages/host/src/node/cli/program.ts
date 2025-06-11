@@ -28,7 +28,7 @@ import { linkAndroidDir } from "./android";
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
 
-export const program = new Command("react-native-node-api-modules").addCommand(
+export const program = new Command("react-native-node-api").addCommand(
   vendorHermes
 );
 
