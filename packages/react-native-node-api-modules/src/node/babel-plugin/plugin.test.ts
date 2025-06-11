@@ -17,14 +17,15 @@ describe("plugin", () => {
       inputFile: string;
     };
 
-    ([
+    const testCases: ReadonlyArray<TestCaseParams> = [
       { resolvedPath: "./addon-1.node", originalPath: "./addon-1.node", inputFile: "./addon-1.js" },
       { resolvedPath: "./addon-2.node", originalPath: "./addon-2.node", inputFile: "./addon-2.js" },
       { resolvedPath: "./addon-1.node", originalPath: "../addon-1.node", inputFile: "./sub-directory/addon-1.js" },
       { resolvedPath: "./addon-2.node", originalPath: "../addon-2.node", inputFile: "./sub-directory-3/addon-outside.js" },
       { resolvedPath: "./addon-1.node", originalPath: "addon-1", inputFile: "./addon-1-bindings.js" },
       { resolvedPath: undefined, originalPath: "./addon-1.js", inputFile: "./require-js-file.js" },
-    ] as TestCaseParams[]).forEach(({ resolvedPath, originalPath, inputFile }) => {
+    ];
+    for (const { resolvedPath, originalPath, inputFile } of testCases) {
       const expectedMessage = resolvedPath
         ? `transform to requireNodeAddon() with "${resolvedPath}"`
         : "NOT transform to requireNodeAddon()";
@@ -80,7 +81,7 @@ describe("plugin", () => {
           );
         }
       });
-    });
+    }
   });
 
   it("transforms require calls to packages with native entry point", (context) => {
