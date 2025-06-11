@@ -1,16 +1,16 @@
 {
-  "name": "react-native-node-api-cmake",
+  "name": "cmake-rn",
   "version": "0.1.0",
   "description": "Build React Native Node API modules with CMake",
   "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
-    "directory": "packages/react-native-node-api-cmake"
+    "directory": "packages/cmake-rn"
   },
   "type": "module",
   "bin": {
-    "react-native-node-api-cmake": "./bin/react-native-node-api-cmake.js"
+    "cmake-rn": "./bin/cmake-rn.js"
   },
   "files": [
     "bin",
