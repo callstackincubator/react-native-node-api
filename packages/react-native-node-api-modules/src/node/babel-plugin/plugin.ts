@@ -60,7 +60,7 @@ export function replaceWithRequireNodeAddon3(
   originalId: string
 ) {
   const { packageName, relativePath } = determineModuleContext(resolvedPath);
-  const finalRelPath = relativePath.startsWith("./") ? relativePath : `./${relativePath}`;
+  const dotRelativePath = relativePath.startsWith("./") ? relativePath : `./${relativePath}`;
 
   p.replaceWith(
     t.callExpression(
@@ -70,7 +70,7 @@ export function replaceWithRequireNodeAddon3(
         ]),
         t.identifier("requireNodeAddon")
       ),
-      [finalRelPath, packageName, originalId]
+      [dotRelativePath, packageName, originalId]
         .map(t.stringLiteral),
     )
   );

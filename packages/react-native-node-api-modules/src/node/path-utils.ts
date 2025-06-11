@@ -134,9 +134,9 @@ export function determineModuleContext(
     packageNameCache.set(pkgDir, pkgName);
   }
   // Compute module-relative path
-  const relPath = path.relative(pkgDir, originalPath)
+  const relativePath = path.relative(pkgDir, originalPath)
     .replaceAll("\\", "/");
-  return { packageName: pkgName, relativePath: relPath };
+  return { packageName: pkgName, relativePath };
 }
 
 /**
