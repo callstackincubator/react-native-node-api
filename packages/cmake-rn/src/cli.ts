@@ -10,11 +10,13 @@ import chalk from "chalk";
 
 import {
   DEFAULT_APPLE_TRIPLETS,
+  isAppleSupported,
   getAppleBuildArgs,
   getAppleConfigureCmakeArgs,
 } from "./apple.js";
 import {
   DEFAULT_ANDROID_TRIPLETS,
+  isAndroidSupported,
   getAndroidConfigureCmakeArgs,
 } from "./android.js";
 import { getWeakNodeApiVariables } from "./weak-node-api.js";
@@ -129,19 +131,23 @@ export const program = new Command("cmake-rn")
       }
 
       if (triplets.size === 0) {
-        console.error(
-          "Nothing to build 🤷",
-          "Please specify at least one triplet with",
-          chalk.dim("--triplet"),
-          `(or use the ${chalk.dim("--android")} or ${chalk.dim(
-            "--apple"
-          )} shorthands)`
-        );
-        for (const triplet of SUPPORTED_TRIPLETS) {
-          console.error(`${chalk.dim("--triplet")} ${triplet}`);
+        if (isAndroidSupported()) {
+          if (process.arch === "arm64") {
+            triplets.add("aarch64-linux-android");
+          } else if (process.arch === "x64") {
+            triplets.add("x86_64-linux-android");
+          }
         }
-        process.exitCode = 1;
-        return;
+        if (isAppleSupported()) {
+          if (process.arch === "arm64") {
+            triplets.add("arm64-apple-ios-sim");
+          }
+        }
+        console.error(
+          chalk.yellowBright("ℹ"),
+          "Using default triplets",
+          chalk.dim("(" + [...triplets].join(", ") + ")")
+        );
       }
 
       const tripletContext = [...triplets].map((triplet) => {

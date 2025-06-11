@@ -94,3 +94,8 @@ export function getAndroidConfigureCmakeArgs({
       .join(" ")}`,
   ];
 }
+
+export function isAndroidSupported() {
+  const { ANDROID_HOME } = process.env;
+  return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
+}

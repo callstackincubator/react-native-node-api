@@ -107,3 +107,7 @@ export function getAppleBuildArgs() {
   // We expect the final application to sign these binaries
   return ["CODE_SIGNING_ALLOWED=NO"];
 }
+
+export function isAppleSupported() {
+  return process.platform === "darwin";
+}

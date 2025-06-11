@@ -118,6 +118,31 @@ export const buildCommand = new Command("build")
             targets.add(target);
           }
         }
+
+        if (targets.size === 0) {
+          if (isAndroidSupported()) {
+            if (process.arch === "arm64") {
+              targets.add("aarch64-linux-android");
+            } else if (process.arch === "x64") {
+              targets.add("x86_64-linux-android");
+            }
+          }
+          if (isAppleSupported()) {
+            if (process.arch === "arm64") {
+              targets.add("aarch64-apple-ios-sim");
+            }
+          }
+          console.error(
+            chalk.yellowBright("ℹ"),
+            chalk.dim(
+              `Using default targets, pass ${chalk.italic(
+                "--android"
+              )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
+                "--target"
+              )} options, to avoid this.`
+            )
+          );
+        }
         ensureCargo();
         ensureInstalledTargets(targets);
 
@@ -313,4 +338,13 @@ async function combineLibraries(
     );
     return [...result, universalPath];
   }
+}
+
+export function isAndroidSupported() {
+  const { ANDROID_HOME } = process.env;
+  return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
+}
+
+export function isAppleSupported() {
+  return process.platform === "darwin";
 }
