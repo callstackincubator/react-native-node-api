@@ -1,5 +1,5 @@
 {
-  "name": "react-native-node-api-root",
+  "name": "@react-native-node-api/root",
   "description": "Node-API Modules for React Native",
   "type": "module",
   "private": true,
