@@ -60,8 +60,7 @@ export function replaceWithRequireNodeAddon3(
   originalId: string
 ) {
   const { packageName, relativePath } = determineModuleContext(resolvedPath);
-  const relPath = relativePath.replaceAll("\\", "/");
-  const finalRelPath = relPath.startsWith("./") ? relPath : `./${relPath}`;
+  const finalRelPath = relativePath.startsWith("./") ? relativePath : `./${relativePath}`;
 
   p.replaceWith(
     t.callExpression(
