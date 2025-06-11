@@ -57,7 +57,7 @@ function tryResolveModulePath(id: string, from: string): string | undefined {
 export function replaceWithRequireNodeAddon3(
   p: NodePath,
   resolvedPath: string,
-  originalPath: string
+  originalId: string
 ) {
   const { packageName, relativePath } = determineModuleContext(resolvedPath);
   const relPath = relativePath.replaceAll("\\", "/");
@@ -71,7 +71,7 @@ export function replaceWithRequireNodeAddon3(
         ]),
         t.identifier("requireNodeAddon")
       ),
-      [finalRelPath, packageName, originalPath]
+      [finalRelPath, packageName, originalId]
         .map(t.stringLiteral),
     )
   );
