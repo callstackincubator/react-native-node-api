@@ -45,7 +45,7 @@ describe("plugin", () => {
     const EXPECTED_PKG_NAME = "my-package";
 
     type TestCaseParams = {
-      resolvedPath: string;
+      resolvedPath?: string;
       originalPath: string;
       inputFile: string;
       options?: PluginOptions;
@@ -62,10 +62,17 @@ describe("plugin", () => {
       );
       assert(result);
       const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${resolvedPath}", "${EXPECTED_PKG_NAME}", "${originalPath}")`),
-        `Unexpected code: ${code}`
-      );
+      if (!resolvedPath) {
+        assert(
+            code && !code.includes(`requireNodeAddon`),
+            `Unexpected code: ${code}`
+        );
+      } else {
+        assert(
+            code && code.includes(`requireNodeAddon("${resolvedPath}", "${EXPECTED_PKG_NAME}", "${originalPath}")`),
+            `Unexpected code: ${code}`
+        );
+      }
     };
 
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "./addon-1.node", inputFile: "./addon-1.js" });
@@ -73,19 +80,7 @@ describe("plugin", () => {
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "../addon-1.node", inputFile: "./sub-directory/addon-1.js" });
     runTestCase({ resolvedPath: "./addon-2.node", originalPath: "../addon-2.node", inputFile: "./sub-directory-3/addon-outside.js" });
     runTestCase({ resolvedPath: "./addon-1.node", originalPath: "addon-1", inputFile: "./addon-1-bindings.js" });
-
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./require-js-file.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && !code.includes(`requireNodeAddon`),
-        `Unexpected code: ${code}`
-      );
-    }
+    runTestCase({ resolvedPath: undefined, originalPath: "./addon-1.js", inputFile: "./require-js-file.js" });
   });
 
   it("transforms require calls to packages with native entry point", (context) => {
