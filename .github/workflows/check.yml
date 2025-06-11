@@ -63,4 +63,4 @@ jobs:
       - run: npm run copy-node-api-headers --workspace react-native-node-api
       - run: npm run build-weak-node-api --workspace react-native-node-api
       - run: npm run generate-weak-node-api-injector --workspace react-native-node-api
-      - run: npm test --workspace react-native-node-addon-examples
+      - run: npm test --workspace @react-native-node-api/node-addon-examples
