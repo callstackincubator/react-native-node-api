@@ -16,9 +16,9 @@
     "test": "npm run copy-and-build && npm run verify"
   },
   "devDependencies": {
+    "cmake-rn": "*",
     "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
     "gyp-to-cmake": "*",
-    "react-native-node-api-cmake": "*",
     "read-pkg": "^9.0.1"
   }
 }

@@ -13,7 +13,7 @@
     "clean": "tsc --build --clean",
     "dev": "tsc --build --watch",
     "lint": "eslint .",
-    "test": "npm run test --workspace react-native-node-api-modules --workspace react-native-node-api-cmake --workspace gyp-to-cmake --workspace node-addon-examples"
+    "test": "npm run test --workspace react-native-node-api-modules --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples"
   },
   "author": {
     "name": "Callstack",

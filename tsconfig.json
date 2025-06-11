@@ -3,7 +3,7 @@
   "references": [
     { "path": "./packages/react-native-node-api-modules/tsconfig.json" },
     { "path": "./packages/gyp-to-cmake/tsconfig.json" },
-    { "path": "./packages/react-native-node-api-cmake/tsconfig.json" },
+    { "path": "./packages/cmake-rn/tsconfig.json" },
     { "path": "./packages/ferric/tsconfig.json" }
   ]
 }

@@ -28,7 +28,7 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run build
-      - run: npm test --workspace gyp-to-cmake --workspace react-native-node-api-cmake --workspace react-native-node-api-modules
+      - run: npm test --workspace gyp-to-cmake --workspace cmake-rn --workspace react-native-node-api-modules
   test-windows:
     name: Run tests on Windows
     runs-on: windows-latest
@@ -39,7 +39,7 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run build
-      - run: npm test --workspace gyp-to-cmake --workspace react-native-node-api-cmake --workspace react-native-node-api-modules
+      - run: npm test --workspace gyp-to-cmake --workspace cmake-rn --workspace react-native-node-api-modules
 
   test-macos:
     name: Run tests which requires MacOS
@@ -56,7 +56,7 @@ jobs:
           distribution: "temurin"
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        # Version here should match the one in React Native template and packages/react-native-node-api-cmake/src/cli.ts
+        # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
       - run: sdkmanager --install "ndk;27.1.12297006"
       - run: npm ci
       - run: npm run build

@@ -5,10 +5,10 @@ import { findCMakeProjects } from "./cmake-projects.mjs";
 const projectDirectories = findCMakeProjects();
 
 for (const projectDirectory of projectDirectories) {
-  console.log(`Running "react-native-node-api-cmake" in ${projectDirectory}`);
+  console.log(`Running "cmake-rn" in ${projectDirectory}`);
   execSync(
-    "react-native-node-api-cmake --android --apple",
-    // "react-native-node-api-cmake --triplet aarch64-linux-android --triplet arm64-apple-ios-sim",
+    "cmake-rn --android --apple",
+    // "cmake-rn --triplet aarch64-linux-android --triplet arm64-apple-ios-sim",
     {
       cwd: projectDirectory,
       stdio: "inherit",

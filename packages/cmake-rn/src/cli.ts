@@ -96,7 +96,7 @@ const xcframeworkExtensionOption = new Option(
   "Don't rename the xcframework to .apple.node"
 ).default(false);
 
-export const program = new Command("react-native-node-api-cmake")
+export const program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(sourcePathOption)
   .addOption(configurationOption)

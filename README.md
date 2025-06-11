@@ -1,4 +1,3 @@
-
 <p align="center">
   <img src="./docs/logo.svg" width="20%" />
 </p>
@@ -49,7 +48,7 @@ Responsible for adding Node-API support to your React Native application:
 
 Note: We'll sometimes refer to this as the "host package", as it can be seen as a host of Node-API modules in React Native apps.
 
-### `packages/react-native-node-api-cmake`
+### `packages/cmake-rn`
 
 A wrapper around CMake making it easier to produce [prebuilt binaries](./docs/PREBUILDS.md) targeting iOS and Android matching the [the prebuilt binary specification](./docs/PREBUILDS.md).
 
@@ -57,11 +56,11 @@ Serves the same purpose as `cmake-js` does for the Node.js community and could p
 
 ### `packages/gyp-to-cmake`
 
-A tool to transform `binding.gyp` files into `CMakeLists.txt` files, intended for `cmake-js` or `react-native-node-api-cmake` to build from.
+A tool to transform `binding.gyp` files into `CMakeLists.txt` files, intended for `cmake-js` or `cmake-rn` to build from.
 
 ### `packages/node-addon-examples`
 
-A wrapper around the examples in the [nodejs/node-addon-examples](https://github.com/nodejs/node-addon-examples) repo, using `gyp-to-cmake` and `react-native-node-api-cmake` to prepare prebuilds and scaffolding for loading the addons.
+A wrapper around the examples in the [nodejs/node-addon-examples](https://github.com/nodejs/node-addon-examples) repo, using `gyp-to-cmake` and `cmake-rn` to prepare prebuilds and scaffolding for loading the addons.
 
 The main purpose is to use these as tests to verify the implementation. We choose to use this as our first signal for compliance, over the [js-native-api tests in the Node.js project](https://github.com/nodejs/node/tree/main/test/js-native-api), because the examples depends much less on Node.js built-in runtime APIs.
 
