@@ -13,7 +13,8 @@
     "build": "tsx scripts/build-examples.mts",
     "copy-and-build": "npm run copy-examples && npm run gyp-to-cmake && npm run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
-    "test": "npm run copy-and-build && npm run verify"
+    "test": "npm run copy-and-build && npm run verify",
+    "bootstrap": "npm run copy-and-build"
   },
   "devDependencies": {
     "cmake-rn": "*",

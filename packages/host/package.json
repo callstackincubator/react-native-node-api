@@ -44,7 +44,8 @@
     "generate-weak-node-api": "tsx scripts/generate-weak-node-api.ts",
     "generate-weak-node-api-injector": "tsx scripts/generate-weak-node-api-injector.ts",
     "build-weak-node-api": "npm run generate-weak-node-api && cmake-rn --android --apple --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api",
-    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts"
+    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
+    "bootstrap": "npm run copy-node-api-headers && npm run generate-weak-node-api-injector && npm run build-weak-node-api"
   },
   "keywords": [
     "react-native",
