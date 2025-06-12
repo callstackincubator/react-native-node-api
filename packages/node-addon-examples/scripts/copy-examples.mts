@@ -51,8 +51,9 @@ const ALLOW_LIST = [
 ];
 
 console.log("Copying files to", EXAMPLES_DIR);
+
 // Clean up the destination directory before copying
-fs.rmSync(EXAMPLES_DIR, { recursive: true, force: true });
+// fs.rmSync(EXAMPLES_DIR, { recursive: true, force: true });
 
 const require = createRequire(import.meta.url);
 
@@ -67,9 +68,20 @@ let counter = 0;
 for (const src of ALLOW_LIST) {
   const srcPath = path.join(SRC_DIR, src);
   const destPath = path.join(EXAMPLES_DIR, src);
+
+  const uniquePackageName = `example-${counter++}`;
+
+  if (fs.existsSync(destPath)) {
+    console.warn(
+      `Destination path ${destPath} already exists - skipping copy of ${src}.`
+    );
+    continue;
+  }
+
   console.log("Copying from", srcPath, "to", destPath);
   fs.cpSync(srcPath, destPath, { recursive: true });
-  // Delete all package.json files recursively, as they have duplicate names, causing collisions when hashing
+  // Update package names in package.json files recursively,
+  // as they have duplicate names, causing collisions when vendored into the host package.
   for (const entry of fs.readdirSync(destPath, {
     withFileTypes: true,
     recursive: true,
@@ -77,7 +89,7 @@ for (const src of ALLOW_LIST) {
     if (entry.name === "package.json") {
       const packageJson = readPackageSync({ cwd: entry.parentPath });
       // Ensure example package names are unique
-      packageJson.name = `example-${counter++}`;
+      packageJson.name = uniquePackageName;
       fs.writeFileSync(
         path.join(entry.parentPath, entry.name),
         JSON.stringify(packageJson, null, 2),
