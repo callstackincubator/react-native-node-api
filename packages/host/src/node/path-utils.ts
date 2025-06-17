@@ -148,9 +148,10 @@ export function escapePath(modulePath: string) {
  */
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
   const { packageName, relativePath } = determineModuleContext(modulePath);
+  const escapedPackageName = escapePath(packageName);
   return naming.stripPathSuffix
-    ? packageName
-    : `${packageName}--${escapePath(relativePath)}`;
+    ? escapedPackageName
+    : `${escapedPackageName}--${escapePath(relativePath)}`;
 }
 
 export function prettyPath(p: string) {
