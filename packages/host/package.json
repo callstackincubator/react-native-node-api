@@ -23,6 +23,7 @@
     "./weak-node-api": "./weak-node-api"
   },
   "files": [
+    "logo.svg",
     "bin",
     "dist",
     "cpp",
