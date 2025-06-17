@@ -68,12 +68,10 @@ export async function linkModules({
   });
 
   // Find absolute paths to xcframeworks
-  const absoluteModulePaths = Object.entries(dependenciesByName).flatMap(
-    ([, dependency]) => {
-      return dependency.modulePaths.map((modulePath) =>
-        path.join(dependency.path, modulePath)
-      );
-    }
+  const absoluteModulePaths = Object.values(dependenciesByName).flatMap(
+    (dependency) => dependency.modulePaths.map(
+      (modulePath) => path.join(dependency.path, modulePath)
+    )
   );
 
   if (hasDuplicateLibraryNames(absoluteModulePaths, naming)) {
@@ -82,28 +80,25 @@ export async function linkModules({
   }
 
   return Promise.all(
-    Object.entries(dependenciesByName).flatMap(([, dependency]) => {
-      return dependency.modulePaths.map(async (modulePath) => {
-        const originalPath = path.join(dependency.path, modulePath);
-        try {
-          return await linker({
-            modulePath: originalPath,
-            incremental,
-            naming,
-            platform,
-          });
-        } catch (error) {
-          if (error instanceof SpawnFailure) {
-            return {
-              originalPath,
-              skipped: false,
-              failure: error,
-            };
-          } else {
-            throw error;
-          }
+    absoluteModulePaths.map(async (originalPath) => {
+      try {
+        return await linker({
+          modulePath: originalPath,
+          incremental,
+          naming,
+          platform,
+        });
+      } catch (error) {
+        if (error instanceof SpawnFailure) {
+          return {
+            originalPath,
+            skipped: false,
+            failure: error,
+          };
+        } else {
+          throw error;
         }
-      });
+      }
     })
   );
 }
