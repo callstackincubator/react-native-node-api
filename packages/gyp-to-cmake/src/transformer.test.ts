@@ -40,13 +40,13 @@ describe("bindingGypToCmakeLists", () => {
         targets: [
           {
             target_name: "foo",
-            sources: ["file\\with\\win32\\seperator.cc"],
+            sources: ["file\\with\\win32\\separator.cc"],
           },
         ],
       },
     });
 
-    assert(output.includes("add_library(foo SHARED file/with/win32/seperator.cc"));
+    assert(output.includes("add_library(foo SHARED file/with/win32/separator.cc"));
   });
 
   it("escapes spaces in source filenames", () => {
