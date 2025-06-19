@@ -167,6 +167,8 @@ export function getTargetEnvironmentVariables({
     const targetArch = getTargetAndroidArch(target);
     const targetPlatform = getTargetAndroidPlatform(target);
     const weakNodeApiPath = getWeakNodeApiAndroidLibraryPath(target);
+    const cmdMaybe = process.platform === "win32" ? ".cmd" : "";
+    const exeMaybe = process.platform === "win32" ? ".exe" : "";
 
     return {
       CARGO_ENCODED_RUSTFLAGS: [
@@ -177,32 +179,32 @@ export function getTargetEnvironmentVariables({
       ].join(String.fromCharCode(0x1f)),
       CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: joinPathAndAssertExistence(
         toolchainBinPath,
-        `aarch64-linux-android${androidApiLevel}-clang`
+        `aarch64-linux-android${androidApiLevel}-clang${cmdMaybe}`
       ),
       CARGO_TARGET_ARMV7_LINUX_ANDROIDEABI_LINKER: joinPathAndAssertExistence(
         toolchainBinPath,
-        `armv7a-linux-androideabi${androidApiLevel}-clang`
+        `armv7a-linux-androideabi${androidApiLevel}-clang${cmdMaybe}`
       ),
       CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER: joinPathAndAssertExistence(
         toolchainBinPath,
-        `x86_64-linux-android${androidApiLevel}-clang`
+        `x86_64-linux-android${androidApiLevel}-clang${cmdMaybe}`
       ),
       CARGO_TARGET_I686_LINUX_ANDROID_LINKER: joinPathAndAssertExistence(
         toolchainBinPath,
-        `i686-linux-android${androidApiLevel}-clang`
+        `i686-linux-android${androidApiLevel}-clang${cmdMaybe}`
       ),
       TARGET_CC: joinPathAndAssertExistence(
         toolchainBinPath,
-        `${targetArch}-linux-${targetPlatform}-clang`
+        `${targetArch}-linux-${targetPlatform}-clang${cmdMaybe}`
       ),
       TARGET_CXX: joinPathAndAssertExistence(
         toolchainBinPath,
-        `${targetArch}-linux-${targetPlatform}-clang++`
+        `${targetArch}-linux-${targetPlatform}-clang++${cmdMaybe}`
       ),
-      TARGET_AR: joinPathAndAssertExistence(toolchainBinPath, `llvm-ar`),
+      TARGET_AR: joinPathAndAssertExistence(toolchainBinPath, `llvm-ar${exeMaybe}`),
       TARGET_RANLIB: joinPathAndAssertExistence(
         toolchainBinPath,
-        `llvm-ranlib`
+        `llvm-ranlib${exeMaybe}`
       ),
       ANDROID_NDK: ndkPath,
       PATH: `${toolchainBinPath}:${process.env.PATH}`,
