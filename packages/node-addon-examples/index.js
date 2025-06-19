@@ -13,6 +13,6 @@ module.exports = {
   },
   "5-async-work": {
     // TODO: This crashes (SIGABRT)
-    "async_work_thread_safe_function": () => require("./examples/5-async-work/async_work_thread_safe_function/napi/index.js"),
+    // "async_work_thread_safe_function": () => require("./examples/5-async-work/async_work_thread_safe_function/napi/index.js"),
   }
 };

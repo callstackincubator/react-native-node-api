@@ -3,11 +3,13 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "android": "react-native run-android",
+    "start": "react-native start",
+    "android": "react-native run-android --no-packager",
     "build:android": "react-native bundle --entry-file index.js --platform android --dev true --bundle-output dist/main.android.jsbundle --assets-dest dist/res",
-    "ios": "react-native run-ios",
+    "ios": "react-native run-ios --no-packager",
     "pod-install": "cd ios && pod install",
-    "start": "react-native start"
+    "test:android": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail npm:start npm:android",
+    "test:ios": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail npm:start npm:ios"
   },
   "dependencies": {
     "@babel/core": "^7.26.10",
@@ -21,7 +23,11 @@
     "@react-native/typescript-config": "0.79.0",
     "@rnx-kit/metro-config": "^2.0.1",
     "@types/react": "^19.0.0",
+    "concurrently": "^9.1.2",
     "ferric-example": "^0.1.0",
+    "mocha": "^11.6.0",
+    "mocha-remote-cli": "^1.13.1",
+    "mocha-remote-react-native": "^1.13.1",
     "react": "19.0.0",
     "react-native": "0.79.1",
     "react-native-node-addon-examples": "*",

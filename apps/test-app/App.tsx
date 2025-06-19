@@ -1,56 +1,73 @@
 import React from "react";
-import { StyleSheet, Text, View, Button } from "react-native";
+import { StyleSheet, View, SafeAreaView } from "react-native";
 
-/* eslint-disable @typescript-eslint/no-require-imports -- We're using require to defer crashes */
+import {
+  MochaRemoteProvider,
+  ConnectionText,
+  StatusEmoji,
+  StatusText,
+} from "mocha-remote-react-native";
 
-// import { requireNodeAddon } from "react-native-node-api";
-import nodeAddonExamples from "react-native-node-addon-examples";
-// import * as ferricExample from "ferric-example";
+import nodeAddonExamples from "@react-native-node-api/node-addon-examples";
 
-function App(): React.JSX.Element {
+function loadTests() {
+  for (const [suiteName, examples] of Object.entries(nodeAddonExamples)) {
+    describe(suiteName, () => {
+      for (const [exampleName, requireExample] of Object.entries(examples)) {
+        it(exampleName, () => {
+          requireExample();
+        });
+      }
+    });
+  }
+
+  describe("ferric-example", () => {
+    it("exports a callable sum function", () => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const exampleAddon = require("ferric-example");
+      const result = exampleAddon.sum(1, 3);
+      if (result !== 4) {
+        throw new Error(`Expected 1 + 3 to equal 4, but got ${result}`);
+      }
+    });
+  });
+}
+
+export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>React Native Node-API Modules</Text>
-      {Object.entries(nodeAddonExamples).map(([suiteName, examples]) => (
-        <View key={suiteName} style={styles.suite}>
-          <Text>{suiteName}</Text>
-          {Object.entries(examples).map(([exampleName, requireExample]) => (
-            <Button
-              key={exampleName}
-              title={exampleName}
-              onPress={requireExample}
-            />
-          ))}
+    <MochaRemoteProvider tests={loadTests}>
+      <SafeAreaView style={styles.container}>
+        <ConnectionText style={styles.connectionText} />
+        <View style={styles.statusContainer}>
+          <StatusEmoji style={styles.statusEmoji} />
+          <StatusText style={styles.statusText} />
         </View>
-      ))}
-      <View key="ferric-example" style={styles.suite}>
-        <Text>ferric-example</Text>
-        <Button
-          title={"Ferric Example: sum(1, 3)"}
-          onPress={() =>
-            console.log("1+3 = " + require("ferric-example").sum(1, 3))
-          }
-        />
-      </View>
-    </View>
+      </SafeAreaView>
+    </MochaRemoteProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  statusContainer: {
+    flex: 1,
     alignItems: "center",
+    justifyContent: "center",
   },
-  suite: {
-    borderWidth: 1,
-    width: "96%",
-    margin: 10,
-    padding: 10,
+  statusEmoji: {
+    fontSize: 30,
+    margin: 30,
+    textAlign: "center",
   },
-  title: {
+  statusText: {
     fontSize: 20,
+    margin: 20,
+    textAlign: "center",
+  },
+  connectionText: {
+    textAlign: "center",
   },
 });
-
-export default App;
