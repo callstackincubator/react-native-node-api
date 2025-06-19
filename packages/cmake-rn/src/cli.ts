@@ -143,11 +143,17 @@ export const program = new Command("cmake-rn")
             triplets.add("arm64-apple-ios-sim");
           }
         }
-        console.error(
-          chalk.yellowBright("ℹ"),
-          "Using default triplets",
-          chalk.dim("(" + [...triplets].join(", ") + ")")
-        );
+        if (triplets.size === 0) {
+          throw new Error(
+            "Found no default triplets: Install some platform specific build tools"
+          );
+        } else {
+          console.error(
+            chalk.yellowBright("ℹ"),
+            "Using default triplets",
+            chalk.dim("(" + [...triplets].join(", ") + ")")
+          );
+        }
       }
 
       const tripletContext = [...triplets].map((triplet) => {
