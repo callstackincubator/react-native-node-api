@@ -23,11 +23,13 @@ export const ANDROID_ARCHITECTURES = {
 type AndroidConfigureOptions = {
   triplet: AndroidTriplet;
   ndkVersion: string;
+  sdkVersion: string;
 };
 
 export function getAndroidConfigureCmakeArgs({
   triplet,
   ndkVersion,
+  sdkVersion,
 }: AndroidConfigureOptions) {
   const { ANDROID_HOME } = process.env;
   assert(typeof ANDROID_HOME === "string", "Missing env variable ANDROID_HOME");
@@ -80,8 +82,8 @@ export function getAndroidConfigureCmakeArgs({
     `ANDROID_ABI=${architecture}`,
     "-D",
     "ANDROID_TOOLCHAIN=clang",
-    // "-D",
-    // `ANDROID_NATIVE_API_LEVEL=${ANDROID_API_LEVEL}`,
+    "-D",
+    `ANDROID_PLATFORM=${sdkVersion}`,
     "-D",
     "ANDROID_STL=c++_shared",
     // Pass linker flags to avoid errors from undefined symbols

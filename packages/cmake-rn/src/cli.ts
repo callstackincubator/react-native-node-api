@@ -39,6 +39,7 @@ EventEmitter.defaultMaxListeners = 100;
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
+const DEFAULT_ANDROID_SDK_VERSION = "24";
 
 // TODO: Add automatic ccache support
 
@@ -88,6 +89,11 @@ const ndkVersionOption = new Option(
   "The NDK version to use for Android builds"
 ).default(DEFAULT_NDK_VERSION);
 
+const androidSdkVersionOption = new Option(
+  "--android-sdk-version <version>",
+  "The Android SDK version to use for Android builds"
+).default(DEFAULT_ANDROID_SDK_VERSION);
+
 const noAutoLinkOption = new Option(
   "--no-auto-link",
   "Don't mark the output as auto-linkable by react-native-node-api"
@@ -115,6 +121,7 @@ export const program = new Command("cmake-rn")
   .addOption(outPathOption)
   .addOption(cleanOption)
   .addOption(ndkVersionOption)
+  .addOption(androidSdkVersionOption)
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption)
   .addOption(xcframeworkExtensionOption)
@@ -348,12 +355,19 @@ function getTripletBuildPath(buildPath: string, triplet: SupportedTriplet) {
 
 function getTripletConfigureCmakeArgs(
   triplet: SupportedTriplet,
-  { ndkVersion }: Pick<GlobalContext, "ndkVersion" | "weakNodeApiLinkage">
+  {
+    ndkVersion,
+    androidSdkVersion,
+  }: Pick<
+    GlobalContext,
+    "ndkVersion" | "androidSdkVersion" | "weakNodeApiLinkage"
+  >
 ) {
   if (isAndroidTriplet(triplet)) {
     return getAndroidConfigureCmakeArgs({
       triplet,
       ndkVersion,
+      sdkVersion: androidSdkVersion,
     });
   } else if (isAppleTriplet(triplet)) {
     return getAppleConfigureCmakeArgs({ triplet });
@@ -379,6 +393,7 @@ async function configureProject(context: TripletScopedContext) {
     tripletBuildPath,
     source,
     ndkVersion,
+    androidSdkVersion,
     weakNodeApiLinkage,
   } = context;
   await spawn(
@@ -392,6 +407,7 @@ async function configureProject(context: TripletScopedContext) {
       ...getTripletConfigureCmakeArgs(triplet, {
         ndkVersion,
         weakNodeApiLinkage,
+        androidSdkVersion,
       }),
     ],
     {
