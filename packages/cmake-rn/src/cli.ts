@@ -42,6 +42,11 @@ const DEFAULT_NDK_VERSION = "27.1.12297006";
 
 // TODO: Add automatic ccache support
 
+const verboseOption = new Option(
+  "--verbose",
+  "Print more output during the build"
+).default(process.env.CI === "true");
+
 const sourcePathOption = new Option(
   "--source <path>",
   "Specify the source directory containing a CMakeLists.txt file"
@@ -100,6 +105,7 @@ const xcframeworkExtensionOption = new Option(
 
 export const program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
+  .addOption(verboseOption)
   .addOption(sourcePathOption)
   .addOption(configurationOption)
   .addOption(tripletOption)
@@ -163,6 +169,7 @@ export const program = new Command("cmake-rn")
       // Configure every triplet project
       await oraPromise(Promise.all(tripletContext.map(configureProject)), {
         text: "Configuring projects",
+        isSilent: globalContext.verbose,
         successText: "Configured projects",
         failText: ({ message }) => `Failed to configure projects: ${message}`,
       });
@@ -182,6 +189,7 @@ export const program = new Command("cmake-rn")
         ),
         {
           text: "Building projects",
+          isSilent: globalContext.verbose,
           successText: "Built projects",
           failText: ({ message }) => `Failed to build projects: ${message}`,
         }
@@ -365,8 +373,14 @@ function getBuildArgs(triplet: SupportedTriplet) {
 }
 
 async function configureProject(context: TripletScopedContext) {
-  const { triplet, tripletBuildPath, source, ndkVersion, weakNodeApiLinkage } =
-    context;
+  const {
+    verbose,
+    triplet,
+    tripletBuildPath,
+    source,
+    ndkVersion,
+    weakNodeApiLinkage,
+  } = context;
   await spawn(
     "cmake",
     [
@@ -381,13 +395,14 @@ async function configureProject(context: TripletScopedContext) {
       }),
     ],
     {
-      outputMode: "buffered",
+      outputMode: verbose ? "inherit" : "buffered",
+      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     }
   );
 }
 
 async function buildProject(context: TripletScopedContext) {
-  const { triplet, tripletBuildPath, configuration } = context;
+  const { verbose, triplet, tripletBuildPath, configuration } = context;
   await spawn(
     "cmake",
     [
@@ -399,7 +414,8 @@ async function buildProject(context: TripletScopedContext) {
       ...getBuildArgs(triplet),
     ],
     {
-      outputMode: "buffered",
+      outputMode: verbose ? "inherit" : "buffered",
+      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     }
   );
 }
