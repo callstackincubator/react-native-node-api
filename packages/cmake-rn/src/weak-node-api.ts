@@ -11,6 +11,10 @@ import {
 import { ANDROID_ARCHITECTURES } from "./android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
 
+export function toCmakePath(input: string) {
+  return input.split(path.win32.sep).join(path.posix.sep);
+}
+
 export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
   const { pathname } = new URL(
     import.meta.resolve("react-native-node-api/weak-node-api")
