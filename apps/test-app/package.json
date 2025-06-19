@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "scripts": {
     "start": "react-native start",
-    "android": "react-native run-android --no-packager",
+    "android": "react-native run-android --no-packager --active-arch-only",
     "build:android": "react-native bundle --entry-file index.js --platform android --dev true --bundle-output dist/main.android.jsbundle --assets-dest dist/res",
     "ios": "react-native run-ios --no-packager",
     "pod-install": "cd ios && pod install",
