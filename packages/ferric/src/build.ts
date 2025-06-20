@@ -287,6 +287,7 @@ export const buildCommand = new Command("build")
           }
         );
       } catch (error) {
+        process.exitCode = 1;
         if (error instanceof SpawnFailure) {
           error.flushOutput("both");
         }

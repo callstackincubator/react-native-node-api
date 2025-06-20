@@ -76,7 +76,7 @@
   "license": "MIT",
   "dependencies": {
     "@commander-js/extra-typings": "^13.1.0",
-    "bufout": "^0.3.1",
+    "bufout": "^0.3.2",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
     "ora": "^8.2.0",
