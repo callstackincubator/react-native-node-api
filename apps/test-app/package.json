@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "start": "react-native start",
+    "start": "react-native start --no-interactive",
     "android": "react-native run-android --no-packager --active-arch-only",
     "build:android": "react-native bundle --entry-file index.js --platform android --dev true --bundle-output dist/main.android.jsbundle --assets-dest dist/res",
     "ios": "react-native run-ios --no-packager",
