@@ -8,7 +8,7 @@ import {
   StatusText,
 } from "mocha-remote-react-native";
 
-import nodeAddonExamples from "@react-native-node-api/node-addon-examples";
+import { examples as nodeAddonExamples } from "@react-native-node-api/node-addon-examples";
 
 function loadTests() {
   for (const [suiteName, examples] of Object.entries(nodeAddonExamples)) {

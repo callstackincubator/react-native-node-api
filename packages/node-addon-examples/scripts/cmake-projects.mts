@@ -5,7 +5,7 @@ export const EXAMPLES_DIR = path.resolve(import.meta.dirname, "../examples");
 export const TESTS_DIR = path.resolve(import.meta.dirname, "../tests");
 export const DIRS = [EXAMPLES_DIR, TESTS_DIR];
 
-export function findCMakeProjectsRecursively(dir): string[] {
+export function findCMakeProjectsRecursively(dir: string): string[] {
   let results: string[] = [];
   const files = readdirSync(dir);
 
