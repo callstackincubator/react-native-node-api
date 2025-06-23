@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Button } from "react-native";
 
 /* eslint-disable @typescript-eslint/no-require-imports -- We're using require to defer crashes */
 
-// import { requireNodeAddon } from "react-native-node-api-modules";
+// import { requireNodeAddon } from "react-native-node-api";
 import nodeAddonExamples from "react-native-node-addon-examples";
 // import * as ferricExample from "ferric-example";
 

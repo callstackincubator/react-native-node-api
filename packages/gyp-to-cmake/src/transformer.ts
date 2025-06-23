@@ -1,4 +1,5 @@
 import cp from "node:child_process";
+import path from "node:path";
 
 import type { GypBinding } from "./gyp.js";
 
@@ -10,6 +11,7 @@ export type GypToCmakeListsOptions = {
   napiVersion?: number;
   executeCmdExpansions?: boolean;
   unsupportedBehaviour?: "skip" | "warn" | "throw";
+  transformWinPathsToPosix?: boolean;
 };
 
 function isCmdExpansion(value: string) {
@@ -31,6 +33,7 @@ export function bindingGypToCmakeLists({
   napiVersion = DEFAULT_NAPI_VERSION,
   executeCmdExpansions = true,
   unsupportedBehaviour = "skip",
+  transformWinPathsToPosix = true,
 }: GypToCmakeListsOptions): string {
   function mapExpansion(value: string): string[] {
     if (!isCmdExpansion(value)) {
@@ -46,6 +49,14 @@ export function bindingGypToCmakeLists({
       console.warn(`Unsupported command expansion: ${value}`);
     }
     return [value];
+  }
+
+  function transformPath(input: string) {
+    if (transformWinPathsToPosix) {
+      return input.split(path.win32.sep).join(path.posix.sep);
+    } else {
+      return input;
+    }
   }
 
   const lines: string[] = [
@@ -67,16 +78,19 @@ export function bindingGypToCmakeLists({
 
     const escapedJoinedSources = target.sources
       .flatMap(mapExpansion)
+      .map(transformPath)
       .map(escapeSpaces)
       .join(" ");
 
     const escapedJoinedIncludes = (target.include_dirs || [])
       .flatMap(mapExpansion)
+      .map(transformPath)
       .map(escapeSpaces)
       .join(" ");
 
     const escapedJoinedDefines = (target.defines || [])
       .flatMap(mapExpansion)
+      .map(transformPath)
       .map(escapeSpaces)
       .join(" ");
 
@@ -97,7 +111,7 @@ export function bindingGypToCmakeLists({
     );
   }
 
-  // Adding this post-amble from the template, although not used by react-native-node-api-modules
+  // Adding this post-amble from the template, although not used by react-native-node-api
   lines.push(
     "",
     "if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)",

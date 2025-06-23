@@ -6,18 +6,20 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
+  globalIgnores([".nx/**"]),
   globalIgnores(["**/dist/**"]),
   globalIgnores(["apps/test-app/ios/**"]),
-  globalIgnores(["packages/react-native-node-api-modules/hermes/**"]),
+  globalIgnores(["packages/host/hermes/**"]),
   globalIgnores(["packages/node-addon-examples/examples/**"]),
+  globalIgnores(["packages/ferric-example/ferric_example.d.ts"]),
   eslint.configs.recommended,
   tseslint.configs.recommended,
   {
     files: [
       "apps/test-app/*.js",
       "packages/node-addon-examples/*.js",
-      "packages/react-native-node-api-modules/babel-plugin.js",
-      "packages/react-native-node-api-modules/react-native.config.js"
+      "packages/host/babel-plugin.js",
+      "packages/host/react-native.config.js"
     ],
     languageOptions: {
       parserOptions: {
@@ -35,8 +37,8 @@ export default tseslint.config(
   {
     files: [
       "packages/gyp-to-cmake/bin/*.js",
-      "packages/react-native-node-api-modules/bin/*.mjs",
-      "packages/react-native-node-api-modules/scripts/*.mjs"
+      "packages/host/bin/*.mjs",
+      "packages/host/scripts/*.mjs"
     ],
     languageOptions: {
       globals: {

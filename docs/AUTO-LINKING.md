@@ -1,6 +1,6 @@
 # Auto-linking
 
-The `react-native-node-api-modules` package (sometimes referred to as "the host package") has mechanisms to automatically find and link prebuilt binaries with Node-API modules.
+The `react-native-node-api` package (sometimes referred to as "the host package") has mechanisms to automatically find and link prebuilt binaries with Node-API modules.
 
 When auto-linking, prebuilt binaries are copied (sometimes referred to as vendored) from dependencies of the app into the host package. As they're copied, they get renamed to avoid conflicts in naming as the library files across multiple dependency packages will be sharing a namespace when building the app.
 
@@ -15,12 +15,12 @@ The name of the library when linked / copied into the host is based on two thing
 
 ## How do I link Node-API module libraries into my app?
 
-Linking will run when you `pod install` and as part of building your app with Gradle as long as your app has a dependency on the `react-native-node-api-modules` package.
+Linking will run when you `pod install` and as part of building your app with Gradle as long as your app has a dependency on the `react-native-node-api` package.
 
 You can also manually link by running the following in your app directory:
 
 ```bash
-npx react-native-node-api-modules link --android --apple
+npx react-native-node-api link --android --apple
 ```
 
 > [!NOTE]

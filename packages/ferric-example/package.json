@@ -2,16 +2,17 @@
   "name": "ferric-example",
   "private": true,
   "version": "0.1.0",
-  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
     "directory": "packages/ferric-example"
   },
   "main": "ferric_example.js",
   "types": "ferric_example.d.ts",
   "scripts": {
-    "build": "ferric build --android --apple"
+    "build": "ferric build",
+    "bootstrap": "npm run build"
   },
   "devDependencies": {
     "ferric-cli": "^0.1.0"

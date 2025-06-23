@@ -8,13 +8,13 @@ license = "MIT"
 crate-type = ["cdylib"]
 
 [dependencies.napi]
-version = "2"
+version = "3.0.0-alpha"
 default-features = false
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
 features = ["napi3"]
 
 [dependencies.napi-derive]
-version = "2"
+version = "3.0.0-alpha"
 features = ["type-def"]
 
 [build-dependencies]
@@ -22,4 +22,4 @@ napi-build = "2"
 
 [profile.release]
 lto = true
-strip = "symbols"
+codegen-units = 1

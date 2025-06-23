@@ -12,7 +12,7 @@ const project = (() => {
       },
       // windows: {
       //   sourceDir: "windows",
-      //   solutionFile: "windows/react-native-node-api-modules-example.sln",
+      //   solutionFile: "windows/react-native-node-api-example.sln",
       // },
     });
     return {

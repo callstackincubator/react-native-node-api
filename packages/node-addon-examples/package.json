@@ -1,10 +1,11 @@
 {
-  "name": "react-native-node-addon-examples",
+  "name": "@react-native-node-api/node-addon-examples",
+  "type": "commonjs",
   "private": true,
-  "homepage": "https://github.com/callstackincubator/react-native-node-api-modules",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/callstackincubator/react-native-node-api-modules.git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
     "directory": "packages/node-addon-examples"
   },
   "scripts": {
@@ -13,12 +14,13 @@
     "build": "tsx scripts/build-examples.mts",
     "copy-and-build": "npm run copy-examples && npm run gyp-to-cmake && npm run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
-    "test": "npm run copy-and-build && npm run verify"
+    "test": "npm run copy-and-build && npm run verify",
+    "bootstrap": "npm run copy-and-build"
   },
   "devDependencies": {
+    "cmake-rn": "*",
     "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
     "gyp-to-cmake": "*",
-    "react-native-node-api-cmake": "*",
     "read-pkg": "^9.0.1"
   }
 }

@@ -1,3 +1,5 @@
+name: Check
+
 on:
   push:
     branches:
@@ -10,6 +12,7 @@ concurrency:
 
 jobs:
   lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,20 +21,13 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run lint
-  test-simple:
-    name: Run tests which doesn't require MacOS
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/jod
-      - run: npm ci
-      - run: npm run build
-      - run: npm test --workspace gyp-to-cmake --workspace react-native-node-api-cmake --workspace react-native-node-api-modules
-  test-macos:
-    name: Run tests which requires MacOS
-    runs-on: macos-latest
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-latest, windows-latest, macos-latest]
+    name: Test (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -44,11 +40,9 @@ jobs:
           distribution: "temurin"
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        # Version here should match the one in React Native template and packages/react-native-node-api-cmake/src/cli.ts
+        # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
       - run: sdkmanager --install "ndk;27.1.12297006"
+      - run: rustup target add x86_64-linux-android aarch64-linux-android aarch64-apple-ios-sim
       - run: npm ci
-      - run: npm run build
-      - run: npm run copy-node-api-headers --workspace react-native-node-api-modules
-      - run: npm run build-weak-node-api --workspace react-native-node-api-modules
-      - run: npm run generate-weak-node-api-injector --workspace react-native-node-api-modules
-      - run: npm test --workspace react-native-node-addon-examples
+      - run: npm run bootstrap
+      - run: npm test

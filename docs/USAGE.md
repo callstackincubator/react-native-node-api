@@ -3,26 +3,27 @@
 The purpose of this document is to explain how Node-API modules are supported all the way from an app loading a library package to the library's native code returning a JavaScript value to from a function call.
 
 For the purpose of the explanation, we'll introduce a two fictitious packages:
+
 - `calculator-lib`: A package publishing a Node-API module.
 - `my-app`: An app depending on `calculator-lib`.
 
 ## Steps needed for the app developer
 
 ```bash
-npm install --save calculator-lib react-native-node-api-modules
+npm install --save calculator-lib react-native-node-api
 ```
 
-The app developer has to install both `calculator-lib` as well as `react-native-node-api-modules`.
+The app developer has to install both `calculator-lib` as well as `react-native-node-api`.
 The reason for the latter is a current limitation of the React Native Community CLI which doesn't consider transitive dependencies when enumerating packages for auto-linking.
 
 > [!WARNING]
->  It's important to match the exact version of the `react-native-node-api-modules` declared as peer dependency by `calculator-lib`.
+> It's important to match the exact version of the `react-native-node-api` declared as peer dependency by `calculator-lib`.
 
-For the app to resolve the Node-API dynamic library files, the app developer must update their Metro config to use a `resolveRequest` function exported from `react-native-node-api-modules`:
+For the app to resolve the Node-API dynamic library files, the app developer must update their Metro config to use a `resolveRequest` function exported from `react-native-node-api`:
 
 ```javascript
-const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
-const nodeApi = require("react-native-node-api-modules/metro-config");
+const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
+const nodeApi = require("react-native-node-api/metro-config");
 module.exports = mergeConfig(getDefaultConfig(__dirname), {
   resolver: { resolveRequest: nodeApi.resolveRequest },
 });
@@ -39,17 +40,17 @@ We will be implementing this `add` function.
 
 ## Steps needed for the author of the `calculator-lib` library
 
-### Install `react-native-node-api-modules` as a dev-dependency and declare a peer dependency
+### Install `react-native-node-api` as a dev-dependency and declare a peer dependency
 
 ```bash
-npm install react-native-node-api-modules --save-dev --save-exact
+npm install react-native-node-api --save-dev --save-exact
 ```
 
 Update the package.json of your library to add a peer dependency on the package as well:
 
 ```bash
 # Update the command to use the exact version you installed as dev-dependency
-npm pkg set peerDependencies.react-native-node-api-modules=1.2.3
+npm pkg set peerDependencies.react-native-node-api=1.2.3
 ```
 
 ### Implement native code
@@ -123,7 +124,7 @@ NAPI_MODULE_INIT(/* napi_env env, napi_value exports */) {
 ### Build the prebuilt binaries
 
 ```
-npx react-native-node-api-modules build ./addon.c
+npx react-native-node-api build ./addon.c
 ```
 
 This is a shorthand command which generates a CMake project from the single source-file and prebuilds for both the Apple and Android platforms. See the [CLI documentation](./CLI.md) for more information on the options available and [documentation on prebuilds](./PREBUILDS.md) for the specifics on their format and structure.

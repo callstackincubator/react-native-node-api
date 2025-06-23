@@ -33,6 +33,22 @@ describe("bindingGypToCmakeLists", () => {
     assert(output.includes("add_library(bar SHARED bar.cc"));
   });
 
+  it("transform \\ to / in source filenames", () => {
+    const output = bindingGypToCmakeLists({
+      projectName: "some-project",
+      gyp: {
+        targets: [
+          {
+            target_name: "foo",
+            sources: ["file\\with\\win32\\separator.cc"],
+          },
+        ],
+      },
+    });
+
+    assert(output.includes("add_library(foo SHARED file/with/win32/separator.cc"));
+  });
+
   it("escapes spaces in source filenames", () => {
     const output = bindingGypToCmakeLists({
       projectName: "some-project",

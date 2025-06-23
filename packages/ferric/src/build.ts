@@ -16,7 +16,7 @@ import {
   createUniversalAppleLibrary,
   determineLibraryBasename,
   prettyPath,
-} from "react-native-node-api-modules";
+} from "react-native-node-api";
 
 import { UsageError } from "./errors.js";
 import { ensureCargo, build } from "./cargo.js";
@@ -118,6 +118,31 @@ export const buildCommand = new Command("build")
             targets.add(target);
           }
         }
+
+        if (targets.size === 0) {
+          if (isAndroidSupported()) {
+            if (process.arch === "arm64") {
+              targets.add("aarch64-linux-android");
+            } else if (process.arch === "x64") {
+              targets.add("x86_64-linux-android");
+            }
+          }
+          if (isAppleSupported()) {
+            if (process.arch === "arm64") {
+              targets.add("aarch64-apple-ios-sim");
+            }
+          }
+          console.error(
+            chalk.yellowBright("ℹ"),
+            chalk.dim(
+              `Using default targets, pass ${chalk.italic(
+                "--android"
+              )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
+                "--target"
+              )} options, to avoid this.`
+            )
+          );
+        }
         ensureCargo();
         ensureInstalledTargets(targets);
 
@@ -155,45 +180,6 @@ export const buildCommand = new Command("build")
             text: `Building ${targetsDescription}`,
             successText: `Built ${targetsDescription}`,
             failText: (error: Error) => `Failed to build: ${error.message}`,
-          }
-        );
-
-        const libraryName = determineLibraryBasename([
-          ...androidLibraries.map(([, outputPath]) => outputPath),
-        ]);
-
-        const declarationsFilename = `${libraryName}.d.ts`;
-        const declarationsPath = path.join(outputPath, declarationsFilename);
-        await oraPromise(
-          generateTypeScriptDeclarations({
-            outputFilename: declarationsFilename,
-            createPath: process.cwd(),
-            outputPath,
-          }),
-          {
-            text: "Generating TypeScript declarations",
-            successText: `Generated TypeScript declarations ${prettyPath(
-              declarationsPath
-            )}`,
-            failText: (error) =>
-              `Failed to generate TypeScript declarations: ${error.message}`,
-          }
-        );
-
-        const entrypointPath = path.join(outputPath, `${libraryName}.js`);
-
-        await oraPromise(
-          generateEntrypoint({
-            libraryName,
-            outputPath: entrypointPath,
-          }),
-          {
-            text: `Generating entrypoint`,
-            successText: `Generated entrypoint into ${prettyPath(
-              entrypointPath
-            )}`,
-            failText: (error) =>
-              `Failed to generate entrypoint: ${error.message}`,
           }
         );
 
@@ -260,7 +246,48 @@ export const buildCommand = new Command("build")
             }
           );
         }
+
+        const libraryName = determineLibraryBasename([
+          ...androidLibraries.map(([, outputPath]) => outputPath),
+          ...appleLibraries.map(([, outputPath]) => outputPath),
+        ]);
+
+        const declarationsFilename = `${libraryName}.d.ts`;
+        const declarationsPath = path.join(outputPath, declarationsFilename);
+        await oraPromise(
+          generateTypeScriptDeclarations({
+            outputFilename: declarationsFilename,
+            createPath: process.cwd(),
+            outputPath,
+          }),
+          {
+            text: "Generating TypeScript declarations",
+            successText: `Generated TypeScript declarations ${prettyPath(
+              declarationsPath
+            )}`,
+            failText: (error) =>
+              `Failed to generate TypeScript declarations: ${error.message}`,
+          }
+        );
+
+        const entrypointPath = path.join(outputPath, `${libraryName}.js`);
+
+        await oraPromise(
+          generateEntrypoint({
+            libraryName,
+            outputPath: entrypointPath,
+          }),
+          {
+            text: `Generating entrypoint`,
+            successText: `Generated entrypoint into ${prettyPath(
+              entrypointPath
+            )}`,
+            failText: (error) =>
+              `Failed to generate entrypoint: ${error.message}`,
+          }
+        );
       } catch (error) {
+        process.exitCode = 1;
         if (error instanceof SpawnFailure) {
           error.flushOutput("both");
         }
@@ -312,4 +339,13 @@ async function combineLibraries(
     );
     return [...result, universalPath];
   }
+}
+
+export function isAndroidSupported() {
+  const { ANDROID_HOME } = process.env;
+  return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
+}
+
+export function isAppleSupported() {
+  return process.platform === "darwin";
 }

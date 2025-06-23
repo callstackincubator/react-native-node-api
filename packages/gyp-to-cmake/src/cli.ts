@@ -57,15 +57,17 @@ export function transformBindingGypsRecursively(
 
 export const program = new Command("gyp-to-cmake")
   .description("Transform binding.gyp to CMakeLists.txt")
+  .option("--no-path-transforms", "Don't transform output from command expansions (replacing '\\' with '/')")
   .argument(
     "[path]",
     "Path to the binding.gyp file or directory to traverse recursively",
     process.cwd()
   )
-  .action((targetPath: string) => {
+  .action((targetPath: string, { pathTransforms }) => {
     const options: TransformOptions = {
       unsupportedBehaviour: "throw",
       disallowUnknownProperties: false,
+      transformWinPathsToPosix: pathTransforms,
     };
     const stat = fs.statSync(targetPath);
     if (stat.isFile()) {
