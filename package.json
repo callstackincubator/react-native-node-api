@@ -19,7 +19,8 @@
     "dev": "tsc --build --watch",
     "lint": "eslint .",
     "test": "npm run test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
-    "bootstrap": "npm run build && npm run bootstrap --workspaces --if-present"
+    "bootstrap": "npm run build && npm run bootstrap --workspaces --if-present",
+    "postinstall": "npm dedupe"
   },
   "author": {
     "name": "Callstack",
@@ -44,5 +45,12 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.22.0",
     "tsx": "^4.19.3"
+  },
+  "resolutions": {
+    "rimraf": "^4.4.1",
+    "glob": "^10.3.16",
+    "npmlog": "^7.0.0",
+    "are-we-there-yet": "^4.0.0",
+    "gauge": "^5.0.0"
   }
 }
