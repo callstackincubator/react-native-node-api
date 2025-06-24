@@ -7,8 +7,8 @@
     "android": "react-native run-android --no-packager --active-arch-only",
     "ios": "react-native run-ios --no-packager",
     "pod-install": "cd ios && pod install",
-    "test:android": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail npm:metro npm:android",
-    "test:ios": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail npm:metro npm:ios"
+    "test:android": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail --passthrough-arguments npm:metro 'npm:android -- {@}' --",
+    "test:ios": "mocha-remote --exit-on-error -- concurrently --passthrough-arguments --kill-others-on-fail npm:metro 'npm:ios -- {@}' --"
   },
   "dependencies": {
     "@babel/core": "^7.26.10",

@@ -79,6 +79,8 @@ jobs:
         working-directory: apps/test-app
       - name: Run tests (iOS)
         run: npm run test:ios
+        # TODO: Enable release mode when it works
+        # run: npm run test:ios -- --mode Release
         working-directory: apps/test-app
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
@@ -145,6 +147,6 @@ jobs:
             # Uninstall the app if already in the snapshot (unlikely but could result in a signature mismatch failure)
             adb uninstall com.microsoft.reacttestapp || true
             # Build, install and run the app
-            npm run test:android
+            npm run test:android -- --mode Release
             # Wait a bit for the sub-process to terminate, before terminating the emulator
             sleep 5
