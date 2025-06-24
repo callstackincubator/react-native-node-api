@@ -55,7 +55,7 @@ jobs:
     - run: npm run bootstrap
     - run: npm test
   test-ios:
-    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'test-ios')
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
     runs-on: macos-latest
     steps:
@@ -81,7 +81,7 @@ jobs:
         run: npm run test:ios
         working-directory: apps/test-app
   test-android:
-    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'test-android')
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
     runs-on: ubuntu-latest
     steps:
