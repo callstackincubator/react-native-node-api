@@ -109,14 +109,14 @@ jobs:
           REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
           echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
         working-directory: apps/test-app
-      - name: Setup Android Emulator cache
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: ${{ runner.os }}-avd-29
+      # - name: Setup Android Emulator cache
+      #   uses: actions/cache@v4
+      #   id: avd-cache
+      #   with:
+      #     path: |
+      #       ~/.android/avd/*
+      #       ~/.android/adb*
+      #     key: ${{ runner.os }}-avd-29
       # See https://github.com/marketplace/actions/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners
       - name: Enable KVM group perms
         run: |
