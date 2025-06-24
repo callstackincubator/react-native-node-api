@@ -25,7 +25,7 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run lint
-  test:
+  unit-tests:
     strategy:
       fail-fast: false
       matrix:
@@ -33,26 +33,30 @@ jobs:
           - ubuntu-latest
           - windows-latest
           - macos-latest
-        variant:
-          - unit-tests
-          - android-tests
-          - ios-tests
-        exclude:
-          # iOS tests are only supported on macOS runners
-          - runner: ubuntu-latest
-            variant: ios-tests
-          - runner: windows-latest
-            variant: ios-tests
-          # The reactivecircus/android-emulator-runner action does not support Windows runners
-          # See https://github.com/marketplace/actions/android-emulator-runner#github-action---android-emulator-runner
-          - runner: windows-latest
-            variant: android-tests
-          # MacOS is slow and expensive at running Android emulators
-          - runner: macos-latest
-            variant: android-tests
-
-    name: Test (${{ matrix.variant }} on ${{ matrix.runner }})
     runs-on: ${{ matrix.runner }}
+    name: Unit tests (${{ matrix.runner }})
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: lts/jod
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: "17"
+        distribution: "temurin"
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      with:
+        packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
+    - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+    - run: npm ci
+    - run: npm run bootstrap
+    - run: npm test
+  test-ios:
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'test-ios')
+    name: Test app (iOS)
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,28 +74,39 @@ jobs:
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
-      # Unit tests
-      - if: matrix.variant == 'unit-tests'
-        name: Run tests (Unit)
-        run: npm test
-      # Integration tests (iOS)
-      - if: matrix.variant == 'ios-tests'
-        run: npm run pod-install
+      - run: npm run pod-install
         working-directory: apps/test-app
-      - if: matrix.variant == 'ios-tests'
-        name: Run tests (iOS)
+      - name: Run tests (iOS)
         run: npm run test:ios
         working-directory: apps/test-app
-      # Integration tests (Android)
+  test-android:
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'test-android')
+    name: Test app (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/jod
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
+      - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      - run: npm ci
+      - run: npm run bootstrap
       - name: Clone patched Hermes version
-        if: matrix.variant == 'android-tests'
         shell: bash
         run: |
           REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
           echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
         working-directory: apps/test-app
       - name: Setup Android Emulator cache
-        if: matrix.variant == 'android-tests'
         uses: actions/cache@v4
         id: avd-cache
         with:
@@ -101,21 +116,17 @@ jobs:
           key: ${{ runner.os }}-avd-29
       # See https://github.com/marketplace/actions/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners
       - name: Enable KVM group perms
-        if: matrix.runner == 'ubuntu-latest' && matrix.variant == 'android-tests'
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all architectures
-        if: matrix.variant == 'android-tests'
         run: npm run build-weak-node-api -- --android
         working-directory: packages/host
       - name: Build ferric-example for all architectures
-        if: matrix.variant == 'android-tests'
         run: npm run build -- --android
         working-directory: packages/ferric-example
       - name: Run tests (Android)
-        if: matrix.variant == 'android-tests'
         timeout-minutes: 75
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -123,7 +134,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-metrics -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          arch: ${{ runner.os == 'macOS' && 'arm64-v8a' || 'x86' }}
+          arch: x86
           ndk: ${{ env.NDK_VERSION }}
           cmake: 3.22.1
           working-directory: apps/test-app
