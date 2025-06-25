@@ -7,7 +7,7 @@ import { spawn, SpawnFailure } from "bufout";
 import { oraPromise } from "ora";
 import { packageDirectorySync } from "pkg-dir";
 
-import { getLatestMtime, prettyPath } from "../path-utils";
+import { prettyPath } from "../path-utils";
 
 const HOST_PACKAGE_ROOT = path.resolve(__dirname, "../../..");
 // FIXME: make this configurable with reasonable fallback before public release
@@ -77,24 +77,23 @@ export const command = new Command("vendor-hermes")
         "ReactCommon/jsi/jsi/"
       );
 
-      if (
-        fs.existsSync(reactNativeJsiPath) &&
-        (force ||
-          getLatestMtime(hermesJsiPath) > getLatestMtime(reactNativeJsiPath))
-      ) {
-        await oraPromise(
-          fs.promises.cp(hermesJsiPath, reactNativeJsiPath, {
-            recursive: true,
-          }),
-          {
-            text: `Copying JSI from Hermes to React Native`,
-            successText: "Copied JSI from Hermes to React Native",
-            failText: (err) =>
-              `Failed to copy JSI from Hermes to React Native: ${err.message}`,
-            isEnabled: !silent,
-          }
-        );
-      }
+      assert(
+        fs.existsSync(hermesJsiPath),
+        `Hermes JSI path does not exist: ${hermesJsiPath}`
+      );
+
+      await oraPromise(
+        fs.promises.cp(hermesJsiPath, reactNativeJsiPath, {
+          recursive: true,
+        }),
+        {
+          text: `Copying JSI from patched Hermes to React Native`,
+          successText: "Copied JSI from patched Hermes to React Native",
+          failText: (err) =>
+            `Failed to copy JSI from Hermes to React Native: ${err.message}`,
+          isEnabled: !silent,
+        }
+      );
       console.log(hermesPath);
     } catch (error) {
       if (error instanceof SpawnFailure) {
