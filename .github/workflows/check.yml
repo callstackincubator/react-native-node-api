@@ -81,7 +81,7 @@ jobs:
       - run: npm run pod-install
         working-directory: apps/test-app
       - name: Run tests (iOS)
-        run: npm run test:ios
+        run: npm run test:ios:allTests
         # TODO: Enable release mode when it works
         # run: npm run test:ios -- --mode Release
         working-directory: apps/test-app
@@ -156,7 +156,7 @@ jobs:
             adb logcat > emulator-logcat.txt 2>&1 &
             LOGCAT_PID=$!
             # Build, install and run the app
-            npm run test:android -- --mode Release
+            npm run test:android:allTests -- --mode Release
             # Wait a bit for the sub-process to terminate, before terminating the emulator
             sleep 5
             # Stop logcat
