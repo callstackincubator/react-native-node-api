@@ -28,7 +28,10 @@ function assertLogs(cb: () => void, expectedMessages: string[]) {
   }
 }
 
-export const examples: Record<string, Record<string, () => void>> = {
+export const suites: Record<
+  string,
+  Record<string, () => void | (() => void)>
+> = {
   "1-getting-started": {
     "1_hello_world/napi": () =>
       assertLogs(
@@ -97,6 +100,6 @@ export const examples: Record<string, Record<string, () => void>> = {
   },
   tests: {
     buffers: () => require("../tests/buffers/addon.js"),
-    async: () => require("./tests/async/addon.js"),
+    async: () => require("../tests/async/addon.js"),
   },
 };
