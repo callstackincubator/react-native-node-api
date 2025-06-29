@@ -1,0 +1,27 @@
+{
+  "name": "@react-native-node-api/node-tests",
+  "description": "Harness for running the Node.js tests from https://github.com/nodejs/node/tree/main/test",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "private": true,
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
+    "directory": "packages/node-tests"
+  },
+  "scripts": {
+    "copy-tests": "tsx scripts/copy-tests.mts",
+    "gyp-to-cmake": "gyp-to-cmake ./tests",
+    "build": "tsx scripts/build-tests.mts",
+    "copy-and-build": "npm run copy-tests && npm run gyp-to-cmake && npm run build",
+    "test": "npm run copy-and-build"
+  },
+  "devDependencies": {
+    "cmake-js": "^7.3.1",
+    "cmake-rn": "*",
+    "gyp-to-cmake": "*",
+    "prebuildify": "^6.0.1",
+    "read-pkg": "^9.0.1"
+  }
+}
