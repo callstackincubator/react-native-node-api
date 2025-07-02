@@ -82,7 +82,7 @@ const cleanOption = new Option(
 const outPathOption = new Option(
   "--out <path>",
   "Specify the output directory to store the final build artifacts"
-);
+).default(false, "./{build}/{configuration}");
 
 const ndkVersionOption = new Option(
   "--ndk-version <version>",
@@ -113,12 +113,12 @@ export const program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(verboseOption)
   .addOption(sourcePathOption)
+  .addOption(buildPathOption)
+  .addOption(outPathOption)
   .addOption(configurationOption)
   .addOption(tripletOption)
   .addOption(androidOption)
   .addOption(appleOption)
-  .addOption(buildPathOption)
-  .addOption(outPathOption)
   .addOption(cleanOption)
   .addOption(ndkVersionOption)
   .addOption(androidSdkVersionOption)
@@ -167,6 +167,10 @@ export const program = new Command("cmake-rn")
             chalk.dim("(" + [...triplets].join(", ") + ")")
           );
         }
+      }
+
+      if (!globalContext.out) {
+        globalContext.out = path.join(buildPath, globalContext.configuration);
       }
 
       const tripletContext = [...triplets].map((triplet) => {
