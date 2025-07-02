@@ -31,6 +31,13 @@ const packageNameCache = new Map<string, string>();
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
+  {
+    // HACK: Take a shortcut (if applicable): existing `.node` files are addons
+    try {
+      fs.accessSync(modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`);
+      return true;
+    } catch { /* empty */ }
+  }
   const dir = path.dirname(modulePath);
   const baseName = path.basename(modulePath, ".node");
   let entries: string[];
@@ -127,8 +134,22 @@ export function determineModuleContext(
     packageNameCache.set(pkgDir, pkgName);
   }
   // Compute module-relative path
-  const relPath = normalizeModulePath(path.relative(pkgDir, originalPath));
-  return { packageName: pkgName, relativePath: relPath };
+  const relativePath = path.relative(pkgDir, originalPath)
+    .replaceAll("\\", "/");
+  return { packageName: pkgName, relativePath };
+}
+
+/**
+ * Traverse the filesystem upward to find a name for the package that which contains a file.
+ * This variant normalizes the module path.
+ */
+export function determineNormalizedModuleContext(
+  modulePath: string,
+  originalPath = modulePath
+): ModuleContext {
+  const { packageName, relativePath } = determineModuleContext(modulePath, originalPath);
+  const relPath = normalizeModulePath(relativePath);
+  return { packageName, relativePath: relPath };
 }
 
 export function normalizeModulePath(modulePath: string) {
@@ -147,7 +168,7 @@ export function escapePath(modulePath: string) {
  * Get the name of the library which will be used when the module is linked in.
  */
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
-  const { packageName, relativePath } = determineModuleContext(modulePath);
+  const { packageName, relativePath } = determineNormalizedModuleContext(modulePath);
   const escapedPackageName = escapePath(packageName);
   return naming.stripPathSuffix
     ? escapedPackageName
@@ -384,4 +405,30 @@ export function getLatestMtime(fromPath: string): number {
   }
 
   return latest;
+}
+
+// NOTE: List of paths influenced by `node-bindings` itself
+// https://github.com/TooTallNate/node-bindings/blob/v1.3.0/bindings.js#L21
+const nodeBindingsSubdirs = [
+  "./",
+  "./build/Release",
+  "./build/Debug",
+  "./build",
+  "./out/Release",
+  "./out/Debug",
+  "./Release",
+  "./Debug",
+];
+
+export function findNodeAddonForBindings(id: string, fromDir: string) {
+  const idWithExt = id.endsWith(".node") ? id : `${id}.node`;
+  // Support traversing the filesystem to find the Node-API module.
+  // Currently, we check the most common directories like `bindings` does.
+  for (const subdir of nodeBindingsSubdirs) {
+    const resolvedPath = path.join(fromDir, subdir, idWithExt);
+    if (isNodeApiModule(resolvedPath)) {
+      return resolvedPath;
+    }
+  }
+  return undefined;
 }

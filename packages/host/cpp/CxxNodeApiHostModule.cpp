@@ -1,15 +1,54 @@
+#include <utility>      // std::move, std::pair, std::make_pair
+#include <vector>       // std::vector
+#include <string>       // std::string
+#include <algorithm>    // std::equal, std::all_of
+#include <cctype>       // std::isalnum
 #include "CxxNodeApiHostModule.hpp"
+#include "AddonRegistry.hpp"
 #include "Logger.hpp"
 
 using namespace facebook;
 
+namespace {
+
+bool startsWith(const std::string_view &str, const std::string_view &prefix) {
+#if __cplusplus >= 202002L // __cpp_lib_starts_ends_with
+  return str.starts_with(prefix);
+#else
+  return str.size() >= prefix.size()
+      && std::equal(prefix.begin(), prefix.end(), str.begin());
+#endif // __cplusplus >= 202002L
+}
+
+bool isModulePathLike(const std::string_view &path) {
+  return std::all_of(path.begin(), path.end(), [](unsigned char c) {
+    return std::isalnum(c) || '_' == c || '-' == c
+        || '.' == c || '/' == c || ':' == c;
+  });
+}
+
+std::pair<std::string_view, std::string_view>
+rpartition(const std::string_view &input, char delimiter) {
+  if (const size_t pos = input.find_last_of(delimiter); std::string_view::npos != pos) {
+    const auto head = std::string_view(input).substr(0, pos);
+    const auto tail = std::string_view(input).substr(pos + 1);
+    return std::make_pair(head, tail);
+  } else {
+    return std::make_pair(std::string_view(), input);
+  }
+}
+
+} // namespace
+
 namespace callstack::nodeapihost {
+
+AddonRegistry g_platformAddonRegistry;
 
 CxxNodeApiHostModule::CxxNodeApiHostModule(
     std::shared_ptr<react::CallInvoker> jsInvoker)
     : TurboModule(CxxNodeApiHostModule::kModuleName, jsInvoker) {
   methodMap_["requireNodeAddon"] =
-      MethodMetadata{1, &CxxNodeApiHostModule::requireNodeAddon};
+      MethodMetadata{3, &CxxNodeApiHostModule::requireNodeAddon};
 }
 
 jsi::Value
@@ -17,114 +56,111 @@ CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
                                        react::TurboModule &turboModule,
                                        const jsi::Value args[], size_t count) {
   auto &thisModule = static_cast<CxxNodeApiHostModule &>(turboModule);
-  if (1 == count && args[0].isString()) {
-    return thisModule.requireNodeAddon(rt, args[0].asString(rt));
+  if (3 == count) {
+    // Must be `requireNodeAddon(requiredPath: string, requiredPackageName: string, originalId: string)`
+    return thisModule.requireNodeAddon(rt,
+        args[0].asString(rt),
+        args[1].asString(rt),
+        args[2].asString(rt));
   }
-  // TODO: Throw a meaningful error
-  return jsi::Value::undefined();
+  throw jsi::JSError(rt, "Invalid number of arguments to requireNodeAddon()");
 }
 
 jsi::Value
 CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
-                                       const jsi::String libraryName) {
-  const std::string libraryNameStr = libraryName.utf8(rt);
-
-  auto [it, inserted] = nodeAddons_.emplace(libraryNameStr, NodeAddon());
-  NodeAddon &addon = it->second;
-
-  // Check if this module has been loaded already, if not then load it...
-  if (inserted) {
-    if (!loadNodeAddon(addon, libraryNameStr)) {
-      return jsi::Value::undefined();
-    }
-  }
-
-  // Initialize the addon if it has not already been initialized
-  if (!rt.global().hasProperty(rt, addon.generatedName.data())) {
-    initializeNodeModule(rt, addon);
-  }
-
-  // Look the exports up (using JSI) and return it...
-  return rt.global().getProperty(rt, addon.generatedName.data());
+                                       const jsi::String &requiredPath,
+                                       const jsi::String &requiredPackageName,
+                                       const jsi::String &originalId) {
+  return requireNodeAddon(rt,
+      requiredPath.utf8(rt),
+      requiredPackageName.utf8(rt),
+      originalId.utf8(rt));
 }
 
-bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
-                                         const std::string &libraryName) const {
-#if defined(__APPLE__)
-  std::string libraryPath =
-      "@rpath/" + libraryName + ".framework/" + libraryName;
-#elif defined(__ANDROID__)
-  std::string libraryPath = "lib" + libraryName + ".so";
-#else
-  abort()
-#endif
+jsi::Value
+CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
+                                       const std::string &requiredPath,
+                                       const std::string &requiredPackageName,
+                                       const std::string &originalId) {
+  // Ensure that user-supplied inputs contain only allowed characters
+  if (!isModulePathLike(requiredPath)) {
+    throw jsi::JSError(rt, "Invalid characters in `requiredPath`. Only ASCII alphanumerics are allowed.");
+  }
 
-  log_debug("[%s] Loading addon by '%s'", libraryName.c_str(),
-            libraryPath.c_str());
-
-  typename LoaderPolicy::Symbol initFn = NULL;
-  typename LoaderPolicy::Module library =
-      LoaderPolicy::loadLibrary(libraryPath.c_str());
-  if (NULL != library) {
-    log_debug("[%s] Loaded addon", libraryName.c_str());
-    addon.moduleHandle = library;
-
-    // Generate a name allowing us to reference the exports object from JSI
-    // later Instead of using random numbers to avoid name clashes, we just use
-    // the pointer address of the loaded module
-    addon.generatedName.resize(32, '\0');
-    snprintf(addon.generatedName.data(), addon.generatedName.size(),
-             "RN$NodeAddon_%p", addon.moduleHandle);
-
-    initFn = LoaderPolicy::getSymbol(library, "napi_register_module_v1");
-    if (NULL != initFn) {
-      log_debug("[%s] Found napi_register_module_v1 (%p)", libraryName.c_str(),
-                initFn);
-      addon.init = (napi_addon_register_func)initFn;
+  // Check if this is a prefixed import (e.g. `node:fs/promises`)
+  const auto [pathPrefix, strippedPath] = rpartition(requiredPath, ':');
+  if (!pathPrefix.empty()) {
+    // URL protocol or prefix detected, dispatch via custom resolver
+    std::string pathPrefixCopy(pathPrefix); // HACK: Need explicit cast to `std::string`
+    if (auto handler = prefixResolvers_.find(pathPrefixCopy); prefixResolvers_.end() != handler) {
+      // HACK: Smuggle the `pathPrefix` as new `requiredPackageName`
+      return (handler->second)(rt, strippedPath, pathPrefix, originalId);
     } else {
-      log_debug("[%s] Failed to find napi_register_module_v1. Expecting the "
-                "addon to call napi_module_register to register itself.",
-                libraryName.c_str());
+      throw jsi::JSError(rt, "Unsupported protocol or prefix \"" + pathPrefixCopy + "\". Have you registered it?");
     }
-    // TODO: Read "node_api_module_get_api_version_v1" to support the addon
-    // declaring its Node-API version
-    // @see
-    // https://github.com/callstackincubator/react-native-node-api/issues/4
-  } else {
-    log_debug("[%s] Failed to load library", libraryName.c_str());
   }
-  return NULL != initFn;
+
+  // Check, if this package has been overridden
+  if (auto handler = packageOverrides_.find(requiredPackageName); packageOverrides_.end() != handler) {
+    // This package has a custom resolver, invoke it
+    return (handler->second)(rt, strippedPath, requiredPackageName, originalId);
+  }
+
+  // Otherwise, "requiredPath" must be a package-relative specifier
+  return resolveRelativePath(rt, strippedPath, requiredPackageName, originalId);
 }
 
-bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
-                                                NodeAddon &addon) {
-  // We should check if the module has already been initialized
-  assert(NULL != addon.moduleHandle);
-  assert(NULL != addon.init);
-  napi_status status = napi_ok;
-  // TODO: Read the version from the addon
-  // @see
-  // https://github.com/callstackincubator/react-native-node-api/issues/4
-  napi_env env = reinterpret_cast<napi_env>(rt.createNodeApiEnv(8));
+jsi::Value
+CxxNodeApiHostModule::resolveRelativePath(facebook::jsi::Runtime &rt,
+                                          const std::string_view &requiredPath,
+                                          const std::string_view &requiredPackageName,
+                                          const std::string_view &originalId) {
+  if (!startsWith(requiredPath, "./")) {
+    throw jsi::JSError(rt, "requiredPath must be relative and cannot leave its package root.");
+  }
 
-  // Create the "exports" object
-  napi_value exports;
-  status = napi_create_object(env, &exports);
-  assert(status == napi_ok);
+  // Check whether (`requiredPackageName`, `requiredPath`) is already cached
+  // NOTE: Cache must to be `jsi::Runtime`-local
+  auto [exports, isCached] = lookupRequireCache(rt,
+                                                requiredPackageName,
+                                                requiredPath);
 
-  // Call the addon init function to populate the "exports" object
-  // Allowing it to replace the value entirely by its return value
-  exports = addon.init(env, exports);
+  if (!isCached) {
+    // Ask the global addon registry to load given Node-API addon.
+    // If other runtime loaded it already, the OS will return the same pointer.
+    // NOTE: This method might try multiple platform-specific paths.
+    const std::string packageNameCopy(requiredPackageName);
+    const std::string requiredPathCopy(requiredPath);
+    auto &addon = g_platformAddonRegistry.loadAddon(packageNameCopy, requiredPathCopy);
 
-  napi_value global;
-  napi_get_global(env, &global);
-  assert(status == napi_ok);
+    // Create a `napi_env` and initialize the addon
+    exports = g_platformAddonRegistry.instantiateAddonInRuntime(rt, addon);
+    updateRequireCache(rt, requiredPackageName, requiredPath, exports);
+  }
 
-  status =
-      napi_set_named_property(env, global, addon.generatedName.data(), exports);
-  assert(status == napi_ok);
-
-  return true;
+  return std::move(exports);
 }
+
+std::pair<jsi::Value, bool>
+CxxNodeApiHostModule::lookupRequireCache(::jsi::Runtime &rt,
+                   const std::string_view &packageName,
+                   const std::string_view &subpath) {
+  // TODO: Implement me
+  return std::make_pair(jsi::Value(), false);
+}
+
+void CxxNodeApiHostModule::updateRequireCache(jsi::Runtime &rt,
+                                              const std::string_view &packageName,
+                                              const std::string_view &subpath,
+                                              jsi::Value &value) {
+  // TODO: Implement me
+}
+
+extern "C" {
+NAPI_EXTERN void NAPI_CDECL napi_module_register(napi_module *mod) {
+  assert(NULL != mod && NULL != mod->nm_register_func);
+  g_platformAddonRegistry.handleOldNapiModuleRegister(mod->nm_register_func);
+}
+} // extern "C"
 
 } // namespace callstack::nodeapihost

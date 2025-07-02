@@ -1,0 +1,19 @@
+{
+  "name": "@callstackincubator/example-3",
+  "version": "0.0.0",
+  "description": "Node.js Addons Example #2",
+  "main": "./index.js",
+  "private": true,
+  "dependencies": {
+    "bindings": "~1.5.0"
+  },
+  "scripts": {
+    "test": "node index.js"
+  },
+  "binary": {
+    "napi_versions": [4]
+  },
+  "gypfile": true,
+  "readme": "ERROR: No README data found!",
+  "_id": "function_arguments@0.0.0"
+}

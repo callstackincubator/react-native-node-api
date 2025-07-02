@@ -42,6 +42,7 @@ export function generateSource(functions: FunctionDecl[]) {
 
     log_debug("Injecting WeakNodeApiHost");
     inject_weak_node_api_host(WeakNodeApiHost {
+      .napi_module_register = napi_module_register,
       ${functions
         .filter(({ kind }) => kind === "engine")
         .flatMap(({ name }) => `.${name} = ${name},`)
