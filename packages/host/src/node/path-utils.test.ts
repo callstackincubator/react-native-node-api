@@ -375,29 +375,28 @@ describe("determineModuleContext", () => {
 });
 
 describe("findNodeAddonForBindings()", () => {
-  it("should look for addons in common paths", (context) => {
-    // Arrange
-    const expectedPaths = {
-      "addon_1": "addon_1.node",
-      "addon_2": "build/Release/addon_2.node",
-      "addon_3": "build/Debug/addon_3.node",
-      "addon_4": "build/addon_4.node",
-      "addon_5": "out/Release/addon_5.node",
-      "addon_6": "out/Debug/addon_6.node",
-      "addon_7": "Release/addon_7.node",
-      "addon_8": "Debug/addon_8.node",
-    };
-    const tempDirectoryPath = setupTempDirectory(context,
-      Object.fromEntries(
-        Object.values(expectedPaths)
-        .map((p) => [p, "// This is supposed to be a binary file"])
-      )
-    );
-    // Act & Assert
-    Object.entries(expectedPaths).forEach(([name, relPath]) => {
-      const expectedPath = path.join(tempDirectoryPath, relPath);
+  const expectedPaths = {
+    "addon_1": "addon_1.node",
+    "addon_2": "build/Release/addon_2.node",
+    "addon_3": "build/Debug/addon_3.node",
+    "addon_4": "build/addon_4.node",
+    "addon_5": "out/Release/addon_5.node",
+    "addon_6": "out/Debug/addon_6.node",
+    "addon_7": "Release/addon_7.node",
+    "addon_8": "Debug/addon_8.node",
+  };
+
+  for (let [name, relPath] of Object.entries(expectedPaths)) {
+    it(`should look for addons in common paths (${name} in "${relPath}")`, (context) => {
+      // Arrange
+      const tempDirectoryPath = setupTempDirectory(context, {
+        [relPath]: "// This is supposed to be a binary file",
+      });
+      // Act
       const actualPath = findNodeAddonForBindings(name, tempDirectoryPath);
-      assert.equal(actualPath, expectedPath);
+      // Assert
+      const expectedAbsPath = path.join(tempDirectoryPath, relPath);
+      assert.equal(actualPath, expectedAbsPath);
     });
-  });
+  }
 });
