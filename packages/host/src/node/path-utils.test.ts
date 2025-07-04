@@ -386,7 +386,7 @@ describe("findNodeAddonForBindings()", () => {
     "addon_8": "Debug/addon_8.node",
   };
 
-  for (let [name, relPath] of Object.entries(expectedPaths)) {
+  for (const [name, relPath] of Object.entries(expectedPaths)) {
     it(`should look for addons in common paths (${name} in "${relPath}")`, (context) => {
       // Arrange
       const tempDirectoryPath = setupTempDirectory(context, {

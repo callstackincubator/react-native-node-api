@@ -36,7 +36,9 @@ export function isNodeApiModule(modulePath: string): boolean {
     try {
       fs.accessSync(modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`);
       return true;
-    } catch {}
+    } catch {
+      // intentionally left empty
+    }
   }
   const dir = path.dirname(modulePath);
   const baseName = path.basename(modulePath, ".node");
