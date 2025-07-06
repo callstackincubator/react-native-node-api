@@ -1,115 +1,165 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, TestContext } from "node:test";
 import path from "node:path";
 
 import { transformFileSync } from "@babel/core";
 
-import { plugin } from "./plugin.js";
+import { plugin, PluginOptions } from "./plugin.js";
 import { setupTempDirectory } from "../test-utils.js";
-import { getLibraryName } from "../path-utils.js";
+
+type TestTransformationOptions = {
+  files: Record<string, string>;
+  inputFilePath: string;
+  assertion: (code: string) => void;
+  options?: PluginOptions;
+};
+
+function itTransforms(
+  title: string,
+  { files, inputFilePath, assertion, options = {} }: TestTransformationOptions
+) {
+  it(`transforms ${title}`, (context: TestContext) => {
+    const tempDirectoryPath = setupTempDirectory(context, files);
+    const result = transformFileSync(
+      path.join(tempDirectoryPath, inputFilePath),
+      { plugins: [[plugin, options]] }
+    );
+    assert(result, "Expected transformation to produce a result");
+    const { code } = result;
+    assert(code, "Expected transformation to produce code");
+    assert(assertion(code), `Unexpected code: ${code}`);
+  });
+}
 
 describe("plugin", () => {
-  it("transforms require calls, regardless", (context) => {
-    const tempDirectoryPath = setupTempDirectory(context, {
-      "package.json": `{ "name": "my-package" }`,
-      "addon-1.apple.node/addon-1.node":
-        "// This is supposed to be a binary file",
-      "addon-2.apple.node/addon-2.node":
-        "// This is supposed to be a binary file",
-      "addon-1.js": `
-        const addon = require('./addon-1.node');
-        console.log(addon);
-      `,
-      "addon-2.js": `
-        const addon = require('./addon-2.node');
-        console.log(addon);
-      `,
-      "sub-directory/addon-1.js": `
-        const addon = require('../addon-1.node');
-        console.log(addon);
-      `,
-      "addon-1-bindings.js": `
-        const addon = require('bindings')('addon-1');
-        console.log(addon);
-      `,
-      "require-js-file.js": `
-        const addon = require('./addon-1.js');
-        console.log(addon);
-      `,
+  describe("transforming require(...) calls", () => {
+    itTransforms("a simple call", {
+      files: {
+        "package.json": `{ "name": "my-package" }`,
+        "my-addon.apple.node/my-addon.node":
+          "// This is supposed to be a binary file",
+        "index.js": `
+          const addon = require('./my-addon.node');
+          console.log(addon);
+        `,
+      },
+      inputFilePath: "index.js",
+      assertion: (code) =>
+        code.includes(`requireNodeAddon("my-package--my-addon")`),
     });
 
-    const ADDON_1_REQUIRE_ARG = getLibraryName(
-      path.join(tempDirectoryPath, "addon-1"),
-      { stripPathSuffix: false }
+    itTransforms("from sub-directory", {
+      files: {
+        "package.json": `{ "name": "my-package" }`,
+        "my-addon.apple.node/my-addon.node":
+          "// This is supposed to be a binary file",
+        "sub-dir/index.js": `
+          const addon = require('../my-addon.node');
+          console.log(addon);
+        `,
+      },
+      inputFilePath: "sub-dir/index.js",
+      assertion: (code) =>
+        code.includes(`requireNodeAddon("my-package--my-addon")`),
+    });
+
+    itTransforms("addon in sub-directory", {
+      files: {
+        "package.json": `{ "name": "my-package" }`,
+        "sub-dir/my-addon.apple.node/my-addon.node":
+          "// This is supposed to be a binary file",
+        "index.js": `
+          const addon = require('./sub-dir/my-addon.node');
+          console.log(addon);
+        `,
+      },
+      inputFilePath: "index.js",
+      assertion: (code) =>
+        code.includes(`requireNodeAddon("my-package--sub-dir-my-addon")`),
+    });
+
+    itTransforms(
+      "and returns package name when passed stripPathSuffix option",
+      {
+        files: {
+          "package.json": `{ "name": "my-package" }`,
+          "sub-dir/my-addon.apple.node/my-addon.node":
+            "// This is supposed to be a binary file",
+          "index.js": `
+          const addon = require('./sub-dir/my-addon.node');
+          console.log(addon);
+        `,
+        },
+        inputFilePath: "index.js",
+        options: { stripPathSuffix: true },
+        assertion: (code) => code.includes(`requireNodeAddon("my-package")`),
+      }
     );
-    const ADDON_2_REQUIRE_ARG = getLibraryName(
-      path.join(tempDirectoryPath, "addon-2"),
-      { stripPathSuffix: false }
-    );
 
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./addon-1.js"),
-        { plugins: [[plugin, { stripPathSuffix: false }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
+    itTransforms("and does not touch required JS files", {
+      files: {
+        "package.json": `{ "name": "my-package" }`,
+        // TODO: Add a ./my-addon.node to make this test complete
+        "my-addon.js": "// Some JS file",
+        "index.js": `
+          const addon = require('./my-addon');
+          console.log(addon);
+        `,
+      },
+      inputFilePath: "index.js",
+      options: { stripPathSuffix: true },
+      assertion: (code) => !code.includes("requireNodeAddon"),
+    });
+  });
 
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./addon-2.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_2_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
+  describe("transforming require('binding')(...) calls", () => {
+    itTransforms("a simple call", {
+      files: {
+        "package.json": `{ "name": "my-package" }`,
+        "my-addon.apple.node/my-addon.node":
+          "// This is supposed to be a binary file",
+        "index.js": `
+          const addon = require('bindings')('my-addon');
+          console.log(addon);
+        `,
+      },
+      inputFilePath: "index.js",
+      assertion: (code) =>
+        code.includes(`requireNodeAddon("my-package--my-addon")`),
+    });
 
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./sub-directory/addon-1.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
+    describe("in 'build/Release'", () => {
+      itTransforms("a nested addon", {
+        files: {
+          "package.json": `{ "name": "my-package" }`,
+          "build/Release/my-addon.apple.node/my-addon.node":
+            "// This is supposed to be a binary file",
+          "index.js": `
+            const addon = require('bindings')('my-addon');
+            console.log(addon);
+          `,
+        },
+        inputFilePath: "index.js",
+        assertion: (code) =>
+          code.includes(
+            `requireNodeAddon("my-package--build-Release-my-addon")`
+          ),
+      });
 
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./addon-1-bindings.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && code.includes(`requireNodeAddon("${ADDON_1_REQUIRE_ARG}")`),
-        `Unexpected code: ${code}`
-      );
-    }
-
-    {
-      const result = transformFileSync(
-        path.join(tempDirectoryPath, "./require-js-file.js"),
-        { plugins: [[plugin, { naming: "hash" }]] }
-      );
-      assert(result);
-      const { code } = result;
-      assert(
-        code && !code.includes(`requireNodeAddon`),
-        `Unexpected code: ${code}`
-      );
-    }
+      itTransforms("strips path suffix when passing stripPathSuffix option", {
+        files: {
+          "package.json": `{ "name": "my-package" }`,
+          "build/Release/my-addon.apple.node/my-addon.node":
+            "// This is supposed to be a binary file",
+          "index.js": `
+            const addon = require('bindings')('my-addon');
+            console.log(addon);
+          `,
+        },
+        inputFilePath: "index.js",
+        options: { stripPathSuffix: true },
+        assertion: (code) => code.includes(`requireNodeAddon("my-package")`),
+      });
+    });
   });
 });
