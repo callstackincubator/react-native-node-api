@@ -4,9 +4,14 @@ import path from "node:path";
 import type { PluginObj, NodePath } from "@babel/core";
 import * as t from "@babel/types";
 
-import { getLibraryName, isNodeApiModule, NamingStrategy } from "../path-utils";
+import {
+  getLibraryName,
+  isNodeApiModule,
+  findNodeAddonForBindings,
+  NamingStrategy,
+} from "../path-utils";
 
-type PluginOptions = {
+export type PluginOptions = {
   stripPathSuffix?: boolean;
 };
 
@@ -64,10 +69,9 @@ export function plugin(): PluginObj {
             const [argument] = p.parent.arguments;
             if (argument.type === "StringLiteral") {
               const id = argument.value;
-              const relativePath = path.join(from, id);
-              // TODO: Support traversing the filesystem to find the Node-API module
-              if (isNodeApiModule(relativePath)) {
-                replaceWithRequireNodeAddon(p.parentPath, relativePath, {
+              const resolvedPath = findNodeAddonForBindings(id, from);
+              if (typeof resolvedPath === "string") {
+                replaceWithRequireNodeAddon(p.parentPath, resolvedPath, {
                   stripPathSuffix,
                 });
               }
