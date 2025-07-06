@@ -20,7 +20,7 @@ import {
 } from "../path-utils";
 
 import { command as vendorHermes } from "./hermes";
-import { stripPathSuffixOption } from "./options";
+import { pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
 import { linkXcframework } from "./apple";
 import { linkAndroidDir } from "./android";
@@ -67,123 +67,107 @@ program
   )
   .option("--android", "Link Android modules")
   .option("--apple", "Link Apple modules")
-  .addOption(stripPathSuffixOption)
-  .action(
-    async (pathArg, { force, prune, stripPathSuffix, android, apple }) => {
-      console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
+  .addOption(pathSuffixOption)
+  .action(async (pathArg, { force, prune, pathSuffix, android, apple }) => {
+    console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
+    const platforms: PlatformName[] = [];
+    if (android) {
+      platforms.push("android");
+    }
+    if (apple) {
+      platforms.push("apple");
+    }
 
-      if (stripPathSuffix) {
-        console.log(
-          chalk.yellowBright("Warning:"),
-          "Stripping path suffixes, which might lead to name collisions"
-        );
-      }
-      const platforms: PlatformName[] = [];
-      if (android) {
-        platforms.push("android");
-      }
-      if (apple) {
-        platforms.push("apple");
-      }
+    if (platforms.length === 0) {
+      console.error(
+        `No platform specified, pass one or more of:`,
+        ...PLATFORMS.map((platform) => chalk.bold(`\n  --${platform}`))
+      );
+      process.exitCode = 1;
+      return;
+    }
 
-      if (platforms.length === 0) {
-        console.error(
-          `No platform specified, pass one or more of:`,
-          ...PLATFORMS.map((platform) => chalk.bold(`\n  --${platform}`))
-        );
-        process.exitCode = 1;
-        return;
-      }
-
-      for (const platform of platforms) {
-        const platformDisplayName = getPlatformDisplayName(platform);
-        const platformOutputPath = getAutolinkPath(platform);
-        const modules = await oraPromise(
-          () =>
-            linkModules({
-              platform,
-              fromPath: path.resolve(pathArg),
-              incremental: !force,
-              naming: { stripPathSuffix },
-              linker: getLinker(platform),
-            }),
-          {
-            text: `Linking ${platformDisplayName} Node-API modules into ${prettyPath(
+    for (const platform of platforms) {
+      const platformDisplayName = getPlatformDisplayName(platform);
+      const platformOutputPath = getAutolinkPath(platform);
+      const modules = await oraPromise(
+        () =>
+          linkModules({
+            platform,
+            fromPath: path.resolve(pathArg),
+            incremental: !force,
+            naming: { pathSuffix },
+            linker: getLinker(platform),
+          }),
+        {
+          text: `Linking ${platformDisplayName} Node-API modules into ${prettyPath(
+            platformOutputPath
+          )}`,
+          successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
+            platformOutputPath
+          )}`,
+          failText: (error) =>
+            `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
               platformOutputPath
-            )}`,
-            successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
-              platformOutputPath
-            )}`,
-            failText: (error) =>
-              `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath
-              )}: ${error.message}`,
-          }
-        );
-
-        if (modules.length === 0) {
-          console.log("Found no Node-API modules 🤷");
+            )}: ${error.message}`,
         }
+      );
 
-        const failures = modules.filter((result) => "failure" in result);
-        const linked = modules.filter((result) => "outputPath" in result);
+      if (modules.length === 0) {
+        console.log("Found no Node-API modules 🤷");
+      }
 
-        for (const { originalPath, outputPath, skipped } of linked) {
-          const prettyOutputPath = outputPath
-            ? "→ " + prettyPath(path.basename(outputPath))
-            : "";
-          if (skipped) {
-            console.log(
-              chalk.greenBright("-"),
-              "Skipped",
-              prettyPath(originalPath),
-              prettyOutputPath,
-              "(up to date)"
-            );
-          } else {
-            console.log(
-              chalk.greenBright("⚭"),
-              "Linked",
-              prettyPath(originalPath),
-              prettyOutputPath
-            );
-          }
-        }
+      const failures = modules.filter((result) => "failure" in result);
+      const linked = modules.filter((result) => "outputPath" in result);
 
-        for (const { originalPath, failure } of failures) {
-          assert(failure instanceof SpawnFailure);
-          console.error(
-            "\n",
-            chalk.redBright("✖"),
-            "Failed to copy",
-            prettyPath(originalPath)
+      for (const { originalPath, outputPath, skipped } of linked) {
+        const prettyOutputPath = outputPath
+          ? "→ " + prettyPath(path.basename(outputPath))
+          : "";
+        if (skipped) {
+          console.log(
+            chalk.greenBright("-"),
+            "Skipped",
+            prettyPath(originalPath),
+            prettyOutputPath,
+            "(up to date)"
           );
-          console.error(failure.message);
-          failure.flushOutput("both");
-          process.exitCode = 1;
+        } else {
+          console.log(
+            chalk.greenBright("⚭"),
+            "Linked",
+            prettyPath(originalPath),
+            prettyOutputPath
+          );
         }
+      }
 
-        if (prune) {
-          await pruneLinkedModules(platform, modules);
-        }
+      for (const { originalPath, failure } of failures) {
+        assert(failure instanceof SpawnFailure);
+        console.error(
+          "\n",
+          chalk.redBright("✖"),
+          "Failed to copy",
+          prettyPath(originalPath)
+        );
+        console.error(failure.message);
+        failure.flushOutput("both");
+        process.exitCode = 1;
+      }
+
+      if (prune) {
+        await pruneLinkedModules(platform, modules);
       }
     }
-  );
+  });
 
 program
   .command("list")
   .description("Lists Node-API modules")
   .argument("[from-path]", "Some path inside the app package", process.cwd())
   .option("--json", "Output as JSON", false)
-  .addOption(stripPathSuffixOption)
-  .action(async (fromArg, { json, stripPathSuffix }) => {
-    if (stripPathSuffix) {
-      console.log(
-        chalk.yellowBright("Warning:"),
-        "Stripping path suffixes might lead to name collisions"
-      );
-    }
-
+  .addOption(pathSuffixOption)
+  .action(async (fromArg, { json, pathSuffix }) => {
     const rootPath = path.resolve(fromArg);
     const dependencies = findNodeApiModulePathsByDependency({
       fromPath: rootPath,
@@ -216,7 +200,7 @@ program
         );
         logModulePaths(
           dependency.modulePaths.map((p) => path.join(dependency.path, p)),
-          { stripPathSuffix }
+          { pathSuffix }
         );
       }
     }
@@ -227,14 +211,14 @@ program
   .description(
     "Utility to print, module path, the hash of a single Android library"
   )
-  .addOption(stripPathSuffixOption)
-  .action((pathInput, { stripPathSuffix }) => {
+  .addOption(pathSuffixOption)
+  .action((pathInput, { pathSuffix }) => {
     const resolvedModulePath = path.resolve(pathInput);
     const normalizedModulePath = normalizeModulePath(resolvedModulePath);
     const { packageName, relativePath } =
       determineModuleContext(resolvedModulePath);
     const libraryName = getLibraryName(resolvedModulePath, {
-      stripPathSuffix,
+      pathSuffix,
     });
     console.log({
       resolvedModulePath,

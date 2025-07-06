@@ -10,7 +10,7 @@ import { setupTempDirectory } from "../test-utils.js";
 type TestTransformationOptions = {
   files: Record<string, string>;
   inputFilePath: string;
-  assertion: (code: string) => void;
+  assertion(code: string): void;
   options?: PluginOptions;
 };
 
@@ -27,8 +27,24 @@ function itTransforms(
     assert(result, "Expected transformation to produce a result");
     const { code } = result;
     assert(code, "Expected transformation to produce code");
-    assert(assertion(code), `Unexpected code: ${code}`);
+    assertion(code);
   });
+}
+
+function assertIncludes(needle: string, { reverse = false } = {}) {
+  return (code: string) => {
+    if (reverse) {
+      assert(
+        !code.includes(needle),
+        `Expected code to not include: ${needle}, got ${code}`
+      );
+    } else {
+      assert(
+        code.includes(needle),
+        `Expected code to include: ${needle}, got ${code}`
+      );
+    }
+  };
 }
 
 describe("plugin", () => {
@@ -44,8 +60,7 @@ describe("plugin", () => {
         `,
       },
       inputFilePath: "index.js",
-      assertion: (code) =>
-        code.includes(`requireNodeAddon("my-package--my-addon")`),
+      assertion: assertIncludes(`requireNodeAddon("my-package--my-addon")`),
     });
 
     itTransforms("from sub-directory", {
@@ -59,42 +74,57 @@ describe("plugin", () => {
         `,
       },
       inputFilePath: "sub-dir/index.js",
-      assertion: (code) =>
-        code.includes(`requireNodeAddon("my-package--my-addon")`),
+      assertion: assertIncludes(`requireNodeAddon("my-package--my-addon")`),
     });
 
-    itTransforms("addon in sub-directory", {
-      files: {
-        "package.json": `{ "name": "my-package" }`,
-        "sub-dir/my-addon.apple.node/my-addon.node":
-          "// This is supposed to be a binary file",
-        "index.js": `
-          const addon = require('./sub-dir/my-addon.node');
-          console.log(addon);
-        `,
-      },
-      inputFilePath: "index.js",
-      assertion: (code) =>
-        code.includes(`requireNodeAddon("my-package--sub-dir-my-addon")`),
-    });
-
-    itTransforms(
-      "and returns package name when passed stripPathSuffix option",
-      {
+    describe("in 'sub-dir'", () => {
+      itTransforms("a nested addon (keeping suffix)", {
         files: {
           "package.json": `{ "name": "my-package" }`,
           "sub-dir/my-addon.apple.node/my-addon.node":
             "// This is supposed to be a binary file",
           "index.js": `
-          const addon = require('./sub-dir/my-addon.node');
-          console.log(addon);
-        `,
+            const addon = require('./sub-dir/my-addon.node');
+            console.log(addon);
+          `,
         },
         inputFilePath: "index.js",
-        options: { stripPathSuffix: true },
-        assertion: (code) => code.includes(`requireNodeAddon("my-package")`),
-      }
-    );
+        options: { pathSuffix: "keep" },
+        assertion: assertIncludes(
+          `requireNodeAddon("my-package--sub-dir-my-addon")`
+        ),
+      });
+
+      itTransforms("a nested addon (stripping suffix)", {
+        files: {
+          "package.json": `{ "name": "my-package" }`,
+          "sub-dir/my-addon.apple.node/my-addon.node":
+            "// This is supposed to be a binary file",
+          "index.js": `
+            const addon = require('./sub-dir/my-addon.node');
+            console.log(addon);
+          `,
+        },
+        inputFilePath: "index.js",
+        options: { pathSuffix: "strip" },
+        assertion: assertIncludes(`requireNodeAddon("my-package--my-addon")`),
+      });
+
+      itTransforms("a nested addon (omitting suffix)", {
+        files: {
+          "package.json": `{ "name": "my-package" }`,
+          "sub-dir/my-addon.apple.node/my-addon.node":
+            "// This is supposed to be a binary file",
+          "index.js": `
+            const addon = require('./sub-dir/my-addon.node');
+            console.log(addon);
+          `,
+        },
+        inputFilePath: "index.js",
+        options: { pathSuffix: "omit" },
+        assertion: assertIncludes(`requireNodeAddon("my-package")`),
+      });
+    });
 
     itTransforms("and does not touch required JS files", {
       files: {
@@ -107,8 +137,7 @@ describe("plugin", () => {
         `,
       },
       inputFilePath: "index.js",
-      options: { stripPathSuffix: true },
-      assertion: (code) => !code.includes("requireNodeAddon"),
+      assertion: assertIncludes("requireNodeAddon", { reverse: true }),
     });
   });
 
@@ -124,12 +153,11 @@ describe("plugin", () => {
         `,
       },
       inputFilePath: "index.js",
-      assertion: (code) =>
-        code.includes(`requireNodeAddon("my-package--my-addon")`),
+      assertion: assertIncludes(`requireNodeAddon("my-package--my-addon")`),
     });
 
     describe("in 'build/Release'", () => {
-      itTransforms("a nested addon", {
+      itTransforms("a nested addon (keeping suffix)", {
         files: {
           "package.json": `{ "name": "my-package" }`,
           "build/Release/my-addon.apple.node/my-addon.node":
@@ -140,13 +168,13 @@ describe("plugin", () => {
           `,
         },
         inputFilePath: "index.js",
-        assertion: (code) =>
-          code.includes(
-            `requireNodeAddon("my-package--build-Release-my-addon")`
-          ),
+        options: { pathSuffix: "keep" },
+        assertion: assertIncludes(
+          `requireNodeAddon("my-package--build-Release-my-addon")`
+        ),
       });
 
-      itTransforms("strips path suffix when passing stripPathSuffix option", {
+      itTransforms("a nested addon (stripping suffix)", {
         files: {
           "package.json": `{ "name": "my-package" }`,
           "build/Release/my-addon.apple.node/my-addon.node":
@@ -157,8 +185,23 @@ describe("plugin", () => {
           `,
         },
         inputFilePath: "index.js",
-        options: { stripPathSuffix: true },
-        assertion: (code) => code.includes(`requireNodeAddon("my-package")`),
+        options: { pathSuffix: "strip" },
+        assertion: assertIncludes(`requireNodeAddon("my-package--my-addon")`),
+      });
+
+      itTransforms("a nested addon (omitting suffix)", {
+        files: {
+          "package.json": `{ "name": "my-package" }`,
+          "build/Release/my-addon.apple.node/my-addon.node":
+            "// This is supposed to be a binary file",
+          "index.js": `
+            const addon = require('bindings')('my-addon');
+            console.log(addon);
+          `,
+        },
+        inputFilePath: "index.js",
+        options: { pathSuffix: "omit" },
+        assertion: assertIncludes(`requireNodeAddon("my-package")`),
       });
     });
   });

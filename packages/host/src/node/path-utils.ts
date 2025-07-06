@@ -15,10 +15,36 @@ export const PLATFORM_EXTENSIONS = {
   android: ".android.node",
   apple: ".apple.node",
 } as const satisfies Record<PlatformName, string>;
+
 export type PlatformExtentions = (typeof PLATFORM_EXTENSIONS)[PlatformName];
 
+export const PATH_SUFFIX_CHOICES = ["strip", "keep", "omit"] as const;
+export type PathSuffixChoice = (typeof PATH_SUFFIX_CHOICES)[number];
+
+export function assertPathSuffix(
+  value: unknown
+): asserts value is PathSuffixChoice {
+  assert(
+    typeof value === "string",
+    `Expected a string, got ${typeof value} (${value})`
+  );
+  assert(
+    (PATH_SUFFIX_CHOICES as readonly string[]).includes(value),
+    `Expected one of ${PATH_SUFFIX_CHOICES.join(", ")}`
+  );
+}
+
 export type NamingStrategy = {
-  stripPathSuffix: boolean;
+  /**
+   * Controls how the path of the addon inside a package is transformed into a library name.
+   * The transformation is needed to disambiguate and avoid conflicts between addons with the same name (but in different sub-paths or packages).
+   *
+   * As an example, if the package name is `my-pkg` and the path of the addon within the package is `build/Release/my-addon.node`:
+   * - `"omit"`: Only the package name is used and the library name will be `my-pkg`.
+   * - `"strip"`: Path gets stripped to its basename and the library name will be `my-pkg--my-addon`.
+   * - `"keep"`: The full path is kept and the library name will be `my-pkg--build-Release-my-addon`.
+   */
+  pathSuffix: PathSuffixChoice;
 };
 
 // Cache mapping package directory to package name across calls
@@ -34,7 +60,9 @@ export function isNodeApiModule(modulePath: string): boolean {
   {
     // HACK: Take a shortcut (if applicable): existing `.node` files are addons
     try {
-      fs.accessSync(modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`);
+      fs.accessSync(
+        modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`
+      );
       return true;
     } catch {
       // intentionally left empty
@@ -158,9 +186,13 @@ export function escapePath(modulePath: string) {
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
   const { packageName, relativePath } = determineModuleContext(modulePath);
   const escapedPackageName = escapePath(packageName);
-  return naming.stripPathSuffix
+  return naming.pathSuffix === "omit"
     ? escapedPackageName
-    : `${escapedPackageName}--${escapePath(relativePath)}`;
+    : `${escapedPackageName}--${escapePath(
+        naming.pathSuffix === "strip"
+          ? path.basename(relativePath)
+          : relativePath
+      )}`;
 }
 
 export function prettyPath(p: string) {

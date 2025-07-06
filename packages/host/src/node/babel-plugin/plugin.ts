@@ -9,19 +9,27 @@ import {
   isNodeApiModule,
   findNodeAddonForBindings,
   NamingStrategy,
+  PathSuffixChoice,
+  assertPathSuffix,
 } from "../path-utils";
 
 export type PluginOptions = {
-  stripPathSuffix?: boolean;
+  /**
+   * Controls how the path of the addon inside a package is transformed into a library name.
+   * The transformation is needed to disambiguate and avoid conflicts between addons with the same name (but in different sub-paths or packages).
+   *
+   * As an example, if the package name is `my-pkg` and the path of the addon within the package is `build/Release/my-addon.node`:
+   * - `"omit"`: Only the package name is used and the library name will be `my-pkg`.
+   * - `"strip"` (default): Path gets stripped to its basename and the library name will be `my-pkg--my-addon`.
+   * - `"keep"`: The full path is kept and the library name will be `my-pkg--build-Release-my-addon`.
+   */
+  pathSuffix?: PathSuffixChoice;
 };
 
 function assertOptions(opts: unknown): asserts opts is PluginOptions {
   assert(typeof opts === "object" && opts !== null, "Expected an object");
-  if ("stripPathSuffix" in opts) {
-    assert(
-      typeof opts.stripPathSuffix === "boolean",
-      "Expected 'stripPathSuffix' to be a boolean"
-    );
+  if ("pathSuffix" in opts) {
+    assertPathSuffix(opts.pathSuffix);
   }
 }
 
@@ -49,7 +57,7 @@ export function plugin(): PluginObj {
     visitor: {
       CallExpression(p) {
         assertOptions(this.opts);
-        const { stripPathSuffix = false } = this.opts;
+        const { pathSuffix = "strip" } = this.opts;
         if (typeof this.filename !== "string") {
           // This transformation only works when the filename is known
           return;
@@ -72,7 +80,7 @@ export function plugin(): PluginObj {
               const resolvedPath = findNodeAddonForBindings(id, from);
               if (typeof resolvedPath === "string") {
                 replaceWithRequireNodeAddon(p.parentPath, resolvedPath, {
-                  stripPathSuffix,
+                  pathSuffix,
                 });
               }
             }
@@ -81,7 +89,7 @@ export function plugin(): PluginObj {
             isNodeApiModule(path.join(from, id))
           ) {
             const relativePath = path.join(from, id);
-            replaceWithRequireNodeAddon(p, relativePath, { stripPathSuffix });
+            replaceWithRequireNodeAddon(p, relativePath, { pathSuffix });
           }
         }
       },

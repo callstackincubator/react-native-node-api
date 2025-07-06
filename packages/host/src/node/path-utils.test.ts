@@ -30,7 +30,8 @@ function removeReadPermissions(p: string) {
   };
 
   const result = fswin.setAttributesSync(p, attributes);
-  if (!result) throw new Error("can not set attributes to remove read permissions");
+  if (!result)
+    throw new Error("can not set attributes to remove read permissions");
 }
 
 function restoreReadPermissions(p: string) {
@@ -47,7 +48,8 @@ function restoreReadPermissions(p: string) {
   };
 
   const result = fswin.setAttributesSync(p, attributes);
-  if (!result) throw new Error("can not set attributes to restore read permissions");
+  if (!result)
+    throw new Error("can not set attributes to restore read permissions");
 }
 
 describe("isNodeApiModule", () => {
@@ -61,20 +63,24 @@ describe("isNodeApiModule", () => {
   });
 
   // there is no way to set ACLs on directories in Node.js on Windows with brittle powershell commands
-  it("returns false when directory cannot be read due to permissions", { skip: process.platform === "win32" }, (context) => {
-    const tempDirectoryPath = setupTempDirectory(context, {
-      "addon.android.node": "",
-    });
-    removeReadPermissions(tempDirectoryPath);
-    try {
-      assert.equal(
-        isNodeApiModule(path.join(tempDirectoryPath, "addon")),
-        false
-      );
-    } finally {
-      restoreReadPermissions(tempDirectoryPath);
+  it(
+    "returns false when directory cannot be read due to permissions",
+    { skip: process.platform === "win32" },
+    (context) => {
+      const tempDirectoryPath = setupTempDirectory(context, {
+        "addon.android.node": "",
+      });
+      removeReadPermissions(tempDirectoryPath);
+      try {
+        assert.equal(
+          isNodeApiModule(path.join(tempDirectoryPath, "addon")),
+          false
+        );
+      } finally {
+        restoreReadPermissions(tempDirectoryPath);
+      }
     }
-  });
+  );
 
   it("throws when module file exists but is not readable", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
@@ -201,20 +207,20 @@ describe("getLibraryName", () => {
     });
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
-        stripPathSuffix: false,
+        pathSuffix: "keep",
       }),
       "my-package--addon"
     );
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory/addon"), {
-        stripPathSuffix: false,
+        pathSuffix: "keep",
       }),
       "my-package--sub-directory-addon"
     );
   });
 
-  it("works when stripping relative path", (context) => {
+  it("strips path suffix", (context) => {
     const tempDirectoryPath = setupTempDirectory(context, {
       "package.json": `{ "name": "my-package" }`,
       "addon.apple.node/addon.node": "// This is supposed to be a binary file",
@@ -223,14 +229,36 @@ describe("getLibraryName", () => {
     });
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
-        stripPathSuffix: true,
+        pathSuffix: "strip",
+      }),
+      "my-package--addon"
+    );
+
+    assert.equal(
+      getLibraryName(path.join(tempDirectoryPath, "sub-directory", "addon"), {
+        pathSuffix: "strip",
+      }),
+      "my-package--addon"
+    );
+  });
+
+  it("omits path suffix", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "my-package" }`,
+      "addon.apple.node/addon.node": "// This is supposed to be a binary file",
+      "sub-directory/addon.apple.node/addon.node":
+        "// This is supposed to be a binary file",
+    });
+    assert.equal(
+      getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        pathSuffix: "omit",
       }),
       "my-package"
     );
 
     assert.equal(
-      getLibraryName(path.join(tempDirectoryPath, "sub-directory-addon"), {
-        stripPathSuffix: true,
+      getLibraryName(path.join(tempDirectoryPath, "sub-directory", "addon"), {
+        pathSuffix: "omit",
       }),
       "my-package"
     );
@@ -376,14 +404,14 @@ describe("determineModuleContext", () => {
 
 describe("findNodeAddonForBindings()", () => {
   const expectedPaths = {
-    "addon_1": "addon_1.node",
-    "addon_2": "build/Release/addon_2.node",
-    "addon_3": "build/Debug/addon_3.node",
-    "addon_4": "build/addon_4.node",
-    "addon_5": "out/Release/addon_5.node",
-    "addon_6": "out/Debug/addon_6.node",
-    "addon_7": "Release/addon_7.node",
-    "addon_8": "Debug/addon_8.node",
+    addon_1: "addon_1.node",
+    addon_2: "build/Release/addon_2.node",
+    addon_3: "build/Debug/addon_3.node",
+    addon_4: "build/addon_4.node",
+    addon_5: "out/Release/addon_5.node",
+    addon_6: "out/Debug/addon_6.node",
+    addon_7: "Release/addon_7.node",
+    addon_8: "Debug/addon_8.node",
   };
 
   for (const [name, relPath] of Object.entries(expectedPaths)) {
