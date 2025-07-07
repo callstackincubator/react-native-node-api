@@ -15,6 +15,6 @@
     "bootstrap": "npm run build"
   },
   "devDependencies": {
-    "ferric-cli": "^0.1.0"
+    "ferric-cli": "^0.2.0"
   }
 }
