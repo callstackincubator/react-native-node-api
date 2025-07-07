@@ -12,7 +12,6 @@ import { prettyPath } from "../path-utils";
 const HOST_PACKAGE_ROOT = path.resolve(__dirname, "../../..");
 // FIXME: make this configurable with reasonable fallback before public release
 const HERMES_GIT_URL = "https://github.com/kraenhansen/hermes.git";
-const HERMES_GIT_TAG = "node-api-for-react-native-0.79.0";
 
 export const command = new Command("vendor-hermes")
   .argument("[from]", "Path to a file inside the app package", process.cwd())
@@ -26,6 +25,27 @@ export const command = new Command("vendor-hermes")
     try {
       const appPackageRoot = packageDirectorySync({ cwd: from });
       assert(appPackageRoot, "Failed to find package root");
+      const reactNativePath = path.dirname(
+        require.resolve("react-native/package.json", {
+          // Ensures we'll be patching the React Native package actually used by the app
+          paths: [appPackageRoot],
+        })
+      );
+      const hermesVersionPath = path.join(
+        reactNativePath,
+        "sdks",
+        ".hermesversion"
+      );
+      const hermesVersion = fs.readFileSync(hermesVersionPath, "utf8").trim();
+      if (!silent) {
+        console.log(`Using Hermes version: ${hermesVersion}`);
+      }
+
+      const reactNativeJsiPath = path.join(
+        reactNativePath,
+        "ReactCommon/jsi/jsi/"
+      );
+
       const hermesPath = path.join(HOST_PACKAGE_ROOT, "hermes");
       if (force && fs.existsSync(hermesPath)) {
         await oraPromise(
@@ -40,42 +60,48 @@ export const command = new Command("vendor-hermes")
         );
       }
       if (!fs.existsSync(hermesPath)) {
-        await oraPromise(
-          spawn(
-            "git",
-            [
-              "clone",
-              "--recursive",
-              "--depth",
-              "1",
-              "--branch",
-              HERMES_GIT_TAG,
-              HERMES_GIT_URL,
-              hermesPath,
-            ],
+        const patchedTag = `node-api-${hermesVersion}`;
+        try {
+          await oraPromise(
+            spawn(
+              "git",
+              [
+                "clone",
+                "--recursive",
+                "--depth",
+                "1",
+                "--branch",
+                patchedTag,
+                HERMES_GIT_URL,
+                hermesPath,
+              ],
+              {
+                outputMode: "buffered",
+              }
+            ),
             {
-              outputMode: "buffered",
+              text: `Cloning custom Hermes into ${prettyPath(hermesPath)}`,
+              successText: "Cloned custom Hermes",
+              failText: (err) =>
+                `Failed to clone custom Hermes: ${err.message}`,
+              isEnabled: !silent,
             }
-          ),
-          {
-            text: `Cloning custom Hermes into ${prettyPath(hermesPath)}`,
-            successText: "Cloned custom Hermes",
-            failText: (err) => `Failed to clone custom Hermes: ${err.message}`,
-            isEnabled: !silent,
+          );
+        } catch (error) {
+          if (error instanceof SpawnFailure) {
+            error.flushOutput("both");
+            console.error(
+              `\n🛑 React Native uses the ${hermesVersion} tag and cloning our fork failed.`,
+              `Please see the Node-API package's peer dependency on "react-native" for supported versions.`
+            );
+            process.exitCode = 1;
+            return;
+          } else {
+            throw error;
           }
-        );
+        }
       }
       const hermesJsiPath = path.join(hermesPath, "API/jsi/jsi");
-      const reactNativePath = path.dirname(
-        require.resolve("react-native/package.json", {
-          // Ensures we'll be patching the React Native package actually used by the app
-          paths: [appPackageRoot],
-        })
-      );
-      const reactNativeJsiPath = path.join(
-        reactNativePath,
-        "ReactCommon/jsi/jsi/"
-      );
 
       assert(
         fs.existsSync(hermesJsiPath),
@@ -96,6 +122,7 @@ export const command = new Command("vendor-hermes")
       );
       console.log(hermesPath);
     } catch (error) {
+      process.exitCode = 1;
       if (error instanceof SpawnFailure) {
         error.flushOutput("both");
       }
