@@ -19,7 +19,9 @@
     "dev": "tsc --build --watch",
     "lint": "eslint .",
     "test": "npm run test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
-    "bootstrap": "npm run build && npm run bootstrap --workspaces --if-present"
+    "bootstrap": "npm run build && npm run bootstrap --workspaces --if-present",
+    "prerelease": "npm run build && npm run prerelease --workspaces --if-present",
+    "release": "changeset publish"
   },
   "author": {
     "name": "Callstack",

@@ -1,0 +1,42 @@
+name: Release
+
+env:
+  # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
+  NDK_VERSION: 27.1.12297006
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/jod
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
+      - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      - run: npm ci
+
+      - name: Create Release Pull Request or Publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: npm run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
