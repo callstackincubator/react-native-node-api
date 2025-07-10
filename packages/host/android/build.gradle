@@ -132,12 +132,6 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 
-react {
-  jsRootDir = file("../src/")
-  libraryName = "NodeApiModules"
-  codegenJavaPackageName = "com.callstack.node_api_modules"
-}
-
 // Custom task to fetch jniLibs paths via CLI
 task linkNodeApiModules {
   doLast {

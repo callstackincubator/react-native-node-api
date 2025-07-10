@@ -96,17 +96,5 @@
   "peerDependencies": {
     "@babel/core": "^7.26.10",
     "react-native": "0.79.1 || 0.79.2"
-  },
-  "codegenConfig": {
-    "name": "NodeApiHostSpec",
-    "type": "modules",
-    "jsSrcsDir": "src/react-native",
-    "outputDir": {
-      "ios": "ios/generated",
-      "android": "android/generated"
-    },
-    "android": {
-      "javaPackageName": "com.callstack.node_api_modules"
-    }
   }
 }
