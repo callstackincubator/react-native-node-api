@@ -75,6 +75,18 @@ jobs:
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
+      - name: Clone patched Hermes version
+        shell: bash
+        run: |
+          REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
+          echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
+        working-directory: apps/test-app
+      - name: Setup Hermes cache
+        uses: actions/cache@v4
+        id: hermes-cache
+        with:
+          path: ${{ env.REACT_NATIVE_OVERRIDE_HERMES_DIR }}
+          key: ${{ runner.os }}-hermes
       - run: npm run pod-install
         working-directory: apps/test-app
       - name: Run tests (iOS)
@@ -109,6 +121,12 @@ jobs:
           REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
           echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
         working-directory: apps/test-app
+      - name: Setup Hermes cache
+        uses: actions/cache@v4
+        id: hermes-cache
+        with:
+          path: ${{ env.REACT_NATIVE_OVERRIDE_HERMES_DIR }}
+          key: ${{ runner.os }}-hermes
       # - name: Setup Android Emulator cache
       #   uses: actions/cache@v4
       #   id: avd-cache
