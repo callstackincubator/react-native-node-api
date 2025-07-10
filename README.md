@@ -18,7 +18,7 @@
 
 ## How does this work?
 
-> [!NOTE]
+> [!IMPORTANT]
 > This library is currently dependent on a custom version of Hermes and therefore has a very limited range of supported React Native versions.
 > Once the [PR adding Node-API support to Hermes](https://github.com/facebook/hermes/pull/1377) merges, we expect this restriction to be lifted.
 
