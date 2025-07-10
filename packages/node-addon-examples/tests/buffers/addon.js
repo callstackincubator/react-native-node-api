@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable no-undef */
 const addon = require("bindings")("addon.node");
 
 const toLocaleString = (text) => {
