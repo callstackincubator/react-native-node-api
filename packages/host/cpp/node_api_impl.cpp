@@ -1,5 +1,5 @@
 #include "node_api_impl.hpp"
-#include "Logger.hpp"
+#include <string>
 
 auto ArrayType = napi_uint8_array;
 
