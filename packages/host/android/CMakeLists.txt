@@ -20,6 +20,8 @@ add_library(node-api-host SHARED
   ../cpp/Logger.cpp
   ../cpp/CxxNodeApiHostModule.cpp
   ../cpp/WeakNodeApiInjector.cpp
+  ../cpp/node_api_impl.cpp
+  ../cpp/node_api_impl.hpp
 )
 
 target_include_directories(node-api-host PRIVATE
