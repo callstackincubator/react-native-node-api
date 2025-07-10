@@ -6,6 +6,15 @@ import { FunctionDecl, getNodeApiFunctions } from "./node-api-functions";
 
 export const CPP_SOURCE_PATH = path.join(__dirname, "../cpp");
 
+// TODO: Remove when all runtime Node API functions are implemented
+const implementedRuntimeFunctions = [
+  "napi_create_buffer",
+  "napi_create_buffer_copy",
+  "napi_is_buffer",
+  "napi_get_buffer_info",
+  "napi_create_external_buffer",
+];
+
 /**
  * Generates source code which injects the Node API functions from the host.
  */
@@ -15,7 +24,8 @@ export function generateSource(functions: FunctionDecl[]) {
     #include <Logger.hpp>
     #include <dlfcn.h>
     #include <weak_node_api.hpp>
-
+    #include <node_api_impl.hpp>
+    
     #if defined(__APPLE__)
     #define WEAK_NODE_API_LIBRARY_NAME "@rpath/weak-node-api.framework/weak-node-api"
     #elif defined(__ANDROID__)
@@ -43,7 +53,10 @@ export function generateSource(functions: FunctionDecl[]) {
     log_debug("Injecting WeakNodeApiHost");
     inject_weak_node_api_host(WeakNodeApiHost {
       ${functions
-        .filter(({ kind }) => kind === "engine")
+        .filter(
+          ({ kind, name }) =>
+            kind === "engine" || implementedRuntimeFunctions.includes(name)
+        )
         .flatMap(({ name }) => `.${name} = ${name},`)
         .join("\n")}
       });
