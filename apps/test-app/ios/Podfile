@@ -4,4 +4,13 @@ ws_dir = ws_dir.parent until
   ws_dir.expand_path.to_s == '/'
 require "#{ws_dir}/node_modules/react-native-test-app/test_app.rb"
 
+# Disabling ccache for now, as I'm getting lots of warnings:
+# Explicit modules is enabled but the compiler was not recognized; disable explicit modules with CLANG_ENABLE_EXPLICIT_MODULES=NO, or use C_COMPILER_LAUNCHER with CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES if using a compatible launcher
+# I could get this working by patching React Native's utils.rb to set
+# config.build_settings["CLANG_ENABLE_EXPLICIT_MODULES"] = "NO"
+# config.build_settings["COMPILER_INDEX_STORE_ENABLE"] = "NO"
+# but I'm still seeing compiler errors after that.
+
+# ENV['USE_CCACHE'] = ENV['USE_CCACHE'] || Pod::Executable::which('ccache') ? '1' : '0'
+
 use_test_app! :hermes_enabled => true, :fabric_enabled => true, :bridgeless_enabled => true

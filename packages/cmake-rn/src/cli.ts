@@ -33,6 +33,7 @@ import {
   createXCframework,
   determineXCFrameworkFilename,
 } from "react-native-node-api";
+import { getCcacheVersion } from "./ccache.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -109,6 +110,11 @@ const xcframeworkExtensionOption = new Option(
   "Don't rename the xcframework to .apple.node"
 ).default(false);
 
+const noCcacheOption = new Option(
+  "--no-ccache",
+  "Don't detect and use ccache to speed up builds"
+);
+
 export const program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(verboseOption)
@@ -120,6 +126,7 @@ export const program = new Command("cmake-rn")
   .addOption(androidOption)
   .addOption(appleOption)
   .addOption(cleanOption)
+  .addOption(noCcacheOption)
   .addOption(ndkVersionOption)
   .addOption(androidSdkVersionOption)
   .addOption(noAutoLinkOption)
@@ -127,6 +134,16 @@ export const program = new Command("cmake-rn")
   .addOption(xcframeworkExtensionOption)
   .action(async ({ triplet: tripletValues, ...globalContext }) => {
     try {
+      const ccacheVersion = globalContext.ccache
+        ? getCcacheVersion()
+        : undefined;
+      if (ccacheVersion) {
+        console.log("⚡️Using ccache", chalk.dim(`(${ccacheVersion})`));
+      } else {
+        // Disable ccache if not found
+        globalContext.ccache = false;
+      }
+
       const buildPath = getBuildPath(globalContext);
       if (globalContext.clean) {
         await fs.promises.rm(buildPath, { recursive: true, force: true });
@@ -368,9 +385,10 @@ function getTripletConfigureCmakeArgs(
   {
     ndkVersion,
     androidSdkVersion,
+    ccache,
   }: Pick<
     GlobalContext,
-    "ndkVersion" | "androidSdkVersion" | "weakNodeApiLinkage"
+    "ndkVersion" | "androidSdkVersion" | "weakNodeApiLinkage" | "ccache"
   >
 ) {
   if (isAndroidTriplet(triplet)) {
@@ -378,9 +396,10 @@ function getTripletConfigureCmakeArgs(
       triplet,
       ndkVersion,
       sdkVersion: androidSdkVersion,
+      ccache,
     });
   } else if (isAppleTriplet(triplet)) {
-    return getAppleConfigureCmakeArgs({ triplet });
+    return getAppleConfigureCmakeArgs({ triplet, ccache });
   } else {
     throw new Error(`Support for '${triplet}' is not implemented yet`);
   }
@@ -402,6 +421,7 @@ async function configureProject(context: TripletScopedContext) {
     triplet,
     tripletBuildPath,
     source,
+    ccache,
     ndkVersion,
     androidSdkVersion,
     weakNodeApiLinkage,
@@ -415,6 +435,7 @@ async function configureProject(context: TripletScopedContext) {
       tripletBuildPath,
       ...getVariablesArgs(getVariables(context)),
       ...getTripletConfigureCmakeArgs(triplet, {
+        ccache,
         ndkVersion,
         weakNodeApiLinkage,
         androidSdkVersion,

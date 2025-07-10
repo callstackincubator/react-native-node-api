@@ -51,6 +51,8 @@ jobs:
       with:
         packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
     - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
     - run: npm ci
     - run: npm run bootstrap
     - run: npm test
@@ -73,6 +75,8 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
       - run: npm ci
       - run: npm run bootstrap
       - run: npm run pod-install
@@ -101,6 +105,8 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
       - run: npm ci
       - run: npm run bootstrap
       - name: Clone patched Hermes version

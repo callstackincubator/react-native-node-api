@@ -24,12 +24,14 @@ type AndroidConfigureOptions = {
   triplet: AndroidTriplet;
   ndkVersion: string;
   sdkVersion: string;
+  ccache: boolean;
 };
 
 export function getAndroidConfigureCmakeArgs({
   triplet,
   ndkVersion,
   sdkVersion,
+  ccache,
 }: AndroidConfigureOptions) {
   const { ANDROID_HOME } = process.env;
   assert(typeof ANDROID_HOME === "string", "Missing env variable ANDROID_HOME");
@@ -72,10 +74,14 @@ export function getAndroidConfigureCmakeArgs({
     // `CMAKE_BUILD_TYPE=${configuration}`,
     "-D",
     "CMAKE_MAKE_PROGRAM=ninja",
-    // "-D",
-    // "CMAKE_C_COMPILER_LAUNCHER=ccache",
-    // "-D",
-    // "CMAKE_CXX_COMPILER_LAUNCHER=ccache",
+    ...(ccache
+      ? [
+          "-D",
+          "CMAKE_C_COMPILER_LAUNCHER=ccache",
+          "-D",
+          "CMAKE_CXX_COMPILER_LAUNCHER=ccache",
+        ]
+      : []),
     "-D",
     `ANDROID_NDK=${ndkPath}`,
     "-D",

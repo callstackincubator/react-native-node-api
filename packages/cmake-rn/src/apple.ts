@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
+import path from "node:path";
 
 import { AppleTriplet, isAppleTriplet } from "react-native-node-api";
+
+const scriptsPath = path.join(import.meta.dirname, "..", "scripts");
+const ccacheClangPath = path.join(scriptsPath, "ccache-clang.sh");
+const ccacheClangPPPath = path.join(scriptsPath, "ccache-clang++.sh");
 
 export const DEFAULT_APPLE_TRIPLETS = [
   "arm64;x86_64-apple-darwin",
@@ -82,9 +87,13 @@ export function createPlistContent(values: Record<string, string>) {
 
 type AppleConfigureOptions = {
   triplet: AppleTriplet;
+  ccache: boolean;
 };
 
-export function getAppleConfigureCmakeArgs({ triplet }: AppleConfigureOptions) {
+export function getAppleConfigureCmakeArgs({
+  triplet,
+  ccache,
+}: AppleConfigureOptions) {
   assert(isAppleTriplet(triplet));
   const systemName = CMAKE_SYSTEM_NAMES[triplet];
 
@@ -100,6 +109,18 @@ export function getAppleConfigureCmakeArgs({ triplet }: AppleConfigureOptions) {
     // Set the target architecture
     "-D",
     `CMAKE_OSX_ARCHITECTURES=${APPLE_ARCHITECTURES[triplet]}`,
+    ...(ccache
+      ? [
+          "-D",
+          `CMAKE_XCODE_ATTRIBUTE_CC=${ccacheClangPath}`,
+          "-D",
+          `CMAKE_XCODE_ATTRIBUTE_CXX=${ccacheClangPPPath}`,
+          "-D",
+          `CMAKE_XCODE_ATTRIBUTE_LD=${ccacheClangPath}`,
+          "-D",
+          `CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS=${ccacheClangPPPath}`,
+        ]
+      : []),
   ];
 }
 
