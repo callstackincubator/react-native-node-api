@@ -1,0 +1,17 @@
+{
+  "name": "buffers-test",
+  "version": "0.0.0",
+  "description": "Tests of runtime buffer functions",
+  "main": "addon.js",
+  "private": true,
+  "dependencies": {
+    "assert": "^2.1.0",
+    "bindings": "~1.5.0"
+  },
+  "scripts": {
+    "test": "node --expose-gc addon.js"
+  },
+  "gypfile": true,
+  "readme": "ERROR: No README data found!",
+  "_id": "function_arguments@0.0.0"
+}
