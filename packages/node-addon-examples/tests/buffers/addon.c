@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include "../../js-native-api/common.h"
 
 #define NODE_API_RETVAL_NOTHING  // Intentionally blank #define
 
@@ -156,29 +155,6 @@ static napi_value newBuffer(napi_env env, napi_callback_info info) {
   memcpy(theCopy, theText, kBufferSize);
 
   return theBuffer;
-
-  // napi_value theBuffer, result;
-  // char* theCopy;
-  // const unsigned int kBufferSize = sizeof(theText);
-
-  // napi_status status =
-  //     napi_create_arraybuffer(env, kBufferSize, (void**)(&theCopy),
-  //     &theBuffer);
-  // if (status != napi_ok) {
-  //   printf("Failed to create arraybuffer\n");
-  //   return NULL;
-  // }
-
-  // memcpy(theCopy, theText, kBufferSize);
-
-  // napi_typedarray_type arrayType = napi_uint8_array;
-  // status = napi_create_typedarray(
-  //     env, arrayType, kBufferSize, theBuffer, 0, &result);
-  // if (status != napi_ok) {
-  //   printf("Failed to create typedarray\n");
-  //   return NULL;
-  // }
-  // return result;
 }
 
 static napi_value newExternalBuffer(napi_env env, napi_callback_info info) {
@@ -278,33 +254,6 @@ static napi_value invalidObjectAsBuffer(napi_env env, napi_callback_info info) {
   return notTheBuffer;
 }
 
-static napi_value bufferFromArrayBuffer(napi_env env, napi_callback_info info) {
-  napi_status status;
-  napi_value arraybuffer;
-  napi_value buffer;
-  size_t byte_length = 1024;
-  void* data = NULL;
-  size_t buffer_length = 0;
-  void* buffer_data = NULL;
-
-  status = napi_create_arraybuffer(env, byte_length, &data, &arraybuffer);
-  NODE_API_ASSERT(env, status == napi_ok, "Failed to create arraybuffer");
-
-#if NAPI_VERSION >= 10
-  status = node_api_create_buffer_from_arraybuffer(
-      env, arraybuffer, 0, byte_length, &buffer);
-  NODE_API_ASSERT(
-      env, status == napi_ok, "Failed to create buffer from arraybuffer");
-#endif
-
-  status = napi_get_buffer_info(env, buffer, &buffer_data, &buffer_length);
-  NODE_API_ASSERT(env, status == napi_ok, "Failed to get buffer info");
-
-  NODE_API_ASSERT(env, buffer_length == byte_length, "Buffer length mismatch");
-
-  return buffer;
-}
-
 static napi_value Init(napi_env env, napi_value exports) {
   napi_value theValue;
 
@@ -322,7 +271,6 @@ static napi_value Init(napi_env env, napi_value exports) {
       DECLARE_NODE_API_PROPERTY("bufferInfo", bufferInfo),
       DECLARE_NODE_API_PROPERTY("staticBuffer", staticBuffer),
       DECLARE_NODE_API_PROPERTY("invalidObjectAsBuffer", invalidObjectAsBuffer),
-      DECLARE_NODE_API_PROPERTY("bufferFromArrayBuffer", bufferFromArrayBuffer),
   };
 
   NODE_API_CALL(env,
