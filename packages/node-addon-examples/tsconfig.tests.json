@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/react-native",
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": false,
+    "module": "commonjs",
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["react-native"]
+  },
+  "include": ["src/*.ts"]
+}

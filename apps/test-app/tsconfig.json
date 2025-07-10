@@ -1,3 +1,8 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json"
+  "extends": "@react-native/typescript-config/tsconfig.json",
+  "compilerOptions": {
+    "types": ["react-native", "mocha"]
+  },
+  "files": ["App.tsx", "index.ts"],
+  "references": [{ "path": "./tsconfig.node-scripts.json" }]
 }

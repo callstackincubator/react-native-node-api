@@ -1,8 +1,7 @@
 {
-  "extends": "@tsconfig/node22/tsconfig.json",
-  "compilerOptions": {
-    "module": "node16",
-    "moduleResolution": "node16"
-  },
-  "include": ["scripts"]
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.tests.json" },
+    { "path": "./tsconfig.node-scripts.json" }
+  ]
 }
