@@ -130,7 +130,6 @@ static void deleteTheText(
   NODE_API_BASIC_ASSERT_RETURN_VOID(
       data != NULL && strcmp(data, theText) == 0, "invalid data");
 
-  printf("XDDDD");
   (void)finalize_hint;
   free(data);
   deleterCallCount++;
@@ -158,7 +157,6 @@ static napi_value newBuffer(napi_env env, napi_callback_info info) {
 }
 
 static napi_value newExternalBuffer(napi_env env, napi_callback_info info) {
-  printf("creating external buffer\n");
   napi_value theBuffer;
   char* theCopy = strdup(theText);
   NODE_API_ASSERT(
