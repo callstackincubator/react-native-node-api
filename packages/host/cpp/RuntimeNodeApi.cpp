@@ -1,4 +1,4 @@
-#include "node_api_impl.hpp"
+#include "RuntimeNodeApi.hpp"
 #include <string>
 
 auto ArrayType = napi_uint8_array;
