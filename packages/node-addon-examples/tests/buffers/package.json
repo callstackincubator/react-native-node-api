@@ -10,7 +10,5 @@
   "scripts": {
     "test": "node --expose-gc addon.js"
   },
-  "gypfile": true,
-  "readme": "ERROR: No README data found!",
-  "_id": "function_arguments@0.0.0"
+  "gypfile": true
 }
