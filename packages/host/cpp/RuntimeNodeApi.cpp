@@ -11,6 +11,10 @@ napi_status NAPI_CDECL callstack::nodeapihost::napi_create_buffer(
     return status;
   }
 
+  // Warning: The returned data structure does not fully align with the
+  // characteristics of a Buffer.
+  // @see
+  // https://github.com/callstackincubator/react-native-node-api/issues/171
   return napi_create_typedarray(env, ArrayType, length, buffer, 0, result);
 }
 
