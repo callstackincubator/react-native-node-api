@@ -7,7 +7,7 @@ import { FunctionDecl, getNodeApiFunctions } from "./node-api-functions";
 export const CPP_SOURCE_PATH = path.join(__dirname, "../cpp");
 
 // TODO: Remove when all runtime Node API functions are implemented
-const implementedRuntimeFunctions = [
+const IMPLEMENTED_RUNTIME_FUNCTIONS = [
   "napi_create_buffer",
   "napi_create_buffer_copy",
   "napi_is_buffer",
@@ -55,7 +55,7 @@ export function generateSource(functions: FunctionDecl[]) {
       ${functions
         .filter(
           ({ kind, name }) =>
-            kind === "engine" || implementedRuntimeFunctions.includes(name)
+            kind === "engine" || IMPLEMENTED_RUNTIME_FUNCTIONS.includes(name)
         )
         .flatMap(({ name }) => `.${name} = ${name},`)
         .join("\n")}
