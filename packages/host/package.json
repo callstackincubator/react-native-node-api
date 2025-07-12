@@ -95,6 +95,6 @@
   },
   "peerDependencies": {
     "@babel/core": "^7.26.10",
-    "react-native": "0.79.1 || 0.79.2"
+    "react-native": "0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5"
   }
 }

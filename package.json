@@ -47,7 +47,7 @@
     "@types/node": "^22.13.0",
     "eslint": "^9.19.0",
     "globals": "^16.0.0",
-    "react-native": "0.79.1",
+    "react-native": "0.79.5",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.22.0",
     "tsx": "^4.19.3"
