@@ -1,5 +1,13 @@
 # cmake-rn
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [bd733b8]
+- Updated dependencies [b771a27]
+  - react-native-node-api@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
