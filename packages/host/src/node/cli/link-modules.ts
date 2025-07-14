@@ -61,7 +61,7 @@ export async function linkModules({
   linker,
 }: LinkModulesOptions): Promise<ModuleOutput[]> {
   // Find all their xcframeworks
-  const dependenciesByName = findNodeApiModulePathsByDependency({
+  const dependenciesByName = await findNodeApiModulePathsByDependency({
     fromPath,
     platform,
     includeSelf: true,
@@ -69,9 +69,10 @@ export async function linkModules({
 
   // Find absolute paths to xcframeworks
   const absoluteModulePaths = Object.values(dependenciesByName).flatMap(
-    (dependency) => dependency.modulePaths.map(
-      (modulePath) => path.join(dependency.path, modulePath)
-    )
+    (dependency) =>
+      dependency.modulePaths.map((modulePath) =>
+        path.join(dependency.path, modulePath)
+      )
   );
 
   if (hasDuplicateLibraryNames(absoluteModulePaths, naming)) {

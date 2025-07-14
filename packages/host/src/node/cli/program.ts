@@ -169,7 +169,7 @@ program
   .addOption(pathSuffixOption)
   .action(async (fromArg, { json, pathSuffix }) => {
     const rootPath = path.resolve(fromArg);
-    const dependencies = findNodeApiModulePathsByDependency({
+    const dependencies = await findNodeApiModulePathsByDependency({
       fromPath: rootPath,
       platform: PLATFORMS,
       includeSelf: true,

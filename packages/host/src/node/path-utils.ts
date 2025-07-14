@@ -302,13 +302,12 @@ export type FindNodeApiModuleOptions = {
 };
 
 /**
- * Recursively search into a directory for xcframeworks containing Node-API modules.
- * TODO: Turn this asynchronous
+ * Recursively search into a directory for directories containing Node-API modules.
  */
-export function findNodeApiModulePaths(
+export async function findNodeApiModulePaths(
   options: FindNodeApiModuleOptions,
   suffix = ""
-): string[] {
+): Promise<string[]> {
   const {
     fromPath,
     platform,
@@ -325,27 +324,33 @@ export function findNodeApiModulePaths(
     return [];
   }
 
-  return fs
-    .readdirSync(candidatePath, { withFileTypes: true })
-    .flatMap((file) => {
-      if (
-        file.isFile() &&
-        file.name === MAGIC_FILENAME &&
-        hasPlatformExtension(platform, candidatePath)
-      ) {
-        return [candidatePath];
-      } else if (file.isDirectory()) {
-        // Traverse into the child directory
-        return findNodeApiModulePaths(options, path.join(suffix, file.name));
-      }
-      return [];
-    });
+  const result: string[] = [];
+  const pendingResults: Promise<string[]>[] = [];
+
+  for await (const dirent of await fs.promises.opendir(candidatePath)) {
+    if (
+      dirent.isFile() &&
+      dirent.name === MAGIC_FILENAME &&
+      hasPlatformExtension(platform, candidatePath)
+    ) {
+      result.push(candidatePath);
+    } else if (dirent.isDirectory()) {
+      // Traverse into the child directory
+      // Pushing result into a list instead of awaiting immediately to parallelize the search
+      pendingResults.push(
+        findNodeApiModulePaths(options, path.join(suffix, dirent.name))
+      );
+    }
+  }
+  const childResults = await Promise.all(pendingResults);
+  result.push(...childResults.flatMap((filePath) => filePath));
+  return result;
 }
 
 /**
  * Finds all dependencies of the app package and their xcframeworks.
  */
-export function findNodeApiModulePathsByDependency({
+export async function findNodeApiModulePathsByDependency({
   fromPath,
   includeSelf,
   ...options
@@ -360,25 +365,32 @@ export function findNodeApiModulePathsByDependency({
     const { name } = readPackageSync({ cwd: packageRoot });
     packagePathsByName[name] = packageRoot;
   }
-  // Find all their xcframeworks
-  return Object.fromEntries(
-    Object.entries(packagePathsByName)
-      .map(([dependencyName, dependencyPath]) => {
+
+  // Find all their node api module paths
+  const resultEntries = await Promise.all(
+    Object.entries(packagePathsByName).map(
+      async ([dependencyName, dependencyPath]) => {
         // Make all the xcframeworks relative to the dependency path
-        const modulePaths = findNodeApiModulePaths({
+        const absoluteModulePaths = await findNodeApiModulePaths({
           fromPath: dependencyPath,
           ...options,
-        }).map((p) => path.relative(dependencyPath, p));
+        });
         return [
           dependencyName,
           {
             path: dependencyPath,
-            modulePaths,
+            modulePaths: absoluteModulePaths.map((p) =>
+              path.relative(dependencyPath, p)
+            ),
           },
         ] as const;
-      })
-      // Remove any dependencies without module paths
-      .filter(([, { modulePaths }]) => modulePaths.length > 0)
+      }
+    )
+  );
+  // Return an object by dependency name
+  return Object.fromEntries(
+    // Remove any dependencies without Node-API module paths
+    resultEntries.filter(([, { modulePaths }]) => modulePaths.length > 0)
   );
 }
 

@@ -300,13 +300,13 @@ describe("findPackageDependencyPaths", () => {
 });
 
 describe("findNodeApiModulePaths", () => {
-  it("should find .apple.node paths", (context) => {
+  it("should find .apple.node paths", async (context) => {
     const tempDir = setupTempDirectory(context, {
       "root.apple.node/react-native-node-api-module": "",
       "sub-directory/lib-a.apple.node/react-native-node-api-module": "",
       "sub-directory/lib-b.apple.node/react-native-node-api-module": "",
     });
-    const result = findNodeApiModulePaths({
+    const result = await findNodeApiModulePaths({
       fromPath: tempDir,
       platform: "apple",
     });
@@ -317,7 +317,7 @@ describe("findNodeApiModulePaths", () => {
     ]);
   });
 
-  it("respects default exclude patterns", (context) => {
+  it("respects default exclude patterns", async (context) => {
     const tempDir = setupTempDirectory(context, {
       "root.apple.node/react-native-node-api-module": "",
       "node_modules/dependency/lib.apple.node/react-native-node-api-module": "",
@@ -325,7 +325,7 @@ describe("findNodeApiModulePaths", () => {
       "child-dir/node_modules/dependency/lib.apple.node/react-native-node-api-module":
         "",
     });
-    const result = findNodeApiModulePaths({
+    const result = await findNodeApiModulePaths({
       fromPath: tempDir,
       platform: "apple",
     });
@@ -335,14 +335,14 @@ describe("findNodeApiModulePaths", () => {
     ]);
   });
 
-  it("respects explicit exclude patterns", (context) => {
+  it("respects explicit exclude patterns", async (context) => {
     const tempDir = setupTempDirectory(context, {
       "root.apple.node/react-native-node-api-module": "",
       "child-dir/dependency/lib.apple.node/react-native-node-api-module": "",
       "child-dir/node_modules/dependency/lib.apple.node/react-native-node-api-module":
         "",
     });
-    const result = findNodeApiModulePaths({
+    const result = await findNodeApiModulePaths({
       fromPath: tempDir,
       platform: "apple",
       excludePatterns: [/root/],
@@ -353,13 +353,13 @@ describe("findNodeApiModulePaths", () => {
     ]);
   });
 
-  it("disregards parts futher up in filesystem when excluding", (context) => {
+  it("disregards parts futher up in filesystem when excluding", async (context) => {
     const tempDir = setupTempDirectory(context, {
       "node_modules/root.apple.node/react-native-node-api-module": "",
       "node_modules/child-dir/node_modules/dependency/lib.apple.node/react-native-node-api-module":
         "",
     });
-    const result = findNodeApiModulePaths({
+    const result = await findNodeApiModulePaths({
       fromPath: path.join(tempDir, "node_modules"),
       platform: "apple",
     });
@@ -416,13 +416,16 @@ describe("findNodeAddonForBindings()", () => {
   };
 
   for (const [name, relPath] of Object.entries(expectedPaths)) {
-    it(`should look for addons in common paths (${name} in "${relPath}")`, (context) => {
+    it(`should look for addons in common paths (${name} in "${relPath}")`, async (context) => {
       // Arrange
       const tempDirectoryPath = setupTempDirectory(context, {
         [relPath]: "// This is supposed to be a binary file",
       });
       // Act
-      const actualPath = findNodeAddonForBindings(name, tempDirectoryPath);
+      const actualPath = await findNodeAddonForBindings(
+        name,
+        tempDirectoryPath
+      );
       // Assert
       const expectedAbsPath = path.join(tempDirectoryPath, relPath);
       assert.equal(actualPath, expectedAbsPath);
