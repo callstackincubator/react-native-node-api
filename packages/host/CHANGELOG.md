@@ -1,5 +1,11 @@
 # react-native-node-api
 
+## 0.3.2
+
+### Patch Changes
+
+- 045e9e5: Fix hasDuplicateLibraryNames by filtering out node_modules in package rootse
+
 ## 0.3.1
 
 ### Patch Changes
