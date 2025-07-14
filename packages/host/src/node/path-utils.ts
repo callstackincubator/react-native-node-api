@@ -279,9 +279,9 @@ export const MAGIC_FILENAME = "react-native-node-api-module";
  * Default patterns to use when excluding paths from the search for Node-API modules.
  */
 export const DEFAULT_EXCLUDE_PATTERNS = [
-  /\/react-native-node-api\//,
-  /\/node_modules\//,
-  /\/.git\//,
+  /(^|\/)react-native-node-api\//,
+  /(^|\/)node_modules\//,
+  /(^|\/).git\//,
 ];
 
 export function hasPlatformExtension(
