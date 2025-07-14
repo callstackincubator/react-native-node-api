@@ -63,3 +63,7 @@ for (const src of ALLOW_LIST) {
   console.log("Copying from", srcPath, "to", destPath);
   fs.cpSync(srcPath, destPath, { recursive: true });
 }
+
+if (!fs.existsSync(path.join(TESTS_DIR, "common.js"))) {
+  // TODO: Perform a symlink of a common.js file from src/common.js
+}

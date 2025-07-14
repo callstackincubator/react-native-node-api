@@ -8,10 +8,11 @@ for (const projectDirectory of projectDirectories) {
   console.log(
     `Running "cmake-rn" in ${projectDirectory} to build for React Native`
   );
-  execSync("cmake-rn --out-to-build", {
+  execSync("cmake-rn", {
     cwd: projectDirectory,
     stdio: "inherit",
   });
+
   console.log(`Running "cmake-js" in ${projectDirectory} to build for Node.js`);
   execSync("cmake-js", {
     cwd: projectDirectory,
