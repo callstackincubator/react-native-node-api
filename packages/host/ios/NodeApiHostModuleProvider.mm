@@ -1,5 +1,6 @@
 #import "CxxNodeApiHostModule.hpp"
 #import "WeakNodeApiInjector.hpp"
+#include "RuntimeNodeApiAsync.hpp"
 
 #define USE_CXX_TURBO_MODULE_UTILS 0
 #if defined(__has_include)
@@ -27,6 +28,7 @@
   facebook::react::registerCxxModuleToGlobalModuleMap(
       callstack::nodeapihost::CxxNodeApiHostModule::kModuleName,
       [](std::shared_ptr<facebook::react::CallInvoker> jsInvoker) {
+        callstack::nodeapihost::setCallInvoker(jsInvoker);
         return std::make_shared<callstack::nodeapihost::CxxNodeApiHostModule>(
             jsInvoker);
       });

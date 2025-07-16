@@ -13,6 +13,10 @@ const IMPLEMENTED_RUNTIME_FUNCTIONS = [
   "napi_is_buffer",
   "napi_get_buffer_info",
   "napi_create_external_buffer",
+  "napi_create_async_work",
+  "napi_queue_async_work",
+  "napi_delete_async_work",
+  "napi_cancel_async_work",
 ];
 
 /**
@@ -25,6 +29,7 @@ export function generateSource(functions: FunctionDecl[]) {
     #include <dlfcn.h>
     #include <weak_node_api.hpp>
     #include <RuntimeNodeApi.hpp>
+    #include <RuntimeNodeApiAsync.hpp>
     
     #if defined(__APPLE__)
     #define WEAK_NODE_API_LIBRARY_NAME "@rpath/weak-node-api.framework/weak-node-api"
@@ -60,6 +65,9 @@ export function generateSource(functions: FunctionDecl[]) {
         .flatMap(({ name }) => `.${name} = ${name},`)
         .join("\n")}
       });
+    }
+    void initialize(const std::shared_ptr<facebook::react::CallInvoker>& invoker) {
+      callstack::nodeapihost::initialize(invoker);
     }
     } // namespace callstack::nodeapihost
   `;
