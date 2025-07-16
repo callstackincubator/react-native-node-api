@@ -12,7 +12,7 @@ CxxNodeApiHostModule::CxxNodeApiHostModule(
   methodMap_["requireNodeAddon"] =
       MethodMetadata{1, &CxxNodeApiHostModule::requireNodeAddon};
 
-  callstack::nodeapihost::setCallInvoker(jsInvoker);
+  callInvoker_ = std::move(jsInvoker);
 }
 
 jsi::Value
@@ -127,6 +127,7 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
       napi_set_named_property(env, global, addon.generatedName.data(), exports);
   assert(status == napi_ok);
 
+  callstack::nodeapihost::setCallInvoker(env, callInvoker_);
   return true;
 }
 

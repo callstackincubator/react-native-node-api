@@ -80,14 +80,21 @@ class AsyncWorkRegistry {
   std::unordered_map<IdType, std::shared_ptr<AsyncJob>> jobs_;
 };
 
-static std::weak_ptr<facebook::react::CallInvoker> callInvoker;
+static std::unordered_map<napi_env, std::weak_ptr<facebook::react::CallInvoker>>
+    callInvokers;
 static AsyncWorkRegistry asyncWorkRegistry;
 
 namespace callstack::nodeapihost {
 
-void setCallInvoker(
+void setCallInvoker(napi_env env,
     const std::shared_ptr<facebook::react::CallInvoker>& invoker) {
-  callInvoker = invoker;
+  callInvokers[env] = invoker;
+}
+
+std::weak_ptr<facebook::react::CallInvoker> getCallInvoker(napi_env env) {
+  return callInvokers.contains(env)
+             ? callInvokers[env]
+             : std::weak_ptr<facebook::react::CallInvoker>{};
 }
 
 napi_status napi_create_async_work(napi_env env,
@@ -116,7 +123,7 @@ napi_status napi_queue_async_work(
     return napi_invalid_arg;
   }
 
-  const auto invoker = callInvoker.lock();
+  const auto invoker = getCallInvoker(env).lock();
   if (!invoker) {
     log_debug("Error: No CallInvoker available for async work");
     return napi_invalid_arg;
