@@ -38,7 +38,6 @@ typedef struct {
 static carrier the_carrier;
 static carrier async_carrier[MAX_CANCEL_THREADS];
 
-static carrier the_carrier;
 static void Execute(napi_env env, void* data) {
   sleep_ms(10);
   carrier* c = (carrier*)(data);
