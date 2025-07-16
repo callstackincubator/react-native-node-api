@@ -1,19 +1,26 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
 const addon = require("bindings")("addon.node");
+const assert = require("assert");
 
 const toLocaleString = (text) => {
   return text
-    .toLocaleString()
+    .toString()
     .split(",")
     .map((code) => String.fromCharCode(parseInt(code, 10)))
     .join("");
 };
 
-console.log(addon.newBuffer().toLocaleString(), addon.theText);
-console.log(toLocaleString(addon.newExternalBuffer()), addon.theText);
-console.log(addon.copyBuffer(), addon.theText);
-let buffer = addon.staticBuffer();
-console.log(addon.bufferHasInstance(buffer), true);
-console.log(addon.bufferInfo(buffer), true);
-addon.invalidObjectAsBuffer({});
+module.exports = async () => {
+  assert.strictEqual(toLocaleString(addon.newBuffer()), addon.theText);
+  assert.strictEqual(toLocaleString(addon.newExternalBuffer()), addon.theText);
+  assert.strictEqual(toLocaleString(addon.copyBuffer()), addon.theText);
+  let buffer = addon.staticBuffer();
+  assert.strictEqual(addon.bufferHasInstance(buffer), true);
+  assert.strictEqual(addon.bufferInfo(buffer), true);
+  addon.invalidObjectAsBuffer({});
+
+  // TODO: Add gc tests
+  // @see
+  // https://github.com/callstackincubator/react-native-node-api/issues/182
+};
