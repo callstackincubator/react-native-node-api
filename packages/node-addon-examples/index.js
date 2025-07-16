@@ -17,5 +17,6 @@ module.exports = {
   },
   "tests": {
     "buffers": () => require("./tests/buffers/addon.js"),
+    "async": () => require("./tests/async/addon.js"),
   },
 };
