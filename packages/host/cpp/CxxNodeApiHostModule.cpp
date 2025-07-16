@@ -1,5 +1,6 @@
 #include "CxxNodeApiHostModule.hpp"
 #include "Logger.hpp"
+#include "RuntimeNodeApiAsync.hpp"
 
 using namespace facebook;
 
@@ -10,6 +11,8 @@ CxxNodeApiHostModule::CxxNodeApiHostModule(
     : TurboModule(CxxNodeApiHostModule::kModuleName, jsInvoker) {
   methodMap_["requireNodeAddon"] =
       MethodMetadata{1, &CxxNodeApiHostModule::requireNodeAddon};
+
+  callstack::nodeapihost::setCallInvoker(jsInvoker);
 }
 
 jsi::Value
