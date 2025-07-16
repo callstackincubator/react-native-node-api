@@ -66,9 +66,6 @@ export function generateSource(functions: FunctionDecl[]) {
         .join("\n")}
       });
     }
-    void initialize(const std::shared_ptr<facebook::react::CallInvoker>& invoker) {
-      callstack::nodeapihost::initialize(invoker);
-    }
     } // namespace callstack::nodeapihost
   `;
 }
