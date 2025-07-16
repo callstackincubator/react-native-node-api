@@ -7,7 +7,7 @@
 #include <WeakNodeApiInjector.hpp>
 
 // Called when the library is loaded
-jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+jint JNI_OnLoad(JavaVM *vm, void *reserved) {
   callstack::nodeapihost::injectIntoWeakNodeApi();
   // Register the C++ TurboModule
   facebook::react::registerCxxModuleToGlobalModuleMap(
