@@ -22,5 +22,8 @@
     "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
     "gyp-to-cmake": "*",
     "read-pkg": "^9.0.1"
+  },
+  "dependencies": {
+    "assert": "^2.1.0"
   }
 }
