@@ -22,6 +22,8 @@ add_library(node-api-host SHARED
   ../cpp/WeakNodeApiInjector.cpp
   ../cpp/RuntimeNodeApi.cpp
   ../cpp/RuntimeNodeApi.hpp
+  ../cpp/RuntimeNodeApiAsync.cpp
+  ../cpp/RuntimeNodeApiAsync.hpp  
 )
 
 target_include_directories(node-api-host PRIVATE
