@@ -62,9 +62,9 @@ describe("isNodeApiModule", () => {
     assert(isNodeApiModule(path.join(tempDirectoryPath, "addon.node")));
   });
 
-  // there is no way to set ACLs on directories in Node.js on Windows with brittle powershell commands
   it(
     "returns false when directory cannot be read due to permissions",
+    // Skipping on Windows because there is no way to set ACLs on directories in Node.js on Windows without brittle powershell commands
     { skip: process.platform === "win32" },
     (context) => {
       const tempDirectoryPath = setupTempDirectory(context, {
@@ -367,6 +367,28 @@ describe("findNodeApiModulePaths", () => {
       path.join(tempDir, "node_modules/root.apple.node"),
     ]);
   });
+
+  it(
+    "returns empty when directory cannot be read due to permissions",
+    // Skipping on Windows because there is no way to set ACLs on directories in Node.js on Windows without brittle powershell commands
+    { skip: process.platform === "win32" },
+    async (context) => {
+      const tempDir = setupTempDirectory(context, {
+        "addon.apple.node/react-native-node-api-module": "",
+      });
+
+      removeReadPermissions(tempDir);
+      try {
+        const result = findNodeApiModulePaths({
+          fromPath: tempDir,
+          platform: "apple",
+        });
+        assert.deepEqual(await result, []);
+      } finally {
+        restoreReadPermissions(tempDir);
+      }
+    }
+  );
 });
 
 describe("determineModuleContext", () => {

@@ -327,20 +327,32 @@ export async function findNodeApiModulePaths(
   const result: string[] = [];
   const pendingResults: Promise<string[]>[] = [];
 
-  for await (const dirent of await fs.promises.opendir(candidatePath)) {
-    if (
-      dirent.isFile() &&
-      dirent.name === MAGIC_FILENAME &&
-      hasPlatformExtension(platform, candidatePath)
-    ) {
-      result.push(candidatePath);
-    } else if (dirent.isDirectory()) {
-      // Traverse into the child directory
-      // Pushing result into a list instead of awaiting immediately to parallelize the search
-      pendingResults.push(
-        findNodeApiModulePaths(options, path.join(suffix, dirent.name))
-      );
+  try {
+    for await (const dirent of await fs.promises.opendir(candidatePath)) {
+      if (
+        dirent.isFile() &&
+        dirent.name === MAGIC_FILENAME &&
+        hasPlatformExtension(platform, candidatePath)
+      ) {
+        result.push(candidatePath);
+      } else if (dirent.isDirectory()) {
+        // Traverse into the child directory
+        // Pushing result into a list instead of awaiting immediately to parallelize the search
+        pendingResults.push(
+          findNodeApiModulePaths(options, path.join(suffix, dirent.name))
+        );
+      }
     }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error.code === "ENOENT" || error.code === "EACCES")
+    ) {
+      // Gracefully handling issues with reading directories
+      return [];
+    }
+    throw error;
   }
   const childResults = await Promise.all(pendingResults);
   result.push(...childResults.flatMap((filePath) => filePath));
