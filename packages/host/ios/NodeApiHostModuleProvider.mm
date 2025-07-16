@@ -1,6 +1,6 @@
 #import "CxxNodeApiHostModule.hpp"
 #import "WeakNodeApiInjector.hpp"
-#include "RuntimeNodeApiAsync.hpp"
+#import "RuntimeNodeApiAsync.hpp"
 
 #define USE_CXX_TURBO_MODULE_UTILS 0
 #if defined(__has_include)
