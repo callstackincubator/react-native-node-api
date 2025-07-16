@@ -6,7 +6,7 @@
 
 namespace callstack::nodeapihost {
 void setCallInvoker(
-    const std::shared_ptr<facebook::react::CallInvoker>& invoker);
+    napi_env env, const std::shared_ptr<facebook::react::CallInvoker>& invoker);
 
 napi_status napi_create_async_work(napi_env env,
     napi_value async_resource,
