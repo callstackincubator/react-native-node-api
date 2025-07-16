@@ -1,3 +1,5 @@
+#pragma once
+
 #include "node_api.h"
 
 namespace callstack::nodeapihost {
@@ -21,5 +23,4 @@ napi_status napi_create_external_buffer(napi_env env,
     node_api_basic_finalize basic_finalize_cb,
     void* finalize_hint,
     napi_value* result);
-
 }  // namespace callstack::nodeapihost
