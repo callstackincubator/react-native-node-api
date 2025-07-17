@@ -12,6 +12,7 @@ import {
   getLibraryName,
   isNodeApiModule,
   stripExtension,
+  findNodeApiModulePathsByDependency,
 } from "./path-utils.js";
 import { setupTempDirectory } from "./test-utils.js";
 
@@ -395,6 +396,50 @@ describe("findNodeApiModulePaths", () => {
       }
     }
   );
+});
+
+describe("findNodeApiModulePathsByDependency", () => {
+  it.only("should find Node-API paths by dependency (excluding certain packages)", async (context) => {
+    const packagesNames = ["lib-a", "lib-b", "lib-c"];
+    const tempDir = setupTempDirectory(context, {
+      "app/package.json": JSON.stringify({
+        name: "app",
+        dependencies: Object.fromEntries(
+          packagesNames.map((packageName) => [packageName, "^1.0.0"])
+        ),
+      }),
+      ...Object.fromEntries(
+        packagesNames.map((packageName) => [
+          `app/node_modules/${packageName}`,
+          {
+            "package.json": JSON.stringify({
+              name: packageName,
+              main: "index.js",
+            }),
+            "index.js": "",
+            "addon.apple.node/react-native-node-api-module": "",
+          },
+        ])
+      ),
+    });
+
+    const result = await findNodeApiModulePathsByDependency({
+      fromPath: path.join(tempDir, "app"),
+      platform: "apple",
+      includeSelf: false,
+      excludePackages: ["lib-a"],
+    });
+    assert.deepEqual(result, {
+      "lib-b": {
+        path: path.join(tempDir, "app/node_modules/lib-b"),
+        modulePaths: ["addon.apple.node"],
+      },
+      "lib-c": {
+        path: path.join(tempDir, "app/node_modules/lib-c"),
+        modulePaths: ["addon.apple.node"],
+      },
+    });
+  });
 });
 
 describe("determineModuleContext", () => {
