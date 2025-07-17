@@ -268,24 +268,30 @@ describe("getLibraryName", () => {
 describe("findPackageDependencyPaths", () => {
   it("should find package dependency paths", (context) => {
     const tempDir = setupTempDirectory(context, {
-      "node_modules/lib-a/package.json": JSON.stringify({
-        name: "lib-a",
-        main: "index.js",
-      }),
-      "node_modules/lib-a/index.js": "",
-      "test-package/node_modules/lib-b/package.json": JSON.stringify({
-        name: "lib-b",
-        main: "index.js",
-      }),
-      "test-package/node_modules/lib-b/index.js": "",
-      "test-package/package.json": JSON.stringify({
-        name: "test-package",
-        dependencies: {
-          "lib-a": "^1.0.0",
-          "lib-b": "^1.0.0",
+      "node_modules/lib-a": {
+        "package.json": JSON.stringify({
+          name: "lib-a",
+          main: "index.js",
+        }),
+        "index.js": "",
+      },
+      "test-package": {
+        "package.json": JSON.stringify({
+          name: "test-package",
+          dependencies: {
+            "lib-a": "^1.0.0",
+            "lib-b": "^1.0.0",
+          },
+        }),
+        "src/index.js": "console.log('Hello, world!')",
+        "node_modules/lib-b": {
+          "package.json": JSON.stringify({
+            name: "lib-b",
+            main: "index.js",
+          }),
+          "index.js": "",
         },
-      }),
-      "test-package/src/index.js": "console.log('Hello, world!')",
+      },
     });
 
     const result = findPackageDependencyPaths(
