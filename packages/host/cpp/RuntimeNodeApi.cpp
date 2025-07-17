@@ -3,11 +3,13 @@
 
 auto ArrayType = napi_uint8_array;
 
-napi_status NAPI_CDECL callstack::nodeapihost::napi_create_buffer(
+namespace callstack::nodeapihost {
+
+napi_status napi_create_buffer(
     napi_env env, size_t length, void** data, napi_value* result) {
   napi_value buffer;
-  const auto status = napi_create_arraybuffer(env, length, data, &buffer);
-  if (status != napi_ok) {
+  if (const auto status = napi_create_arraybuffer(env, length, data, &buffer);
+      status != napi_ok) {
     return status;
   }
 
@@ -18,8 +20,7 @@ napi_status NAPI_CDECL callstack::nodeapihost::napi_create_buffer(
   return napi_create_typedarray(env, ArrayType, length, buffer, 0, result);
 }
 
-napi_status NAPI_CDECL callstack::nodeapihost::napi_create_buffer_copy(
-    napi_env env,
+napi_status napi_create_buffer_copy(napi_env env,
     size_t length,
     const void* data,
     void** result_data,
@@ -38,8 +39,7 @@ napi_status NAPI_CDECL callstack::nodeapihost::napi_create_buffer_copy(
   return napi_ok;
 }
 
-napi_status callstack::nodeapihost::napi_is_buffer(
-    napi_env env, napi_value value, bool* result) {
+napi_status napi_is_buffer(napi_env env, napi_value value, bool* result) {
   if (!result) {
     return napi_invalid_arg;
   }
@@ -74,7 +74,7 @@ napi_status callstack::nodeapihost::napi_is_buffer(
   return napi_ok;
 }
 
-napi_status callstack::nodeapihost::napi_get_buffer_info(
+napi_status napi_get_buffer_info(
     napi_env env, napi_value value, void** data, size_t* length) {
   if (!data || !length) {
     return napi_invalid_arg;
@@ -101,12 +101,24 @@ napi_status callstack::nodeapihost::napi_get_buffer_info(
   return napi_ok;
 }
 
-napi_status callstack::nodeapihost::napi_create_external_buffer(napi_env env,
+napi_status napi_create_external_buffer(napi_env env,
     size_t length,
     void* data,
     node_api_basic_finalize basic_finalize_cb,
     void* finalize_hint,
     napi_value* result) {
-  return napi_create_external_arraybuffer(
-      env, data, length, basic_finalize_cb, finalize_hint, result);
+  napi_value buffer;
+  if (const auto status = napi_create_external_arraybuffer(
+          env, data, length, basic_finalize_cb, finalize_hint, &buffer);
+      status != napi_ok) {
+    return status;
+  }
+
+  // Warning: The returned data structure does not fully align with the
+  // characteristics of a Buffer.
+  // @see
+  // https://github.com/callstackincubator/react-native-node-api/issues/171
+  return napi_create_typedarray(env, ArrayType, length, buffer, 0, result);
 }
+
+}  // namespace callstack::nodeapihost

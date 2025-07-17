@@ -14,8 +14,11 @@ function loadTests() {
   for (const [suiteName, examples] of Object.entries(nodeAddonExamples)) {
     describe(suiteName, () => {
       for (const [exampleName, requireExample] of Object.entries(examples)) {
-        it(exampleName, () => {
-          requireExample();
+        it(exampleName, async () => {
+          const test = requireExample();
+          if (test instanceof Function) {
+            await test();
+          }
         });
       }
     });
