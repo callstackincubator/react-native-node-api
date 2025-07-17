@@ -1,5 +1,11 @@
 # react-native-node-api
 
+## 0.3.3
+
+### Patch Changes
+
+- acf1a7c: Treating failures when scanning filesystems for Node-API prebuilds more gracefully
+
 ## 0.3.2
 
 ### Patch Changes
