@@ -27,6 +27,10 @@
 
 See the document on ["how it works"](./docs/HOW-IT-WORKS.md) for a detailed description of what it's like to write native modules using this package.
 
+### Quick start
+
+To get started, first install the dependencies with `npm i` and then build all packages using `npm run build`.
+
 ## Packages
 
 This mono-repository hosts the development of a few packages:

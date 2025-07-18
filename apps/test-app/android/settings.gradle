@@ -19,3 +19,7 @@ apply(from: {
     throw new GradleException("Could not find `react-native-test-app`");
 }())
 applyTestAppSettings(settings)
+
+// customize the path to match your node_modules location
+apply(from: "../../../node_modules/react-native-node-api/android/app-settings.gradle")
+applyNodeAPISettings(settings)
