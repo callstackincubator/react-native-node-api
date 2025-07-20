@@ -1,15 +1,15 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   isAndroidTriplet,
   isAppleTriplet,
   SupportedTriplet,
+  weakNodeApiPath,
 } from "react-native-node-api";
 
-import { ANDROID_ARCHITECTURES } from "./android.js";
+import { ANDROID_ARCHITECTURES } from "./platforms/android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
 
 export function toCmakePath(input: string) {
@@ -17,12 +17,11 @@ export function toCmakePath(input: string) {
 }
 
 export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
-  const basePath = fileURLToPath(
-    import.meta.resolve("react-native-node-api/weak-node-api")
-  );
-  assert(fs.existsSync(basePath), "Weak Node API path does not exist");
   if (isAppleTriplet(triplet)) {
-    const xcframeworkPath = path.join(basePath, "weak-node-api.xcframework");
+    const xcframeworkPath = path.join(
+      weakNodeApiPath,
+      "weak-node-api.xcframework"
+    );
     assert(
       fs.existsSync(xcframeworkPath),
       `Expected an XCFramework at ${xcframeworkPath}`
@@ -30,7 +29,7 @@ export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
     return xcframeworkPath;
   } else if (isAndroidTriplet(triplet)) {
     const libraryPath = path.join(
-      basePath,
+      weakNodeApiPath,
       "weak-node-api.android.node",
       ANDROID_ARCHITECTURES[triplet],
       "libweak-node-api.so"

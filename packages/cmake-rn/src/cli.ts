@@ -8,38 +8,18 @@ import { spawn, SpawnFailure } from "bufout";
 import { oraPromise } from "ora";
 import chalk from "chalk";
 
-import {
-  DEFAULT_APPLE_TRIPLETS,
-  isAppleSupported,
-  getAppleBuildArgs,
-  getAppleConfigureCmakeArgs,
-} from "./apple.js";
-import {
-  DEFAULT_ANDROID_TRIPLETS,
-  isAndroidSupported,
-  getAndroidConfigureCmakeArgs,
-} from "./android.js";
 import { getWeakNodeApiVariables } from "./weak-node-api.js";
-
 import {
-  SUPPORTED_TRIPLETS,
-  SupportedTriplet,
-  AndroidTriplet,
-  isAndroidTriplet,
-  isAppleTriplet,
-  determineAndroidLibsFilename,
-  createAndroidLibsDirectory,
-  createAppleFramework,
-  createXCframework,
-  determineXCFrameworkFilename,
-} from "react-native-node-api";
+  platforms,
+  allTargets,
+  findPlatformForTarget,
+  platformHasTarget,
+} from "./platforms.js";
+import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
+import { isSupportedTriplet } from "react-native-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
-
-// This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
-const DEFAULT_NDK_VERSION = "27.1.12297006";
-const DEFAULT_ANDROID_SDK_VERSION = "24";
 
 // TODO: Add automatic ccache support
 
@@ -58,16 +38,13 @@ const configurationOption = new Option("--configuration <configuration>")
   .choices(["Release", "Debug"] as const)
   .default("Release");
 
-// TODO: Derive default triplets
+// TODO: Derive default targets
 // This is especially important when driving the build from within a React Native app package.
 
-const tripletOption = new Option(
-  "--triplet <triplet...>",
-  "Triplets to build for"
-).choices(SUPPORTED_TRIPLETS);
-
-const androidOption = new Option("--android", "Enable all Android triplets");
-const appleOption = new Option("--apple", "Enable all Apple triplets");
+const targetOption = new Option(
+  "--target <target...>",
+  "Targets to build for"
+).choices(allTargets);
 
 const buildPathOption = new Option(
   "--build <path>",
@@ -84,16 +61,6 @@ const outPathOption = new Option(
   "Specify the output directory to store the final build artifacts"
 ).default(false, "./{build}/{configuration}");
 
-const ndkVersionOption = new Option(
-  "--ndk-version <version>",
-  "The NDK version to use for Android builds"
-).default(DEFAULT_NDK_VERSION);
-
-const androidSdkVersionOption = new Option(
-  "--android-sdk-version <version>",
-  "The Android SDK version to use for Android builds"
-).default(DEFAULT_ANDROID_SDK_VERSION);
-
 const noAutoLinkOption = new Option(
   "--no-auto-link",
   "Don't mark the output as auto-linkable by react-native-node-api"
@@ -104,233 +71,131 @@ const noWeakNodeApiLinkageOption = new Option(
   "Don't pass the path of the weak-node-api library from react-native-node-api"
 );
 
-const xcframeworkExtensionOption = new Option(
-  "--xcframework-extension",
-  "Don't rename the xcframework to .apple.node"
-).default(false);
-
-export const program = new Command("cmake-rn")
+let program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
+  .addOption(targetOption)
   .addOption(verboseOption)
   .addOption(sourcePathOption)
   .addOption(buildPathOption)
   .addOption(outPathOption)
   .addOption(configurationOption)
-  .addOption(tripletOption)
-  .addOption(androidOption)
-  .addOption(appleOption)
   .addOption(cleanOption)
-  .addOption(ndkVersionOption)
-  .addOption(androidSdkVersionOption)
   .addOption(noAutoLinkOption)
-  .addOption(noWeakNodeApiLinkageOption)
-  .addOption(xcframeworkExtensionOption)
-  .action(async ({ triplet: tripletValues, ...globalContext }) => {
+  .addOption(noWeakNodeApiLinkageOption);
+
+for (const platform of platforms) {
+  const allOption = new Option(
+    `--${platform.id}`,
+    `Enable all ${platform.name} triplets`
+  );
+  program = program.addOption(allOption);
+  program = platform.amendCommand(program);
+}
+
+program = program.action(
+  async ({ target: requestedTargets, ...baseOptions }) => {
     try {
-      const buildPath = getBuildPath(globalContext);
-      if (globalContext.clean) {
+      const buildPath = getBuildPath(baseOptions);
+      if (baseOptions.clean) {
         await fs.promises.rm(buildPath, { recursive: true, force: true });
       }
-      const triplets = new Set<SupportedTriplet>(tripletValues);
-      if (globalContext.apple) {
-        for (const triplet of DEFAULT_APPLE_TRIPLETS) {
-          triplets.add(triplet);
-        }
-      }
-      if (globalContext.android) {
-        for (const triplet of DEFAULT_ANDROID_TRIPLETS) {
-          triplets.add(triplet);
+      const targets = new Set<unknown>(requestedTargets);
+
+      for (const platform of Object.values(platforms)) {
+        // Forcing the types a bit here, since the platform id option is dynamically added
+        if ((baseOptions as Record<string, unknown>)[platform.id]) {
+          for (const target of platform.targets) {
+            targets.add(target);
+          }
         }
       }
 
-      if (triplets.size === 0) {
-        if (isAndroidSupported()) {
-          if (process.arch === "arm64") {
-            triplets.add("aarch64-linux-android");
-          } else if (process.arch === "x64") {
-            triplets.add("x86_64-linux-android");
+      if (targets.size === 0) {
+        for (const platform of Object.values(platforms)) {
+          if (platform.isSupportedByHost()) {
+            for (const target of await platform.defaultTargets()) {
+              targets.add(target);
+            }
           }
         }
-        if (isAppleSupported()) {
-          if (process.arch === "arm64") {
-            triplets.add("arm64-apple-ios-sim");
-          }
-        }
-        if (triplets.size === 0) {
+        if (targets.size === 0) {
           throw new Error(
-            "Found no default triplets: Install some platform specific build tools"
+            "Found no default targets: Install some platform specific build tools"
           );
         } else {
           console.error(
             chalk.yellowBright("ℹ"),
-            "Using default triplets",
-            chalk.dim("(" + [...triplets].join(", ") + ")")
+            "Using default targets",
+            chalk.dim("(" + [...targets].join(", ") + ")")
           );
         }
       }
 
-      if (!globalContext.out) {
-        globalContext.out = path.join(buildPath, globalContext.configuration);
+      if (!baseOptions.out) {
+        baseOptions.out = path.join(buildPath, baseOptions.configuration);
       }
 
-      const tripletContext = [...triplets].map((triplet) => {
-        const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
+      const targetContexts = [...targets].map((target) => {
+        const platform = findPlatformForTarget(target);
+        const targetBuildPath = getTargetBuildPath(buildPath, target);
         return {
-          ...globalContext,
-          triplet,
-          tripletBuildPath,
-          tripletOutputPath: path.join(tripletBuildPath, "out"),
+          target,
+          platform,
+          buildPath: targetBuildPath,
+          outputPath: path.join(targetBuildPath, "out"),
+          options: baseOptions as BaseOpts &
+            ReturnType<typeof platform.buildArgs>,
         };
       });
 
       // Configure every triplet project
-      await oraPromise(Promise.all(tripletContext.map(configureProject)), {
-        text: "Configuring projects",
-        isSilent: globalContext.verbose,
-        successText: "Configured projects",
-        failText: ({ message }) => `Failed to configure projects: ${message}`,
-      });
+      await oraPromise(
+        Promise.all(
+          targetContexts.map(({ platform, ...context }) =>
+            configureProject(platform, context, baseOptions)
+          )
+        ),
+        {
+          text: "Configuring projects",
+          isSilent: baseOptions.verbose,
+          successText: "Configured projects",
+          failText: ({ message }) => `Failed to configure projects: ${message}`,
+        }
+      );
 
       // Build every triplet project
       await oraPromise(
         Promise.all(
-          tripletContext.map(async (context) => {
+          targetContexts.map(async ({ platform, ...context }) => {
             // Delete any stale build artifacts before building
             // This is important, since we might rename the output files
-            await fs.promises.rm(context.tripletOutputPath, {
+            await fs.promises.rm(context.outputPath, {
               recursive: true,
               force: true,
             });
-            await buildProject(context);
+            await buildProject(platform, context, baseOptions);
           })
         ),
         {
           text: "Building projects",
-          isSilent: globalContext.verbose,
+          isSilent: baseOptions.verbose,
           successText: "Built projects",
           failText: ({ message }) => `Failed to build projects: ${message}`,
         }
       );
 
-      // Collect triplets in vendor specific containers
-      const appleTriplets = tripletContext.filter(({ triplet }) =>
-        isAppleTriplet(triplet)
-      );
-      if (appleTriplets.length > 0) {
-        const libraryPaths = await Promise.all(
-          appleTriplets.map(async ({ tripletOutputPath }) => {
-            const configSpecificPath = path.join(
-              tripletOutputPath,
-              globalContext.configuration
-            );
-            assert(
-              fs.existsSync(configSpecificPath),
-              `Expected a directory at ${configSpecificPath}`
-            );
-            // Expect binary file(s), either .node or .dylib
-            const files = await fs.promises.readdir(configSpecificPath);
-            const result = files.map(async (file) => {
-              const filePath = path.join(configSpecificPath, file);
-              if (filePath.endsWith(".dylib")) {
-                return filePath;
-              } else if (file.endsWith(".node")) {
-                // Rename the file to .dylib for xcodebuild to accept it
-                const newFilePath = filePath.replace(/\.node$/, ".dylib");
-                await fs.promises.rename(filePath, newFilePath);
-                return newFilePath;
-              } else {
-                throw new Error(
-                  `Expected a .node or .dylib file, but found ${file}`
-                );
-              }
-            });
-            assert.equal(result.length, 1, "Expected exactly one library file");
-            return await result[0];
-          })
+      // Perform post-build steps for each platform in sequence
+      for (const platform of platforms) {
+        // TODO: Increase type-safety around this
+        const relevantTargets = targetContexts.filter(({ target }) =>
+          platformHasTarget(platform, target)
         );
-        const frameworkPaths = libraryPaths.map(createAppleFramework);
-        const xcframeworkFilename = determineXCFrameworkFilename(
-          frameworkPaths,
-          globalContext.xcframeworkExtension ? ".xcframework" : ".apple.node"
-        );
-
-        // Create the xcframework
-        const xcframeworkOutputPath = path.resolve(
-          globalContext.out || globalContext.source,
-          xcframeworkFilename
-        );
-
-        await oraPromise(
-          createXCframework({
-            outputPath: xcframeworkOutputPath,
-            frameworkPaths,
-            autoLink: globalContext.autoLink,
-          }),
+        await platform.postBuild(
           {
-            text: "Assembling XCFramework",
-            successText: `XCFramework assembled into ${chalk.dim(
-              path.relative(process.cwd(), xcframeworkOutputPath)
-            )}`,
-            failText: ({ message }) =>
-              `Failed to assemble XCFramework: ${message}`,
-          }
-        );
-      }
-
-      const androidTriplets = tripletContext.filter(({ triplet }) =>
-        isAndroidTriplet(triplet)
-      );
-      if (androidTriplets.length > 0) {
-        const libraryPathByTriplet = Object.fromEntries(
-          await Promise.all(
-            androidTriplets.map(async ({ tripletOutputPath, triplet }) => {
-              assert(
-                fs.existsSync(tripletOutputPath),
-                `Expected a directory at ${tripletOutputPath}`
-              );
-              // Expect binary file(s), either .node or .so
-              const dirents = await fs.promises.readdir(tripletOutputPath, {
-                withFileTypes: true,
-              });
-              const result = dirents
-                .filter(
-                  (dirent) =>
-                    dirent.isFile() &&
-                    (dirent.name.endsWith(".so") ||
-                      dirent.name.endsWith(".node"))
-                )
-                .map((dirent) => path.join(dirent.parentPath, dirent.name));
-              assert.equal(
-                result.length,
-                1,
-                "Expected exactly one library file"
-              );
-              return [triplet, result[0]] as const;
-            })
-          )
-        ) as Record<AndroidTriplet, string>;
-        const androidLibsFilename = determineAndroidLibsFilename(
-          Object.values(libraryPathByTriplet)
-        );
-        const androidLibsOutputPath = path.resolve(
-          globalContext.out || globalContext.source,
-          androidLibsFilename
-        );
-
-        await oraPromise(
-          createAndroidLibsDirectory({
-            outputPath: androidLibsOutputPath,
-            libraryPathByTriplet,
-            autoLink: globalContext.autoLink,
-          }),
-          {
-            text: "Assembling Android libs directory",
-            successText: `Android libs directory assembled into ${chalk.dim(
-              path.relative(process.cwd(), androidLibsOutputPath)
-            )}`,
-            failText: ({ message }) =>
-              `Failed to assemble Android libs directory: ${message}`,
-          }
+            outputPath: baseOptions.out || baseOptions.source,
+            targets: relevantTargets,
+          },
+          baseOptions
         );
       }
     } catch (error) {
@@ -339,123 +204,87 @@ export const program = new Command("cmake-rn")
       }
       throw error;
     }
-  });
+  }
+);
 
-type GlobalContext = ReturnType<typeof program.optsWithGlobals>;
-type TripletScopedContext = Omit<GlobalContext, "triplet"> & {
-  triplet: SupportedTriplet;
-  tripletBuildPath: string;
-  tripletOutputPath: string;
-};
-
-function getBuildPath(context: GlobalContext) {
+function getBuildPath({ build, source }: BaseOpts) {
   // TODO: Add configuration (debug vs release)
-  return path.resolve(
-    process.cwd(),
-    context.build || path.join(context.source, "build")
-  );
+  return path.resolve(process.cwd(), build || path.join(source, "build"));
 }
 
 /**
- * Namespaces the output path with the triplet
+ * Namespaces the output path with a target name
  */
-function getTripletBuildPath(buildPath: string, triplet: SupportedTriplet) {
-  return path.join(buildPath, triplet.replace(/;/g, "_"));
+function getTargetBuildPath(buildPath: string, target: unknown) {
+  assert(typeof target === "string", "Expected target to be a string");
+  return path.join(buildPath, target.replace(/;/g, "_"));
 }
 
-function getTripletConfigureCmakeArgs(
-  triplet: SupportedTriplet,
-  {
-    ndkVersion,
-    androidSdkVersion,
-  }: Pick<
-    GlobalContext,
-    "ndkVersion" | "androidSdkVersion" | "weakNodeApiLinkage"
-  >
+async function configureProject<T>(
+  platform: Platform<T, Record<string, unknown>>,
+  context: TargetContext<T>,
+  options: BaseOpts
 ) {
-  if (isAndroidTriplet(triplet)) {
-    return getAndroidConfigureCmakeArgs({
-      triplet,
-      ndkVersion,
-      sdkVersion: androidSdkVersion,
-    });
-  } else if (isAppleTriplet(triplet)) {
-    return getAppleConfigureCmakeArgs({ triplet });
-  } else {
-    throw new Error(`Support for '${triplet}' is not implemented yet`);
-  }
-}
+  const { target, buildPath, outputPath } = context;
+  const { verbose, source, weakNodeApiLinkage } = options;
 
-function getBuildArgs(triplet: SupportedTriplet) {
-  if (isAndroidTriplet(triplet)) {
-    return [];
-  } else if (isAppleTriplet(triplet)) {
-    return getAppleBuildArgs();
-  } else {
-    throw new Error(`Support for '${triplet}' is not implemented yet`);
-  }
-}
+  const nodeApiVariables =
+    weakNodeApiLinkage && isSupportedTriplet(target)
+      ? getWeakNodeApiVariables(target)
+      : // TODO: Make this a part of the platform definition
+        {};
 
-async function configureProject(context: TripletScopedContext) {
-  const {
-    verbose,
-    triplet,
-    tripletBuildPath,
-    source,
-    ndkVersion,
-    androidSdkVersion,
-    weakNodeApiLinkage,
-  } = context;
+  const declarations = {
+    ...nodeApiVariables,
+    CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
+  };
+
   await spawn(
     "cmake",
     [
       "-S",
       source,
       "-B",
-      tripletBuildPath,
-      ...getVariablesArgs(getVariables(context)),
-      ...getTripletConfigureCmakeArgs(triplet, {
-        ndkVersion,
-        weakNodeApiLinkage,
-        androidSdkVersion,
-      }),
+      buildPath,
+      ...platform.configureArgs(context, options),
+      ...toDeclarationArguments(declarations),
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",
-      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
+      outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,
     }
   );
 }
 
-async function buildProject(context: TripletScopedContext) {
-  const { verbose, triplet, tripletBuildPath, configuration } = context;
+async function buildProject<T>(
+  platform: Platform<T, Record<string, unknown>>,
+  context: TargetContext<T>,
+  options: BaseOpts
+) {
+  const { target, buildPath } = context;
+  const { verbose, configuration } = options;
   await spawn(
     "cmake",
     [
       "--build",
-      tripletBuildPath,
+      buildPath,
       "--config",
       configuration,
       "--",
-      ...getBuildArgs(triplet),
+      ...platform.buildArgs(context, options),
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",
-      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
+      outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,
     }
   );
 }
 
-function getVariables(context: TripletScopedContext): Record<string, string> {
-  return {
-    ...(context.weakNodeApiLinkage && getWeakNodeApiVariables(context.triplet)),
-    CMAKE_LIBRARY_OUTPUT_DIRECTORY: context.tripletOutputPath,
-  };
-}
-
-function getVariablesArgs(variables: Record<string, string>) {
-  return Object.entries(variables).flatMap(([key, value]) => [
+function toDeclarationArguments(declarations: Record<string, string>) {
+  return Object.entries(declarations).flatMap(([key, value]) => [
     "-D",
     `${key}=${value}`,
   ]);
 }
+
+export { program };
