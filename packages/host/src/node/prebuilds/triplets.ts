@@ -32,14 +32,20 @@ export const SUPPORTED_TRIPLETS = [
 
 export type SupportedTriplet = (typeof SUPPORTED_TRIPLETS)[number];
 
+export function isSupportedTriplet(
+  triplet: unknown
+): triplet is SupportedTriplet {
+  return (SUPPORTED_TRIPLETS as readonly unknown[]).includes(triplet);
+}
+
 export function isAndroidTriplet(
   triplet: SupportedTriplet
 ): triplet is AndroidTriplet {
-  return ANDROID_TRIPLETS.includes(triplet as AndroidTriplet);
+  return (ANDROID_TRIPLETS as readonly unknown[]).includes(triplet);
 }
 
 export function isAppleTriplet(
   triplet: SupportedTriplet
 ): triplet is AppleTriplet {
-  return APPLE_TRIPLETS.includes(triplet as AppleTriplet);
+  return (APPLE_TRIPLETS as readonly unknown[]).includes(triplet);
 }

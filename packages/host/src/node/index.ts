@@ -1,10 +1,11 @@
 export {
+  SUPPORTED_TRIPLETS,
   ANDROID_TRIPLETS,
   APPLE_TRIPLETS,
-  SUPPORTED_TRIPLETS,
+  type SupportedTriplet,
   type AndroidTriplet,
   type AppleTriplet,
-  type SupportedTriplet,
+  isSupportedTriplet,
   isAppleTriplet,
   isAndroidTriplet,
 } from "./prebuilds/triplets.js";
