@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import cp from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { spawn } from "bufout";
 import chalk from "chalk";
@@ -15,9 +14,7 @@ import {
   isAppleTarget,
 } from "./targets.js";
 
-const WEAK_NODE_API_PATH = fileURLToPath(
-  import.meta.resolve("react-native-node-api/weak-node-api")
-);
+import { weakNodeApiPath } from "react-native-node-api";
 
 const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   "aarch64-apple-darwin": "macos-arm64_x86_64", // Universal
@@ -126,18 +123,16 @@ export function getTargetAndroidPlatform(target: AndroidTargetName) {
 }
 
 export function getWeakNodeApiFrameworkPath(target: AppleTargetName) {
-  assert(fs.existsSync(WEAK_NODE_API_PATH), "Expected weak-node-api to exist");
   return joinPathAndAssertExistence(
-    WEAK_NODE_API_PATH,
+    weakNodeApiPath,
     "weak-node-api.xcframework",
     APPLE_XCFRAMEWORK_CHILDS_PER_TARGET[target]
   );
 }
 
 export function getWeakNodeApiAndroidLibraryPath(target: AndroidTargetName) {
-  assert(fs.existsSync(WEAK_NODE_API_PATH), "Expected weak-node-api to exist");
   return joinPathAndAssertExistence(
-    WEAK_NODE_API_PATH,
+    weakNodeApiPath,
     "weak-node-api.android.node",
     ANDROID_ARCH_PR_TARGET[target]
   );
@@ -202,7 +197,10 @@ export function getTargetEnvironmentVariables({
         toolchainBinPath,
         `${targetArch}-linux-${targetPlatform}-clang++${cmdMaybe}`
       ),
-      TARGET_AR: joinPathAndAssertExistence(toolchainBinPath, `llvm-ar${exeMaybe}`),
+      TARGET_AR: joinPathAndAssertExistence(
+        toolchainBinPath,
+        `llvm-ar${exeMaybe}`
+      ),
       TARGET_RANLIB: joinPathAndAssertExistence(
         toolchainBinPath,
         `llvm-ranlib${exeMaybe}`
