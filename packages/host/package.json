@@ -20,7 +20,7 @@
     },
     "./babel-plugin": "./dist/node/babel-plugin/index.js",
     "./cli": "./dist/node/cli/run.js",
-    "./weak-node-api": "./weak-node-api"
+    "./weak-node-api": "./dist/node/weak-node-api.js"
   },
   "files": [
     "logo.svg",

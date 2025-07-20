@@ -23,3 +23,5 @@ export {
 } from "./prebuilds/apple.js";
 
 export { determineLibraryBasename, prettyPath } from "./path-utils.js";
+
+export { weakNodeApiPath } from "./weak-node-api.js";
