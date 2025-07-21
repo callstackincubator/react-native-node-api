@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
 const assert = require("assert");
+const addon = require("bindings")("addon.node");
 
 const toLocaleString = (text) => {
   return text
@@ -10,8 +11,7 @@ const toLocaleString = (text) => {
     .join("");
 };
 
-module.exports = async () => {
-  const addon = require("bindings")("addon.node");
+module.exports = () => {
   assert.strictEqual(toLocaleString(addon.newBuffer()), addon.theText);
   assert.strictEqual(toLocaleString(addon.newExternalBuffer()), addon.theText);
   assert.strictEqual(toLocaleString(addon.copyBuffer()), addon.theText);
