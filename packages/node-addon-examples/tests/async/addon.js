@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
-const test_async = require("bindings")("addon.node");
 const assert = require("assert");
 
 module.exports = async () => {
+  const test_async = require("bindings")("addon.node");
   return new Promise((resolve, reject) => {
     const test = () =>
       new Promise((resolve, reject) => {
