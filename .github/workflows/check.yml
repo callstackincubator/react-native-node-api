@@ -152,7 +152,18 @@ jobs:
             adb reverse tcp:8090 tcp:8090
             # Uninstall the app if already in the snapshot (unlikely but could result in a signature mismatch failure)
             adb uninstall com.microsoft.reacttestapp || true
+            # Start logcat in background and save logs
+            adb logcat > emulator-logcat.txt 2>&1 &
+            LOGCAT_PID=$!
             # Build, install and run the app
             npm run test:android -- --mode Release
             # Wait a bit for the sub-process to terminate, before terminating the emulator
             sleep 5
+            # Stop logcat
+            kill $LOGCAT_PID || true
+      - name: Upload device logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-logcat
+          path: apps/test-app/emulator-logcat.txt
