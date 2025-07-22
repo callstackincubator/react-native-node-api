@@ -186,18 +186,19 @@ program = program.action(
 
       // Perform post-build steps for each platform in sequence
       for (const platform of platforms) {
-        {
-          const relevantTargets = targetContexts.filter(({ target }) =>
-            platformHasTarget(platform, target)
-          );
-          await platform.postBuild(
-            {
-              outputPath: baseOptions.out || baseOptions.source,
-              targets: relevantTargets,
-            },
-            baseOptions
-          );
+        const relevantTargets = targetContexts.filter(({ target }) =>
+          platformHasTarget(platform, target)
+        );
+        if (relevantTargets.length == 0) {
+          continue;
         }
+        await platform.postBuild(
+          {
+            outputPath: baseOptions.out || baseOptions.source,
+            targets: relevantTargets,
+          },
+          baseOptions
+        );
       }
     } catch (error) {
       if (error instanceof SpawnFailure) {
