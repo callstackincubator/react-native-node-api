@@ -85,7 +85,6 @@ export const platform: Platform<Target[], AndroidOpts> = {
     const architecture = ANDROID_ARCHITECTURES[target];
 
     return [
-      // Use the XCode as generator for Apple platforms
       "-G",
       "Ninja",
       "--toolchain",

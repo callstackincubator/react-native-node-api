@@ -116,15 +116,12 @@ export const platform: Platform<Target[], AppleOpts> = {
   },
   configureArgs({ target }) {
     return [
-      // Use the XCode as generator for Apple platforms
       "-G",
       "Xcode",
       "-D",
       `CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAMES[target]}`,
-      // Set the SDK path for the target platform
       "-D",
       `CMAKE_OSX_SYSROOT=${XCODE_SDK_NAMES[target]}`,
-      // Set the target architecture
       "-D",
       `CMAKE_OSX_ARCHITECTURES=${APPLE_ARCHITECTURES[target]}`,
     ];

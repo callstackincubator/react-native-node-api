@@ -143,8 +143,7 @@ program = program.action(
           platform,
           buildPath: targetBuildPath,
           outputPath: path.join(targetBuildPath, "out"),
-          options: baseOptions as BaseOpts &
-            ReturnType<typeof platform.buildArgs>,
+          options: baseOptions,
         };
       });
 
