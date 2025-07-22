@@ -77,6 +77,7 @@ jobs:
       - run: npm run bootstrap
         env:
           CMAKE_RN_TARGETS: arm64-apple-ios-sim
+          FERRIC_TARGETS: aarch64-apple-ios-sim
       - run: npm run pod-install
         working-directory: apps/test-app
       - name: Run tests (iOS)
@@ -107,6 +108,7 @@ jobs:
       - run: npm run bootstrap
         env:
           CMAKE_RN_TARGETS: i686-linux-android
+          FERRIC_TARGETS: i686-linux-android
       - name: Clone patched Hermes version
         shell: bash
         run: |
