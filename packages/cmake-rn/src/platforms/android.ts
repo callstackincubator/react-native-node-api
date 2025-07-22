@@ -38,7 +38,7 @@ const androidSdkVersionOption = new Option(
 
 type AndroidOpts = { ndkVersion: string; androidSdkVersion: string };
 
-export const platform: Platform<Target, AndroidOpts> = {
+export const platform: Platform<Target[], AndroidOpts> = {
   id: "android",
   name: "Android",
   targets: [

@@ -96,7 +96,7 @@ type AppleOpts = {
   xcframeworkExtension: boolean;
 };
 
-export const platform: Platform<Target, AppleOpts> = {
+export const platform: Platform<Target[], AppleOpts> = {
   id: "apple",
   name: "Apple",
   targets: [

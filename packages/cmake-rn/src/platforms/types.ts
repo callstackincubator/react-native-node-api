@@ -14,14 +14,14 @@ type ExtendedCommand<Opts extends commander.OptionValues> = commander.Command<
 
 export type BaseOpts = Omit<InferOptionValues<typeof program>, "target">;
 
-export type TargetContext<Target> = {
+export type TargetContext<Target extends string> = {
   target: Target;
   buildPath: string;
   outputPath: string;
 };
 
 export type Platform<
-  Target = unknown,
+  Targets extends string[] = string[],
   Opts extends commander.OptionValues = Record<string, unknown>,
   Command = ExtendedCommand<Opts>
 > = {
@@ -36,11 +36,11 @@ export type Platform<
   /**
    * All the targets supported by this platform.
    */
-  targets: Readonly<Target[]>;
+  targets: Readonly<Targets>;
   /**
    * Get the limited subset of targets that should be built by default for this platform, to support a development workflow.
    */
-  defaultTargets(): Target[] | Promise<Target[]>;
+  defaultTargets(): Targets[number][] | Promise<Targets[number][]>;
   /**
    * Implement this to add any platform specific options to the command.
    */
@@ -53,13 +53,16 @@ export type Platform<
    * Platform specific arguments passed to CMake to configure a target project.
    */
   configureArgs(
-    context: TargetContext<Target>,
+    context: TargetContext<Targets[number]>,
     options: BaseOpts & Opts
   ): string[];
   /**
    * Platform specific arguments passed to CMake to build a target project.
    */
-  buildArgs(context: TargetContext<Target>, options: BaseOpts & Opts): string[];
+  buildArgs(
+    context: TargetContext<Targets[number]>,
+    options: BaseOpts & Opts
+  ): string[];
   /**
    * Called to combine multiple targets into a single prebuilt artefact.
    */
@@ -69,7 +72,7 @@ export type Platform<
        * Location of the final prebuilt artefact.
        */
       outputPath: string;
-      targets: TargetContext<Target>[];
+      targets: TargetContext<Targets[number]>[];
     },
     options: BaseOpts & Opts
   ): Promise<void>;

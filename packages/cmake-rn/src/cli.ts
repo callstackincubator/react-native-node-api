@@ -99,7 +99,7 @@ program = program.action(
       if (baseOptions.clean) {
         await fs.promises.rm(buildPath, { recursive: true, force: true });
       }
-      const targets = new Set<unknown>(requestedTargets);
+      const targets = new Set<string>(requestedTargets);
 
       for (const platform of Object.values(platforms)) {
         // Forcing the types a bit here, since the platform id option is dynamically added
@@ -186,17 +186,18 @@ program = program.action(
 
       // Perform post-build steps for each platform in sequence
       for (const platform of platforms) {
-        // TODO: Increase type-safety around this
-        const relevantTargets = targetContexts.filter(({ target }) =>
-          platformHasTarget(platform, target)
-        );
-        await platform.postBuild(
-          {
-            outputPath: baseOptions.out || baseOptions.source,
-            targets: relevantTargets,
-          },
-          baseOptions
-        );
+        {
+          const relevantTargets = targetContexts.filter(({ target }) =>
+            platformHasTarget(platform, target)
+          );
+          await platform.postBuild(
+            {
+              outputPath: baseOptions.out || baseOptions.source,
+              targets: relevantTargets,
+            },
+            baseOptions
+          );
+        }
       }
     } catch (error) {
       if (error instanceof SpawnFailure) {
@@ -220,8 +221,8 @@ function getTargetBuildPath(buildPath: string, target: unknown) {
   return path.join(buildPath, target.replace(/;/g, "_"));
 }
 
-async function configureProject<T>(
-  platform: Platform<T, Record<string, unknown>>,
+async function configureProject<T extends string>(
+  platform: Platform<T[], Record<string, unknown>>,
   context: TargetContext<T>,
   options: BaseOpts
 ) {
@@ -256,8 +257,8 @@ async function configureProject<T>(
   );
 }
 
-async function buildProject<T>(
-  platform: Platform<T, Record<string, unknown>>,
+async function buildProject<T extends string>(
+  platform: Platform<T[], Record<string, unknown>>,
   context: TargetContext<T>,
   options: BaseOpts
 ) {
