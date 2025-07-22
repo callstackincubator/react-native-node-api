@@ -420,6 +420,10 @@ export async function findNodeApiModulePathsByDependency({
  * Errors if all framework paths doesn't produce the same basename.
  */
 export function determineLibraryBasename(libraryPaths: string[]) {
+  assert(
+    libraryPaths.length > 0,
+    "Expected at least one library path to determine its basename"
+  );
   const libraryNames = libraryPaths.map((p) =>
     // Strip the "lib" prefix and any file extension
     path.basename(p, path.extname(p)).replace(/^lib/, "")
