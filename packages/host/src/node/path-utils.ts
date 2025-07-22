@@ -425,7 +425,10 @@ export function determineLibraryBasename(libraryPaths: string[]) {
     path.basename(p, path.extname(p)).replace(/^lib/, "")
   );
   const candidates = new Set<string>(libraryNames);
-  assert(candidates.size === 1, "Expected all libraries to have the same name");
+  assert(
+    candidates.size === 1,
+    `Expected all libraries to share name, got: ${[...candidates].join(", ")}`
+  );
   const [name] = candidates;
   return name;
 }
