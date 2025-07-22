@@ -41,10 +41,23 @@ const configurationOption = new Option("--configuration <configuration>")
 // TODO: Derive default targets
 // This is especially important when driving the build from within a React Native app package.
 
-const targetOption = new Option(
-  "--target <target...>",
-  "Targets to build for"
-).choices(allTargets);
+const { CMAKE_RN_TARGETS } = process.env;
+
+const defaultTargets = CMAKE_RN_TARGETS ? CMAKE_RN_TARGETS.split(",") : [];
+
+for (const target of defaultTargets) {
+  assert(
+    (allTargets as string[]).includes(target),
+    `Unexpected target in CMAKE_RN_TARGETS: ${target}`
+  );
+}
+
+const targetOption = new Option("--target <target...>", "Targets to build for")
+  .choices(allTargets)
+  .default(
+    defaultTargets,
+    "CMAKE_RN_TARGETS environment variable split by ','"
+  );
 
 const buildPathOption = new Option(
   "--build <path>",
@@ -148,6 +161,9 @@ program = program.action(
       });
 
       // Configure every triplet project
+      const targetsSummary = chalk.dim(
+        `(${getTargetsSummary(targetContexts)})`
+      );
       await oraPromise(
         Promise.all(
           targetContexts.map(({ platform, ...context }) =>
@@ -155,9 +171,9 @@ program = program.action(
           )
         ),
         {
-          text: "Configuring projects",
+          text: `Configuring projects ${targetsSummary}`,
           isSilent: baseOptions.verbose,
-          successText: "Configured projects",
+          successText: `Configured projects ${targetsSummary}`,
           failText: ({ message }) => `Failed to configure projects: ${message}`,
         }
       );
@@ -207,6 +223,23 @@ program = program.action(
     }
   }
 );
+
+function getTargetsSummary(
+  targetContexts: { target: string; platform: Platform }[]
+) {
+  const targetsPerPlatform: Record<string, string[]> = {};
+  for (const { target, platform } of targetContexts) {
+    if (!targetsPerPlatform[platform.id]) {
+      targetsPerPlatform[platform.id] = [];
+    }
+    targetsPerPlatform[platform.id].push(target);
+  }
+  return Object.entries(targetsPerPlatform)
+    .map(([platformId, targets]) => {
+      return `${platformId}: ${targets.join(", ")}`;
+    })
+    .join(" / ");
+}
 
 function getBuildPath({ build, source }: BaseOpts) {
   // TODO: Add configuration (debug vs release)
