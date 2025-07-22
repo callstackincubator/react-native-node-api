@@ -75,6 +75,8 @@ jobs:
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
+        env:
+          CMAKE_RN_TARGETS: arm64-apple-ios-sim
       - run: npm run pod-install
         working-directory: apps/test-app
       - name: Run tests (iOS)
@@ -103,6 +105,8 @@ jobs:
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
+        env:
+          CMAKE_RN_TARGETS: i686-linux-android
       - name: Clone patched Hermes version
         shell: bash
         run: |
