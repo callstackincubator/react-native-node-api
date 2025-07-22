@@ -18,7 +18,7 @@ import {
   prettyPath,
 } from "react-native-node-api";
 
-import { UsageError } from "./errors.js";
+import { UsageError, assertFixable } from "./errors.js";
 import { ensureCargo, build } from "./cargo.js";
 import {
   ALL_TARGETS,
@@ -62,9 +62,26 @@ const ANDROID_TRIPLET_PER_TARGET: Record<AndroidTargetName, AndroidTriplet> = {
 const DEFAULT_NDK_VERSION = "27.1.12297006";
 const ANDROID_API_LEVEL = 24;
 
+const { FERRIC_TARGETS } = process.env;
+
+function getDefaultTargets() {
+  const result = FERRIC_TARGETS ? FERRIC_TARGETS.split(",") : [];
+  for (const target of result) {
+    assertFixable(
+      (ALL_TARGETS as readonly string[]).includes(target),
+      `Unexpected target in FERRIC_TARGETS: ${target}`,
+      {
+        instructions:
+          "Pass only valid targets via FERRIC_TARGETS (or remove them)",
+      }
+    );
+  }
+  return result as (typeof ALL_TARGETS)[number][];
+}
+
 const targetOption = new Option("--target <target...>", "Target triple")
   .choices(ALL_TARGETS)
-  .default([]);
+  .default(getDefaultTargets());
 const appleTarget = new Option("--apple", "Use all Apple targets");
 const androidTarget = new Option("--android", "Use all Android targets");
 const ndkVersionOption = new Option(
