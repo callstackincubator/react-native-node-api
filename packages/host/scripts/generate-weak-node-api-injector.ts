@@ -17,6 +17,9 @@ const IMPLEMENTED_RUNTIME_FUNCTIONS = [
   "napi_queue_async_work",
   "napi_delete_async_work",
   "napi_cancel_async_work",
+  "napi_fatal_error",
+  "napi_get_node_version",
+  "napi_get_version",
 ];
 
 /**

@@ -1,5 +1,7 @@
 #include "RuntimeNodeApi.hpp"
 #include <string>
+#include "Logger.hpp"
+#include "Versions.hpp"
 
 auto ArrayType = napi_uint8_array;
 
@@ -119,6 +121,42 @@ napi_status napi_create_external_buffer(napi_env env,
   // @see
   // https://github.com/callstackincubator/react-native-node-api/issues/171
   return napi_create_typedarray(env, ArrayType, length, buffer, 0, result);
+}
+
+void napi_fatal_error(const char* location,
+    size_t location_len,
+    const char* message,
+    size_t message_len) {
+  log_error("Fatal error in Node-API: %.*s: %.*s",
+      static_cast<int>(location_len),
+      location,
+      static_cast<int>(message_len),
+      message);
+  abort();
+}
+
+napi_status napi_get_node_version(
+    node_api_basic_env env, const napi_node_version** result) {
+  if (!result) {
+    return napi_invalid_arg;
+  }
+
+  static napi_node_version version = {
+      .major = NODE_MAJOR_VERSION,
+      .minor = NODE_MINOR_VERSION,
+      .patch = NODE_PATCH_VERSION,
+  };
+  *result = &version;
+  return napi_ok;
+}
+
+napi_status napi_get_version(node_api_basic_env env, uint32_t* result) {
+  if (!result) {
+    return napi_invalid_arg;
+  }
+
+  *result = NAPI_VERSION;
+  return napi_ok;
 }
 
 }  // namespace callstack::nodeapihost

@@ -1,0 +1,7 @@
+#pragma once
+
+#define NODE_MAJOR_VERSION 8
+#define NODE_MINOR_VERSION 6
+#define NODE_PATCH_VERSION 0
+
+#define NAPI_VERSION 1
