@@ -127,11 +127,16 @@ void napi_fatal_error(const char* location,
     size_t location_len,
     const char* message,
     size_t message_len) {
-  log_error("Fatal error in Node-API: %.*s: %.*s",
-      static_cast<int>(location_len),
-      location,
-      static_cast<int>(message_len),
-      message);
+  if (location && location_len) {
+    log_error("Fatal Node-API error: %.*s %.*s",
+        static_cast<int>(location_len),
+        location,
+        static_cast<int>(message_len),
+        message);
+  } else {
+    log_error(
+        "Fatal Node-API error: %.*s", static_cast<int>(message_len), message);
+  }
   abort();
 }
 
