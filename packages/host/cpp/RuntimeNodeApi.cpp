@@ -146,13 +146,8 @@ napi_status napi_get_node_version(
     return napi_invalid_arg;
   }
 
-  static napi_node_version version = {
-      .major = NODE_MAJOR_VERSION,
-      .minor = NODE_MINOR_VERSION,
-      .patch = NODE_PATCH_VERSION,
-  };
-  *result = &version;
-  return napi_ok;
+  *result = nullptr;
+  return napi_generic_failure;
 }
 
 napi_status napi_get_version(node_api_basic_env env, uint32_t* result) {
