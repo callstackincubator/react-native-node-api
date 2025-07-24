@@ -20,6 +20,9 @@ const IMPLEMENTED_RUNTIME_FUNCTIONS = [
   "napi_fatal_error",
   "napi_get_node_version",
   "napi_get_version",
+  "napi_async_init",
+  "napi_async_destroy",
+  "napi_make_callback",
 ];
 
 /**
