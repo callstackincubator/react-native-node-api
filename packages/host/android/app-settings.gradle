@@ -1,0 +1,22 @@
+import org.gradle.initialization.DefaultSettings
+
+
+ext.applyNodeAPISettings = { DefaultSettings settings ->
+    def searchDirectory = rootDir.toPath()
+    do {
+        def p = searchDirectory.resolve("node_modules/react-native")
+        if (p.toFile().exists()) {
+            println "[Node-API] !!! PATCHING HERMES WITH NODE-API SUPPORT !!! Found React Native in ${p.toRealPath().toString()}"
+
+            includeBuild(p.toRealPath().toString()) {
+                dependencySubstitution {
+                    substitute(module("com.facebook.react:react-android")).using(project(":packages:react-native:ReactAndroid"))
+                    substitute(module("com.facebook.react:react-native")).using(project(":packages:react-native:ReactAndroid"))
+                    substitute(module("com.facebook.react:hermes-android")).using(project(":packages:react-native:ReactAndroid:hermes-engine"))
+                    substitute(module("com.facebook.react:hermes-engine")).using(project(":packages:react-native:ReactAndroid:hermes-engine"))
+                }
+            }
+            break
+        }
+    } while (searchDirectory = searchDirectory.getParent())
+}

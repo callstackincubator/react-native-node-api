@@ -55,7 +55,7 @@ export const command = new Command("vendor-hermes")
             successText: "Removed existing Hermes clone",
             failText: (error) =>
               `Failed to remove existing Hermes clone: ${error.message}`,
-            isEnabled: !silent,
+            isSilent: silent,
           }
         );
       }
@@ -84,7 +84,7 @@ export const command = new Command("vendor-hermes")
               successText: "Cloned custom Hermes",
               failText: (err) =>
                 `Failed to clone custom Hermes: ${err.message}`,
-              isEnabled: !silent,
+              isSilent: silent,
             }
           );
         } catch (error) {
@@ -117,7 +117,7 @@ export const command = new Command("vendor-hermes")
           successText: "Copied JSI from patched Hermes to React Native",
           failText: (err) =>
             `Failed to copy JSI from Hermes to React Native: ${err.message}`,
-          isEnabled: !silent,
+          isSilent: silent,
         }
       );
       console.log(hermesPath);
