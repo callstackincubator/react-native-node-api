@@ -7,12 +7,13 @@ import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
-  globalIgnores([".nx/**"]),
-  globalIgnores(["**/dist/**"]),
-  globalIgnores(["apps/test-app/ios/**"]),
-  globalIgnores(["packages/host/hermes/**"]),
-  globalIgnores(["packages/node-addon-examples/examples/**"]),
-  globalIgnores(["packages/ferric-example/ferric_example.d.ts"]),
+  globalIgnores([
+    "**/dist/**",
+    "apps/test-app/ios/**",
+    "packages/host/hermes/**",
+    "packages/node-addon-examples/examples/**",
+    "packages/ferric-example/ferric_example.d.ts",
+  ]),
   eslint.configs.recommended,
   tseslint.configs.recommended,
   eslintConfigPrettier,
