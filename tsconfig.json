@@ -5,6 +5,7 @@
     { "path": "./packages/gyp-to-cmake/tsconfig.json" },
     { "path": "./packages/cmake-rn/tsconfig.json" },
     { "path": "./packages/ferric/tsconfig.json" },
-    { "path": "./packages/node-addon-examples/tsconfig.json" }
+    { "path": "./packages/node-addon-examples/tsconfig.json" },
+    { "path": "./packages/node-tests/tsconfig.json" }
   ]
 }

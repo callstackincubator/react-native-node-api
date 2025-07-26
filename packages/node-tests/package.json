@@ -1,0 +1,29 @@
+{
+  "name": "@react-native-node-api/node-tests",
+  "description": "Harness for running the Node.js tests from https://github.com/nodejs/node/tree/main/test",
+  "type": "commonjs",
+  "main": "tests.generated.js",
+  "private": true,
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
+    "directory": "packages/node-tests"
+  },
+  "scripts": {
+    "copy-tests": "tsx scripts/copy-tests.mts",
+    "gyp-to-cmake": "gyp-to-cmake ./tests",
+    "build-tests": "tsx scripts/build-tests.mts",
+    "bundle": "rolldown -c rolldown.config.mts",
+    "generate-entrypoint": "tsx scripts/generate-entrypoint.mts",
+    "bootstrap": "node --run copy-tests && node --run gyp-to-cmake && node --run build-tests && node --run bundle && node --run generate-entrypoint"
+  },
+  "devDependencies": {
+    "cmake-rn": "*",
+    "gyp-to-cmake": "*",
+    "prebuildify": "^6.0.1",
+    "react-native-node-api": "^0.3.2",
+    "read-pkg": "^9.0.1",
+    "rolldown": "1.0.0-beta.29"
+  }
+}
