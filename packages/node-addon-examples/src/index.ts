@@ -103,5 +103,6 @@ export const suites: Record<
   tests: {
     buffers: () => require("../tests/buffers/addon.js"),
     async: () => require("../tests/async/addon.js"),
+    make_callback: () => require("../tests/make_callback/addon.js"),
   },
 };
