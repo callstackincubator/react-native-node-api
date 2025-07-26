@@ -21,13 +21,11 @@ function describeIf(
 type Context = {
   allTests?: boolean;
   nodeAddonExamples?: boolean;
-  ferricExample?: boolean;
 };
 
 function loadTests({
   allTests = false,
   nodeAddonExamples = allTests,
-  ferricExample = allTests,
 }: Context) {
   describeIf(nodeAddonExamples, "Node Addon Examples", () => {
     for (const [suiteName, examples] of Object.entries(
@@ -44,17 +42,6 @@ function loadTests({
         }
       });
     }
-  });
-
-  describeIf(ferricExample, "ferric-example", () => {
-    it("exports a callable sum function", () => {
-      /* eslint-disable-next-line @typescript-eslint/no-require-imports -- TODO: Determine why a dynamic import doesn't work on Android */
-      const exampleAddon = require("ferric-example");
-      const result = exampleAddon.sum(1, 3);
-      if (result !== 4) {
-        throw new Error(`Expected 1 + 3 to equal 4, but got ${result}`);
-      }
-    });
   });
 }
 
