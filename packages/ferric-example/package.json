@@ -13,9 +13,9 @@
   "types": "ferric_example.d.ts",
   "scripts": {
     "build": "ferric build",
-    "bootstrap": "npm run build"
+    "bootstrap": "pnpm build"
   },
   "devDependencies": {
-    "ferric-cli": "*"
+    "ferric-cli": "~0.2.3"
   }
 }

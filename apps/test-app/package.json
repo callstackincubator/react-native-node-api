@@ -8,13 +8,13 @@
     "ios": "react-native run-ios --no-packager",
     "pod-install": "cd ios && pod install",
     "test:android": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail --passthrough-arguments npm:metro 'npm:android -- {@}' --",
-    "test:android:allTests": "MOCHA_REMOTE_CONTEXT=allTests npm run test:android -- ",
-    "test:android:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples npm run test:android -- ",
-    "test:android:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample npm run test:android -- ",
+    "test:android:allTests": "MOCHA_REMOTE_CONTEXT=allTests pnpm test:android -- ",
+    "test:android:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples pnpm test:android -- ",
+    "test:android:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample pnpm test:android -- ",
     "test:ios": "mocha-remote --exit-on-error -- concurrently --passthrough-arguments --kill-others-on-fail npm:metro 'npm:ios -- {@}' --",
-    "test:ios:allTests": "MOCHA_REMOTE_CONTEXT=allTests npm run test:ios -- ",
-    "test:ios:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples npm run test:ios -- ",
-    "test:ios:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample npm run test:ios -- "
+    "test:ios:allTests": "MOCHA_REMOTE_CONTEXT=allTests pnpm test:ios -- ",
+    "test:ios:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples pnpm test:ios -- ",
+    "test:ios:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample pnpm test:ios -- "
   },
   "dependencies": {
     "@babel/core": "^7.26.10",
@@ -30,14 +30,14 @@
     "@types/mocha": "^10.0.10",
     "@types/react": "^19.0.0",
     "concurrently": "^9.1.2",
-    "ferric-example": "^0.1.0",
+    "@react-native-node-api/ferric-example": "workspace:*",
     "mocha": "^11.6.0",
     "mocha-remote-cli": "^1.13.2",
     "mocha-remote-react-native": "^1.13.2",
     "react": "19.0.0",
     "react-native": "0.79.5",
-    "react-native-node-addon-examples": "*",
-    "react-native-node-api": "*",
+    "@react-native-node-api/node-addon-examples": "workspace:*",
+    "react-native-node-api": "workspace:*",
     "react-native-test-app": "^4.3.3"
   }
 }

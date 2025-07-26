@@ -21,7 +21,7 @@
     "bufout": "^0.3.2",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
-    "react-native-node-api": "0.3.2",
+    "react-native-node-api": "workspace:*",
     "ora": "^8.2.0"
   }
 }
