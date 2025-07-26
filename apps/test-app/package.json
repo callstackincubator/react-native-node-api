@@ -6,7 +6,7 @@
     "metro": "react-native start --no-interactive",
     "android": "react-native run-android --no-packager --active-arch-only",
     "ios": "react-native run-ios --no-packager",
-    "pod-install": "cd ios && pod install",
+    "pod-install": "cd ios && RCT_USE_PREBUILT_RNCORE=1 RCT_USE_RN_DEP=1 pod install",
     "test:android": "mocha-remote --exit-on-error -- concurrently --kill-others-on-fail --passthrough-arguments npm:metro 'npm:android -- {@}' --",
     "test:android:allTests": "MOCHA_REMOTE_CONTEXT=allTests npm run test:android -- ",
     "test:android:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples npm run test:android -- ",
@@ -35,7 +35,7 @@
     "mocha-remote-cli": "^1.13.2",
     "mocha-remote-react-native": "^1.13.2",
     "react": "19.0.0",
-    "react-native": "0.79.5",
+    "react-native": "~0.81",
     "react-native-node-addon-examples": "*",
     "react-native-node-api": "*",
     "react-native-test-app": "^4.3.3"
