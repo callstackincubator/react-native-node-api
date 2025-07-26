@@ -5,16 +5,14 @@ import path from "node:path";
 
 import { spawn } from "bufout";
 import chalk from "chalk";
-
+import { weakNodeApiPath } from "react-native-node-api";
 import { assertFixable, UsageError } from "./errors.js";
 import {
-  AndroidTargetName,
-  AppleTargetName,
+  type AndroidTargetName,
+  type AppleTargetName,
   isAndroidTarget,
   isAppleTarget,
 } from "./targets.js";
-
-import { weakNodeApiPath } from "react-native-node-api";
 
 const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   "aarch64-apple-darwin": "macos-arm64_x86_64", // Universal
@@ -61,6 +59,7 @@ export function ensureCargo() {
 
 type BuildOptions = {
   configuration: "debug" | "release";
+  sourcePath: string;
 } & (
   | {
       target: AndroidTargetName;
@@ -75,8 +74,15 @@ type BuildOptions = {
 );
 
 export async function build(options: BuildOptions) {
-  const { target, configuration } = options;
-  const args = ["build", "--target", target];
+  const { target, configuration, sourcePath } = options;
+  const manifestBuildPath = `${sourcePath}/Cargo.toml`;
+  const args = [
+    "build",
+    "--target",
+    target,
+    "--manifest-path",
+    manifestBuildPath,
+  ];
   if (configuration.toLowerCase() === "release") {
     args.push("--release");
   }
@@ -88,7 +94,7 @@ export async function build(options: BuildOptions) {
     },
   });
   const targetOutputPath = joinPathAndAssertExistence(
-    process.cwd(),
+    sourcePath,
     "target",
     target,
     configuration,

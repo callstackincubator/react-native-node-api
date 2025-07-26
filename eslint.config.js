@@ -12,7 +12,7 @@ export default tseslint.config(
     "apps/test-app/ios/**",
     "packages/host/hermes/**",
     "packages/node-addon-examples/examples/**",
-    "packages/ferric-example/ferric_example.d.ts",
+    "packages/ferric-example/dist/ferric_example.d.ts",
   ]),
   eslint.configs.recommended,
   tseslint.configs.recommended,

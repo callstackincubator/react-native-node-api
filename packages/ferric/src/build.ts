@@ -1,36 +1,35 @@
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
 
 import { Command, Option } from "@commander-js/extra-typings";
-import chalk from "chalk";
 import { SpawnFailure } from "bufout";
+import chalk from "chalk";
 import { oraPromise } from "ora";
 
 import {
-  determineAndroidLibsFilename,
+  type AndroidTriplet,
   createAndroidLibsDirectory,
-  AndroidTriplet,
   createAppleFramework,
-  determineXCFrameworkFilename,
-  createXCframework,
   createUniversalAppleLibrary,
+  createXCframework,
+  determineAndroidLibsFilename,
   determineLibraryBasename,
+  determineXCFrameworkFilename,
   prettyPath,
 } from "react-native-node-api";
-
-import { UsageError, assertFixable } from "./errors.js";
-import { ensureCargo, build } from "./cargo.js";
+import { getBlockComment } from "./banner.js";
+import { build, ensureCargo } from "./cargo.js";
+import { assertFixable, UsageError } from "./errors.js";
+import { generateTypeScriptDeclarations } from "./napi-rs.js";
 import {
   ALL_TARGETS,
   ANDROID_TARGETS,
-  AndroidTargetName,
+  type AndroidTargetName,
   APPLE_TARGETS,
-  AppleTargetName,
+  type AppleTargetName,
   ensureInstalledTargets,
   filterTargetsByPlatform,
 } from "./targets.js";
-import { generateTypeScriptDeclarations } from "./napi-rs.js";
-import { getBlockComment } from "./banner.js";
 
 type EntrypointOptions = {
   outputPath: string;
@@ -97,6 +96,7 @@ const outputPathOption = new Option(
   "--output <path>",
   "Writing outputs to this directory",
 ).default(process.cwd());
+const cwdPathOption = new Option("--cwd <path>", "Specify project path");
 const configurationOption = new Option(
   "--configuration <configuration>",
   "Build configuration",
@@ -111,6 +111,7 @@ export const buildCommand = new Command("build")
   .addOption(androidTarget)
   .addOption(ndkVersionOption)
   .addOption(outputPathOption)
+  .addOption(cwdPathOption)
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
   .action(
@@ -120,9 +121,15 @@ export const buildCommand = new Command("build")
       android,
       ndkVersion,
       output: outputPath,
+      cwd: cwdPath,
       configuration,
       xcframeworkExtension,
     }) => {
+      const sourcePath =
+        cwdPath && cwdPath.length > 0
+          ? path.join(outputPath, cwdPath)
+          : outputPath;
+      outputPath = path.join(sourcePath, "dist");
       try {
         const targets = new Set([...targetArg]);
         if (apple) {
@@ -175,7 +182,10 @@ export const buildCommand = new Command("build")
             Promise.all(
               appleTargets.map(
                 async (target) =>
-                  [target, await build({ configuration, target })] as const,
+                  [
+                    target,
+                    await build({ configuration, target, sourcePath }),
+                  ] as const,
               ),
             ),
             Promise.all(
@@ -186,6 +196,7 @@ export const buildCommand = new Command("build")
                     await build({
                       configuration,
                       target,
+                      sourcePath,
                       ndkVersion,
                       androidApiLevel: ANDROID_API_LEVEL,
                     }),
@@ -256,7 +267,7 @@ export const buildCommand = new Command("build")
             {
               text: "Assembling XCFramework",
               successText: `XCFramework assembled into ${chalk.dim(
-                path.relative(process.cwd(), xcframeworkOutputPath),
+                path.relative(outputPath, xcframeworkOutputPath),
               )}`,
               failText: ({ message }) =>
                 `Failed to assemble XCFramework: ${message}`,
@@ -274,7 +285,7 @@ export const buildCommand = new Command("build")
         await oraPromise(
           generateTypeScriptDeclarations({
             outputFilename: declarationsFilename,
-            createPath: process.cwd(),
+            createPath: sourcePath,
             outputPath,
           }),
           {
