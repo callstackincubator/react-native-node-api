@@ -9,14 +9,14 @@ export const allTargets = [...android.targets, ...apple.targets] as const;
 
 export function platformHasTarget<P extends Platform>(
   platform: P,
-  target: unknown
+  target: unknown,
 ): target is P["targets"][number] {
   return (platform.targets as unknown[]).includes(target);
 }
 
 export function findPlatformForTarget(target: unknown) {
   const platform = Object.values(platforms).find((platform) =>
-    platformHasTarget(platform, target)
+    platformHasTarget(platform, target),
   );
   assert(platform, `Unable to determine platform from target: ${target}`);
   return platform;

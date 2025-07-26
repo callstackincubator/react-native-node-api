@@ -46,7 +46,9 @@ describe("bindingGypToCmakeLists", () => {
       },
     });
 
-    assert(output.includes("add_library(foo SHARED file/with/win32/separator.cc"));
+    assert(
+      output.includes("add_library(foo SHARED file/with/win32/separator.cc"),
+    );
   });
 
   it("escapes spaces in source filenames", () => {
@@ -117,9 +119,9 @@ describe("bindingGypToCmakeLists", () => {
 
       assert(
         output.includes(
-          "target_compile_definitions(foo PRIVATE FOO BAR=value)"
+          "target_compile_definitions(foo PRIVATE FOO BAR=value)",
         ),
-        `Expected output to include target_compile_definitions:\n${output}`
+        `Expected output to include target_compile_definitions:\n${output}`,
       );
     });
   });

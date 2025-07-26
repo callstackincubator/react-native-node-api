@@ -21,7 +21,7 @@ function writeFiles(fromPath: string, files: FileMap) {
 
 export function setupTempDirectory(context: TestContext, files: FileMap) {
   const tempDirectoryPath = fs.realpathSync(
-    fs.mkdtempSync(path.join(os.tmpdir(), "react-native-node-api-test-"))
+    fs.mkdtempSync(path.join(os.tmpdir(), "react-native-node-api-test-")),
   );
 
   context.after(() => {

@@ -6,5 +6,5 @@ export const weakNodeApiPath = path.resolve(__dirname, "../../weak-node-api");
 
 assert(
   fs.existsSync(weakNodeApiPath),
-  `Expected Weak Node API path to exist: ${weakNodeApiPath}`
+  `Expected Weak Node API path to exist: ${weakNodeApiPath}`,
 );

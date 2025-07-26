@@ -16,7 +16,7 @@ export type GypBinding = {
 
 function assertNoExtraProperties<T extends object>(
   input: T,
-  expectedKeys: string[]
+  expectedKeys: string[],
 ) {
   for (const key of Object.keys(input)) {
     if (!expectedKeys.includes(key)) {
@@ -27,7 +27,7 @@ function assertNoExtraProperties<T extends object>(
 
 export function assertTarget(
   target: unknown,
-  disallowUnknownProperties = false
+  disallowUnknownProperties = false,
 ): asserts target is GypTarget {
   assert(typeof target === "object" && target !== null, "Expected an object");
   assert("target_name" in target, "Expected a 'target_name' property");
@@ -36,17 +36,17 @@ export function assertTarget(
   assert(Array.isArray(sources), "Expected a 'sources' array");
   assert(
     sources.every((source) => typeof source === "string"),
-    "Expected all sources to be strings"
+    "Expected all sources to be strings",
   );
   if ("include_dirs" in target) {
     const { include_dirs } = target;
     assert(
       Array.isArray(include_dirs),
-      "Expected 'include_dirs' to be an array"
+      "Expected 'include_dirs' to be an array",
     );
     assert(
       include_dirs.every((dir) => typeof dir === "string"),
-      "Expected all include_dirs to be strings"
+      "Expected all include_dirs to be strings",
     );
   }
   if (disallowUnknownProperties) {
@@ -56,7 +56,7 @@ export function assertTarget(
 
 export function assertBinding(
   json: unknown,
-  disallowUnknownProperties = false
+  disallowUnknownProperties = false,
 ): asserts json is GypBinding {
   assert(typeof json === "object" && json !== null, "Expected an object");
   assert("targets" in json, "Expected a 'targets' property");
@@ -72,7 +72,7 @@ export function assertBinding(
 
 export function readBindingFile(
   path: string,
-  disallowUnknownProperties = false
+  disallowUnknownProperties = false,
 ): GypBinding {
   try {
     const contents = fs.readFileSync(path, "utf-8");

@@ -23,7 +23,7 @@ export type TargetContext<Target extends string> = {
 export type Platform<
   Targets extends string[] = string[],
   Opts extends commander.OptionValues = Record<string, unknown>,
-  Command = ExtendedCommand<Opts>
+  Command = ExtendedCommand<Opts>,
 > = {
   /**
    * Used to identify the platform in the CLI.
@@ -54,14 +54,14 @@ export type Platform<
    */
   configureArgs(
     context: TargetContext<Targets[number]>,
-    options: BaseOpts & Opts
+    options: BaseOpts & Opts,
   ): string[];
   /**
    * Platform specific arguments passed to CMake to build a target project.
    */
   buildArgs(
     context: TargetContext<Targets[number]>,
-    options: BaseOpts & Opts
+    options: BaseOpts & Opts,
   ): string[];
   /**
    * Called to combine multiple targets into a single prebuilt artefact.
@@ -74,6 +74,6 @@ export type Platform<
       outputPath: string;
       targets: TargetContext<Targets[number]>[];
     },
-    options: BaseOpts & Opts
+    options: BaseOpts & Opts,
   ): Promise<void>;
 };

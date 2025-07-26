@@ -25,7 +25,7 @@ The generated code looks something like this:
 
 ```javascript
 module.exports = require("react-native-node-api").requireNodeAddon(
-  "calculator-lib--prebuild"
+  "calculator-lib--prebuild",
 );
 ```
 

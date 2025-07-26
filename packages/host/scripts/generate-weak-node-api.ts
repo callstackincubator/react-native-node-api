@@ -21,7 +21,7 @@ export function generateHeader(functions: FunctionDecl[]) {
       ({ returnType, noReturn, name, argumentTypes }) =>
         `${returnType} ${
           noReturn ? " __attribute__((noreturn))" : ""
-        }(*${name})(${argumentTypes.join(", ")});`
+        }(*${name})(${argumentTypes.join(", ")});`,
     ),
     "};",
     "typedef void(*InjectHostFunction)(const WeakNodeApiHost&);",

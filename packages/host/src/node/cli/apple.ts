@@ -30,7 +30,7 @@ export async function updateInfoPlist({
   // TODO: Use a proper plist parser
   const updatedContents = infoPlistContents.replaceAll(
     oldLibraryName,
-    newLibraryName
+    newLibraryName,
   );
   await fs.promises.writeFile(filePath, updatedContents, "utf-8");
 }
@@ -45,7 +45,7 @@ export async function linkXcframework({
   const newLibraryName = getLibraryName(modulePath, naming);
   const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
   const tempPath = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), `react-native-node-api-${newLibraryName}-`)
+    path.join(os.tmpdir(), `react-native-node-api-${newLibraryName}-`),
   );
   try {
     if (incremental && fs.existsSync(outputPath)) {
@@ -67,7 +67,7 @@ export async function linkXcframework({
     // Following extracted function mimics `glob("*/*.framework/")`
     function globFrameworkDirs<T>(
       startPath: string,
-      fn: (parentPath: string, name: string) => Promise<T>
+      fn: (parentPath: string, name: string) => Promise<T>,
     ) {
       return fs
         .readdirSync(startPath, { withFileTypes: true })
@@ -79,10 +79,11 @@ export async function linkXcframework({
             .filter(
               (frameworkEntry) =>
                 frameworkEntry.isDirectory() &&
-                path.extname(frameworkEntry.name) === ".framework"
+                path.extname(frameworkEntry.name) === ".framework",
             )
-            .flatMap(async (frameworkEntry) =>
-              await fn(tripletPath, frameworkEntry.name)
+            .flatMap(
+              async (frameworkEntry) =>
+                await fn(tripletPath, frameworkEntry.name),
             );
         });
     }
@@ -94,18 +95,18 @@ export async function linkXcframework({
         const oldLibraryPath = path.join(frameworkPath, oldLibraryName);
         const newFrameworkPath = path.join(
           tripletPath,
-          `${newLibraryName}.framework`
+          `${newLibraryName}.framework`,
         );
         const newLibraryPath = path.join(newFrameworkPath, newLibraryName);
         assert(
           fs.existsSync(oldLibraryPath),
-          `Expected a library at '${oldLibraryPath}'`
+          `Expected a library at '${oldLibraryPath}'`,
         );
         // Rename the library
         await fs.promises.rename(
           oldLibraryPath,
           // Cannot use newLibraryPath here, because the framework isn't renamed yet
-          path.join(frameworkPath, newLibraryName)
+          path.join(frameworkPath, newLibraryName),
         );
         // Rename the framework
         await fs.promises.rename(frameworkPath, newFrameworkPath);
@@ -121,7 +122,7 @@ export async function linkXcframework({
           ],
           {
             outputMode: "buffered",
-          }
+          },
         );
         // Update the Info.plist file for the framework
         await updateInfoPlist({
@@ -130,7 +131,7 @@ export async function linkXcframework({
           newLibraryName,
         });
         return newFrameworkPath;
-      })
+      }),
     );
 
     // Create a new xcframework from the renamed frameworks
@@ -147,7 +148,7 @@ export async function linkXcframework({
       ],
       {
         outputMode: "buffered",
-      }
+      },
     );
 
     return {

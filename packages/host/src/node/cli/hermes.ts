@@ -19,7 +19,7 @@ export const command = new Command("vendor-hermes")
   .option(
     "--force",
     "Don't check timestamps of input files to skip unnecessary rebuilds",
-    false
+    false,
   )
   .action(async (from, { force, silent }) => {
     try {
@@ -29,12 +29,12 @@ export const command = new Command("vendor-hermes")
         require.resolve("react-native/package.json", {
           // Ensures we'll be patching the React Native package actually used by the app
           paths: [appPackageRoot],
-        })
+        }),
       );
       const hermesVersionPath = path.join(
         reactNativePath,
         "sdks",
-        ".hermesversion"
+        ".hermesversion",
       );
       const hermesVersion = fs.readFileSync(hermesVersionPath, "utf8").trim();
       if (!silent) {
@@ -43,7 +43,7 @@ export const command = new Command("vendor-hermes")
 
       const reactNativeJsiPath = path.join(
         reactNativePath,
-        "ReactCommon/jsi/jsi/"
+        "ReactCommon/jsi/jsi/",
       );
 
       const hermesPath = path.join(HOST_PACKAGE_ROOT, "hermes");
@@ -56,7 +56,7 @@ export const command = new Command("vendor-hermes")
             failText: (error) =>
               `Failed to remove existing Hermes clone: ${error.message}`,
             isEnabled: !silent,
-          }
+          },
         );
       }
       if (!fs.existsSync(hermesPath)) {
@@ -77,7 +77,7 @@ export const command = new Command("vendor-hermes")
               ],
               {
                 outputMode: "buffered",
-              }
+              },
             ),
             {
               text: `Cloning custom Hermes into ${prettyPath(hermesPath)}`,
@@ -85,14 +85,14 @@ export const command = new Command("vendor-hermes")
               failText: (err) =>
                 `Failed to clone custom Hermes: ${err.message}`,
               isEnabled: !silent,
-            }
+            },
           );
         } catch (error) {
           if (error instanceof SpawnFailure) {
             error.flushOutput("both");
             console.error(
               `\n🛑 React Native uses the ${hermesVersion} tag and cloning our fork failed.`,
-              `Please see the Node-API package's peer dependency on "react-native" for supported versions.`
+              `Please see the Node-API package's peer dependency on "react-native" for supported versions.`,
             );
             process.exitCode = 1;
             return;
@@ -105,7 +105,7 @@ export const command = new Command("vendor-hermes")
 
       assert(
         fs.existsSync(hermesJsiPath),
-        `Hermes JSI path does not exist: ${hermesJsiPath}`
+        `Hermes JSI path does not exist: ${hermesJsiPath}`,
       );
 
       await oraPromise(
@@ -118,7 +118,7 @@ export const command = new Command("vendor-hermes")
           failText: (err) =>
             `Failed to copy JSI from Hermes to React Native: ${err.message}`,
           isEnabled: !silent,
-        }
+        },
       );
       console.log(hermesPath);
     } catch (error) {

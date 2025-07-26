@@ -13,7 +13,7 @@ import { suites as nodeAddonExamplesSuites } from "@react-native-node-api/node-a
 function describeIf(
   condition: boolean,
   title: string,
-  fn: (this: Mocha.Suite) => void
+  fn: (this: Mocha.Suite) => void,
 ) {
   return condition ? describe(title, fn) : describe.skip(title, fn);
 }
@@ -31,7 +31,7 @@ function loadTests({
 }: Context) {
   describeIf(nodeAddonExamples, "Node Addon Examples", () => {
     for (const [suiteName, examples] of Object.entries(
-      nodeAddonExamplesSuites
+      nodeAddonExamplesSuites,
     )) {
       describe(suiteName, () => {
         for (const [exampleName, requireExample] of Object.entries(examples)) {

@@ -47,7 +47,7 @@ async function generateEntrypoint({
       getBlockComment(),
       `module.exports = require('./${libraryName}.node');`,
     ].join("\n\n") + "\n",
-    "utf8"
+    "utf8",
   );
 }
 
@@ -73,7 +73,7 @@ function getDefaultTargets() {
       {
         instructions:
           "Pass only valid targets via FERRIC_TARGETS (or remove them)",
-      }
+      },
     );
   }
   return result as (typeof ALL_TARGETS)[number][];
@@ -86,20 +86,20 @@ const appleTarget = new Option("--apple", "Use all Apple targets");
 const androidTarget = new Option("--android", "Use all Android targets");
 const ndkVersionOption = new Option(
   "--ndk-version <version>",
-  "The NDK version to use for Android builds"
+  "The NDK version to use for Android builds",
 ).default(DEFAULT_NDK_VERSION);
 const xcframeworkExtensionOption = new Option(
   "--xcframework-extension",
-  "Don't rename the xcframework to .apple.node"
+  "Don't rename the xcframework to .apple.node",
 ).default(false);
 
 const outputPathOption = new Option(
   "--output <path>",
-  "Writing outputs to this directory"
+  "Writing outputs to this directory",
 ).default(process.cwd());
 const configurationOption = new Option(
   "--configuration <configuration>",
-  "Build configuration"
+  "Build configuration",
 )
   .choices(["debug", "release"])
   .default("debug");
@@ -153,11 +153,11 @@ export const buildCommand = new Command("build")
             chalk.yellowBright("ℹ"),
             chalk.dim(
               `Using default targets, pass ${chalk.italic(
-                "--android"
+                "--android",
               )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
-                "--target"
-              )} options, to avoid this.`
-            )
+                "--target",
+              )} options, to avoid this.`,
+            ),
           );
         }
         ensureCargo();
@@ -175,8 +175,8 @@ export const buildCommand = new Command("build")
             Promise.all(
               appleTargets.map(
                 async (target) =>
-                  [target, await build({ configuration, target })] as const
-              )
+                  [target, await build({ configuration, target })] as const,
+              ),
             ),
             Promise.all(
               androidTargets.map(
@@ -189,15 +189,15 @@ export const buildCommand = new Command("build")
                       ndkVersion,
                       androidApiLevel: ANDROID_API_LEVEL,
                     }),
-                  ] as const
-              )
+                  ] as const,
+              ),
             ),
           ]),
           {
             text: `Building ${targetsDescription}`,
             successText: `Built ${targetsDescription}`,
             failText: (error: Error) => `Failed to build: ${error.message}`,
-          }
+          },
         );
 
         if (androidLibraries.length > 0) {
@@ -205,15 +205,15 @@ export const buildCommand = new Command("build")
             androidLibraries.map(([target, outputPath]) => [
               ANDROID_TRIPLET_PER_TARGET[target],
               outputPath,
-            ])
+            ]),
           ) as Record<AndroidTriplet, string>;
 
           const androidLibsFilename = determineAndroidLibsFilename(
-            Object.values(libraryPathByTriplet)
+            Object.values(libraryPathByTriplet),
           );
           const androidLibsOutputPath = path.resolve(
             outputPath,
-            androidLibsFilename
+            androidLibsFilename,
           );
 
           await oraPromise(
@@ -225,11 +225,11 @@ export const buildCommand = new Command("build")
             {
               text: "Assembling Android libs directory",
               successText: `Android libs directory assembled into ${prettyPath(
-                androidLibsOutputPath
+                androidLibsOutputPath,
               )}`,
               failText: ({ message }) =>
                 `Failed to assemble Android libs directory: ${message}`,
-            }
+            },
           );
         }
 
@@ -238,13 +238,13 @@ export const buildCommand = new Command("build")
           const frameworkPaths = libraryPaths.map(createAppleFramework);
           const xcframeworkFilename = determineXCFrameworkFilename(
             frameworkPaths,
-            xcframeworkExtension ? ".xcframework" : ".apple.node"
+            xcframeworkExtension ? ".xcframework" : ".apple.node",
           );
 
           // Create the xcframework
           const xcframeworkOutputPath = path.resolve(
             outputPath,
-            xcframeworkFilename
+            xcframeworkFilename,
           );
 
           await oraPromise(
@@ -256,11 +256,11 @@ export const buildCommand = new Command("build")
             {
               text: "Assembling XCFramework",
               successText: `XCFramework assembled into ${chalk.dim(
-                path.relative(process.cwd(), xcframeworkOutputPath)
+                path.relative(process.cwd(), xcframeworkOutputPath),
               )}`,
               failText: ({ message }) =>
                 `Failed to assemble XCFramework: ${message}`,
-            }
+            },
           );
         }
 
@@ -280,11 +280,11 @@ export const buildCommand = new Command("build")
           {
             text: "Generating TypeScript declarations",
             successText: `Generated TypeScript declarations ${prettyPath(
-              declarationsPath
+              declarationsPath,
             )}`,
             failText: (error) =>
               `Failed to generate TypeScript declarations: ${error.message}`,
-          }
+          },
         );
 
         const entrypointPath = path.join(outputPath, `${libraryName}.js`);
@@ -297,11 +297,11 @@ export const buildCommand = new Command("build")
           {
             text: `Generating entrypoint`,
             successText: `Generated entrypoint into ${prettyPath(
-              entrypointPath
+              entrypointPath,
             )}`,
             failText: (error) =>
               `Failed to generate entrypoint: ${error.message}`,
-          }
+          },
         );
       } catch (error) {
         process.exitCode = 1;
@@ -318,18 +318,18 @@ export const buildCommand = new Command("build")
               chalk.green("FIX"),
               error.fix.command
                 ? chalk.dim("Run: ") + error.fix.command
-                : error.fix.instructions
+                : error.fix.instructions,
             );
           }
         } else {
           throw error;
         }
       }
-    }
+    },
   );
 
 async function combineLibraries(
-  libraries: Readonly<[AppleTargetName, string]>[]
+  libraries: Readonly<[AppleTargetName, string]>[],
 ): Promise<string[]> {
   const result = [];
   const darwinLibraries = [];
@@ -352,7 +352,7 @@ async function combineLibraries(
         successText: "Combined Darwin libraries into a universal library",
         failText: (error) =>
           `Failed to combine Darwin libraries: ${error.message}`,
-      }
+      },
     );
     return [...result, universalPath];
   }

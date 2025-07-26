@@ -75,12 +75,12 @@ describe("isNodeApiModule", () => {
       try {
         assert.equal(
           isNodeApiModule(path.join(tempDirectoryPath, "addon")),
-          false
+          false,
         );
       } finally {
         restoreReadPermissions(tempDirectoryPath);
       }
-    }
+    },
   );
 
   it("throws when module file exists but is not readable", (context) => {
@@ -92,7 +92,7 @@ describe("isNodeApiModule", () => {
     try {
       assert.throws(
         () => isNodeApiModule(path.join(tempDirectoryPath, "addon")),
-        /Found an unreadable module addon\.android\.node/
+        /Found an unreadable module addon\.android\.node/,
       );
     } finally {
       restoreReadPermissions(candidate);
@@ -112,7 +112,7 @@ describe("isNodeApiModule", () => {
     assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "addon")), true);
     assert.equal(
       isNodeApiModule(path.join(tempDirectoryPath, "addon.node")),
-      true
+      true,
     );
     assert.equal(isNodeApiModule(path.join(tempDirectoryPath, "nope")), false);
   });
@@ -127,7 +127,7 @@ describe("isNodeApiModule", () => {
     removeReadPermissions(unreadable);
     assert.throws(
       () => isNodeApiModule(path.join(tempDirectoryPath, "addon")),
-      /Found an unreadable module addon\.android\.node/
+      /Found an unreadable module addon\.android\.node/,
     );
     restoreReadPermissions(unreadable);
   });
@@ -151,7 +151,7 @@ describe("determineModuleContext", () => {
 
     {
       const { packageName, relativePath } = determineModuleContext(
-        path.join(tempDirectoryPath, "some-dir/some-file.node")
+        path.join(tempDirectoryPath, "some-dir/some-file.node"),
       );
       assert.equal(packageName, "my-package");
       assert.equal(relativePath, "some-dir/some-file");
@@ -165,7 +165,7 @@ describe("determineModuleContext", () => {
 
     {
       const { packageName, relativePath } = determineModuleContext(
-        path.join(tempDirectoryPath, "some-dir/libsome-file.node")
+        path.join(tempDirectoryPath, "some-dir/libsome-file.node"),
       );
       assert.equal(packageName, "my-package");
       assert.equal(relativePath, "some-dir/some-file");
@@ -182,7 +182,7 @@ describe("determineModuleContext", () => {
 
     {
       const { packageName, relativePath } = determineModuleContext(
-        path.join(tempDirectoryPath, "sub-package-a/some-file.node")
+        path.join(tempDirectoryPath, "sub-package-a/some-file.node"),
       );
       assert.equal(packageName, "my-sub-package-a");
       assert.equal(relativePath, "some-file");
@@ -190,7 +190,7 @@ describe("determineModuleContext", () => {
 
     {
       const { packageName, relativePath } = determineModuleContext(
-        path.join(tempDirectoryPath, "sub-package-b/some-file.node")
+        path.join(tempDirectoryPath, "sub-package-b/some-file.node"),
       );
       assert.equal(packageName, "my-sub-package-b");
       assert.equal(relativePath, "some-file");
@@ -210,14 +210,14 @@ describe("getLibraryName", () => {
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
         pathSuffix: "keep",
       }),
-      "my-package--addon"
+      "my-package--addon",
     );
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory/addon"), {
         pathSuffix: "keep",
       }),
-      "my-package--sub-directory-addon"
+      "my-package--sub-directory-addon",
     );
   });
 
@@ -232,14 +232,14 @@ describe("getLibraryName", () => {
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
         pathSuffix: "strip",
       }),
-      "my-package--addon"
+      "my-package--addon",
     );
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory", "addon"), {
         pathSuffix: "strip",
       }),
-      "my-package--addon"
+      "my-package--addon",
     );
   });
 
@@ -254,14 +254,14 @@ describe("getLibraryName", () => {
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
         pathSuffix: "omit",
       }),
-      "my-package"
+      "my-package",
     );
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory", "addon"), {
         pathSuffix: "omit",
       }),
-      "my-package"
+      "my-package",
     );
   });
 });
@@ -296,7 +296,7 @@ describe("findPackageDependencyPaths", () => {
     });
 
     const result = findPackageDependencyPaths(
-      path.join(tempDir, "test-package/src/index.js")
+      path.join(tempDir, "test-package/src/index.js"),
     );
 
     assert.deepEqual(result, {
@@ -394,7 +394,7 @@ describe("findNodeApiModulePaths", () => {
       } finally {
         restoreReadPermissions(tempDir);
       }
-    }
+    },
   );
 });
 
@@ -405,7 +405,7 @@ describe("findNodeApiModulePathsByDependency", () => {
       "app/package.json": JSON.stringify({
         name: "app",
         dependencies: Object.fromEntries(
-          packagesNames.map((packageName) => [packageName, "^1.0.0"])
+          packagesNames.map((packageName) => [packageName, "^1.0.0"]),
         ),
       }),
       ...Object.fromEntries(
@@ -419,7 +419,7 @@ describe("findNodeApiModulePathsByDependency", () => {
             "index.js": "",
             "addon.apple.node/react-native-node-api-module": "",
           },
-        ])
+        ]),
       ),
     });
 
@@ -461,14 +461,14 @@ describe("determineModuleContext", () => {
           readCount++;
         }
         return orig(...args);
-      }
+      },
     );
 
     const ctx1 = determineModuleContext(
-      path.join(tempDir, "subdir1/file1.node")
+      path.join(tempDir, "subdir1/file1.node"),
     );
     const ctx2 = determineModuleContext(
-      path.join(tempDir, "subdir2/file2.node")
+      path.join(tempDir, "subdir2/file2.node"),
     );
     assert.equal(ctx1.packageName, "cached-pkg");
     assert.equal(ctx2.packageName, "cached-pkg");
@@ -497,7 +497,7 @@ describe("findNodeAddonForBindings()", () => {
       // Act
       const actualPath = await findNodeAddonForBindings(
         name,
-        tempDirectoryPath
+        tempDirectoryPath,
       );
       // Assert
       const expectedAbsPath = path.join(tempDirectoryPath, relPath);

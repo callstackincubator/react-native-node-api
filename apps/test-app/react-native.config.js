@@ -1,4 +1,3 @@
-
 const project = (() => {
   try {
     const { configureProjects } = require("react-native-test-app");

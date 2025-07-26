@@ -2,8 +2,8 @@
 
 import { globalIgnores } from "eslint/config";
 import globals from "globals";
-import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
+import eslint from "@eslint/js";
+import tseslint from "typescript-eslint";
 import eslintConfigPrettier from "eslint-config-prettier/flat";
 
 export default tseslint.config(
@@ -21,7 +21,7 @@ export default tseslint.config(
       "apps/test-app/*.js",
       "packages/node-addon-examples/*.js",
       "packages/host/babel-plugin.js",
-      "packages/host/react-native.config.js"
+      "packages/host/react-native.config.js",
     ],
     languageOptions: {
       parserOptions: {
@@ -40,7 +40,7 @@ export default tseslint.config(
     files: [
       "packages/gyp-to-cmake/bin/*.js",
       "packages/host/bin/*.mjs",
-      "packages/host/scripts/*.mjs"
+      "packages/host/scripts/*.mjs",
     ],
     languageOptions: {
       globals: {

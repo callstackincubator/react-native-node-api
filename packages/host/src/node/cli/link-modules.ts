@@ -14,7 +14,7 @@ import {
 import chalk from "chalk";
 
 export type ModuleLinker = (
-  options: LinkModuleOptions
+  options: LinkModuleOptions,
 ) => Promise<LinkModuleResult>;
 
 export type LinkModulesOptions = {
@@ -71,8 +71,8 @@ export async function linkModules({
   const absoluteModulePaths = Object.values(dependenciesByName).flatMap(
     (dependency) =>
       dependency.modulePaths.map((modulePath) =>
-        path.join(dependency.path, modulePath)
-      )
+        path.join(dependency.path, modulePath),
+      ),
   );
 
   if (hasDuplicateLibraryNames(absoluteModulePaths, naming)) {
@@ -100,13 +100,13 @@ export async function linkModules({
           throw error;
         }
       }
-    })
+    }),
   );
 }
 
 export async function pruneLinkedModules(
   platform: PlatformName,
-  linkedModules: ModuleOutput[]
+  linkedModules: ModuleOutput[],
 ) {
   if (linkedModules.some(({ failure }) => failure)) {
     // Don't prune if any of the modules failed to copy
@@ -122,17 +122,17 @@ export async function pruneLinkedModules(
         console.log(
           "🧹Deleting",
           prettyPath(candidatePath),
-          chalk.dim("(no longer linked)")
+          chalk.dim("(no longer linked)"),
         );
         await fs.promises.rm(candidatePath, { recursive: true, force: true });
       }
-    })
+    }),
   );
 }
 
 export function hasDuplicateLibraryNames(
   modulePaths: string[],
-  naming: NamingStrategy
+  naming: NamingStrategy,
 ): boolean {
   const libraryNames = modulePaths.map((modulePath) => {
     return getLibraryName(modulePath, naming);
@@ -144,7 +144,7 @@ export function hasDuplicateLibraryNames(
 export function getLinkedModuleOutputPath(
   platform: PlatformName,
   modulePath: string,
-  naming: NamingStrategy
+  naming: NamingStrategy,
 ): string {
   const libraryName = getLibraryName(modulePath, naming);
   if (platform === "android") {

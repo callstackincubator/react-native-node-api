@@ -21,7 +21,7 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
     "Verifying Android prebuild",
     dirent.name,
     "in",
-    dirent.parentPath
+    dirent.parentPath,
   );
   for (const arch of EXPECTED_ANDROID_ARCHS) {
     const archDir = path.join(dirent.parentPath, dirent.name, arch);
@@ -31,7 +31,7 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
       assert(file.isFile());
       assert(
         !file.name.endsWith(".node"),
-        `Unexpected .node file: ${path.join(file.parentPath, file.name)}`
+        `Unexpected .node file: ${path.join(file.parentPath, file.name)}`,
       );
     }
   }
@@ -46,7 +46,7 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
     })) {
       assert(
         file.isDirectory(),
-        "Expected only directories in xcframework arch directory"
+        "Expected only directories in xcframework arch directory",
       );
       assert(file.name.endsWith(".framework"), "Expected framework directory");
       const frameworkDir = path.join(file.parentPath, file.name);
@@ -57,12 +57,12 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
           assert.equal(
             file.name,
             "Headers",
-            "Unexpected directory in xcframework"
+            "Unexpected directory in xcframework",
           );
         } else {
           assert(
             file.isFile(),
-            "Expected only directory and files in framework"
+            "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
             // TODO: Verify the contents of the Info.plist file
@@ -72,8 +72,8 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
               !file.name.endsWith(".node"),
               `Didn't expected a .node file in xcframework: ${path.join(
                 frameworkDir,
-                file.name
-              )}`
+                file.name,
+              )}`,
             );
           }
         }
@@ -92,7 +92,7 @@ for await (const dirent of fs.promises.glob("**/*.*.node", {
     await verifyApplePrebuild(dirent);
   } else {
     throw new Error(
-      `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`
+      `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`,
     );
   }
 }

@@ -58,7 +58,7 @@ console.log("Copying files to", EXAMPLES_DIR);
 const require = createRequire(import.meta.url);
 
 const EXAMPLES_PACKAGE_PATH = require.resolve(
-  "node-addon-examples/package.json"
+  "node-addon-examples/package.json",
 );
 const SRC_DIR = path.join(path.dirname(EXAMPLES_PACKAGE_PATH), "src");
 console.log("Copying files from", SRC_DIR);
@@ -73,7 +73,7 @@ for (const src of ALLOW_LIST) {
 
   if (fs.existsSync(destPath)) {
     console.warn(
-      `Destination path ${destPath} already exists - skipping copy of ${src}.`
+      `Destination path ${destPath} already exists - skipping copy of ${src}.`,
     );
     continue;
   }
@@ -93,7 +93,7 @@ for (const src of ALLOW_LIST) {
       fs.writeFileSync(
         path.join(entry.parentPath, entry.name),
         JSON.stringify(packageJson, null, 2),
-        "utf-8"
+        "utf-8",
       );
     }
   }

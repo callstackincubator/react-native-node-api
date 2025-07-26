@@ -15,7 +15,7 @@ export class UsageError extends Error {
 
   constructor(
     message: string,
-    { fix, cause }: { cause?: unknown; fix?: Fix } = {}
+    { fix, cause }: { cause?: unknown; fix?: Fix } = {},
   ) {
     super(message, { cause });
     this.fix = fix;
@@ -25,7 +25,7 @@ export class UsageError extends Error {
 export function assertFixable(
   value: unknown,
   message: string,
-  fix: Fix
+  fix: Fix,
 ): asserts value {
   try {
     assert(value, message);

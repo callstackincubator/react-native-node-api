@@ -9,12 +9,12 @@ export function getInstalledTargets() {
         .execFileSync("rustup", ["target", "list", "--installed"], {
           encoding: "utf-8",
         })
-        .split("\n")
+        .split("\n"),
     );
   } catch (error) {
     throw new UsageError(
       "You need a Rust toolchain: https://doc.rust-lang.org/cargo/getting-started/installation.html#install-rust-and-cargo",
-      { cause: error }
+      { cause: error },
     );
   }
 }

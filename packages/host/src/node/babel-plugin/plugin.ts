@@ -36,7 +36,7 @@ function assertOptions(opts: unknown): asserts opts is PluginOptions {
 export function replaceWithRequireNodeAddon(
   p: NodePath,
   modulePath: string,
-  naming: NamingStrategy
+  naming: NamingStrategy,
 ) {
   const requireCallArgument = getLibraryName(modulePath, naming);
   p.replaceWith(
@@ -45,10 +45,10 @@ export function replaceWithRequireNodeAddon(
         t.callExpression(t.identifier("require"), [
           t.stringLiteral("react-native-node-api"),
         ]),
-        t.identifier("requireNodeAddon")
+        t.identifier("requireNodeAddon"),
       ),
-      [t.stringLiteral(requireCallArgument)]
-    )
+      [t.stringLiteral(requireCallArgument)],
+    ),
   );
 }
 

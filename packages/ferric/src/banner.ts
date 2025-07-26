@@ -25,6 +25,6 @@ export function printBanner() {
     LINES.map((line, lineNumber, lines) => {
       const ratio = lineNumber / lines.length;
       return chalk.rgb(Math.round(250 - 100 * ratio), 0, 0)(line);
-    }).join("\n")
+    }).join("\n"),
   );
 }

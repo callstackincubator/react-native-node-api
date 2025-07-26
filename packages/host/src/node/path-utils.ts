@@ -22,15 +22,15 @@ export const PATH_SUFFIX_CHOICES = ["strip", "keep", "omit"] as const;
 export type PathSuffixChoice = (typeof PATH_SUFFIX_CHOICES)[number];
 
 export function assertPathSuffix(
-  value: unknown
+  value: unknown,
 ): asserts value is PathSuffixChoice {
   assert(
     typeof value === "string",
-    `Expected a string, got ${typeof value} (${value})`
+    `Expected a string, got ${typeof value} (${value})`,
   );
   assert(
     (PATH_SUFFIX_CHOICES as readonly string[]).includes(value),
-    `Expected one of ${PATH_SUFFIX_CHOICES.join(", ")}`
+    `Expected one of ${PATH_SUFFIX_CHOICES.join(", ")}`,
   );
 }
 
@@ -61,7 +61,7 @@ export function isNodeApiModule(modulePath: string): boolean {
     // HACK: Take a shortcut (if applicable): existing `.node` files are addons
     try {
       fs.accessSync(
-        modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`
+        modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`,
       );
       return true;
     } catch {
@@ -131,7 +131,7 @@ export function stripExtension(modulePath: string) {
         return modulePath;
       }
     },
-    modulePath
+    modulePath,
   );
 }
 
@@ -145,7 +145,7 @@ export type ModuleContext = {
  */
 export function determineModuleContext(
   modulePath: string,
-  originalPath = modulePath
+  originalPath = modulePath,
 ): ModuleContext {
   // Locate nearest package directory
   const pkgDir = packageDirectorySync({ cwd: modulePath });
@@ -158,7 +158,7 @@ export function determineModuleContext(
     const pkg = readPackageSync({ cwd: pkgDir });
     assert(
       typeof pkg.name === "string",
-      "Expected package.json to have a name"
+      "Expected package.json to have a name",
     );
     pkgName = pkg.name;
     packageNameCache.set(pkgDir, pkgName);
@@ -191,19 +191,19 @@ export function getLibraryName(modulePath: string, naming: NamingStrategy) {
     : `${escapedPackageName}--${escapePath(
         naming.pathSuffix === "strip"
           ? path.basename(relativePath)
-          : relativePath
+          : relativePath,
       )}`;
 }
 
 export function prettyPath(p: string) {
   return chalk.dim(
-    path.relative(process.cwd(), p) || chalk.italic("current directory")
+    path.relative(process.cwd(), p) || chalk.italic("current directory"),
   );
 }
 
 export function resolvePackageRoot(
   requireFromPackageRoot: NodeJS.Require,
-  packageName: string
+  packageName: string,
 ): string | undefined {
   try {
     const resolvedPath = requireFromPackageRoot.resolve(packageName);
@@ -217,7 +217,7 @@ export function resolvePackageRoot(
 export function logModulePaths(
   modulePaths: string[],
   // TODO: Default to iterating and printing for all supported naming strategies
-  naming: NamingStrategy
+  naming: NamingStrategy,
 ) {
   const pathsPerName = new Map<string, string[]>();
   for (const modulePath of modulePaths) {
@@ -237,7 +237,7 @@ export function logModulePaths(
           ? chalk.redBright(prettyPath(modulePath))
           : prettyPath(modulePath);
         return `\n ↳ ${line}`;
-      })
+      }),
     );
   }
 }
@@ -247,13 +247,13 @@ export function logModulePaths(
  * return a record mapping from each dependencies of that package to their path on disk.
  */
 export function findPackageDependencyPaths(
-  fromPath: string
+  fromPath: string,
 ): Record<string, string> {
   const packageRoot = packageDirectorySync({ cwd: fromPath });
   assert(packageRoot, `Could not find package root from ${fromPath}`);
 
   const requireFromPackageRoot = createRequire(
-    path.join(packageRoot, "noop.js")
+    path.join(packageRoot, "noop.js"),
   );
 
   const { dependencies = {} } = readPackageSync({ cwd: packageRoot });
@@ -263,13 +263,13 @@ export function findPackageDependencyPaths(
       .map((dependencyName) => {
         const resolvedDependencyRoot = resolvePackageRoot(
           requireFromPackageRoot,
-          dependencyName
+          dependencyName,
         );
         return resolvedDependencyRoot
           ? [dependencyName, resolvedDependencyRoot]
           : undefined;
       })
-      .filter((item) => typeof item !== "undefined")
+      .filter((item) => typeof item !== "undefined"),
   );
 }
 
@@ -285,7 +285,7 @@ export const DEFAULT_EXCLUDE_PATTERNS = [
 
 export function hasPlatformExtension(
   platform: PlatformName | Readonly<PlatformName[]>,
-  fileName: string
+  fileName: string,
 ): boolean {
   if (typeof platform === "string") {
     return fileName.endsWith(PLATFORM_EXTENSIONS[platform]);
@@ -305,7 +305,7 @@ export type FindNodeApiModuleOptions = {
  */
 export async function findNodeApiModulePaths(
   options: FindNodeApiModuleOptions,
-  suffix = ""
+  suffix = "",
 ): Promise<string[]> {
   const {
     fromPath,
@@ -338,7 +338,7 @@ export async function findNodeApiModulePaths(
         // Traverse into the child directory
         // Pushing result into a list instead of awaiting immediately to parallelize the search
         pendingResults.push(
-          findNodeApiModulePaths(options, path.join(suffix, dirent.name))
+          findNodeApiModulePaths(options, path.join(suffix, dirent.name)),
         );
       }
     }
@@ -402,16 +402,16 @@ export async function findNodeApiModulePathsByDependency({
           {
             path: dependencyPath,
             modulePaths: absoluteModulePaths.map((p) =>
-              path.relative(dependencyPath, p)
+              path.relative(dependencyPath, p),
             ),
           },
         ] as const;
-      })
+      }),
   );
   // Return an object by dependency name
   return Object.fromEntries(
     // Remove any dependencies without Node-API module paths
-    resultEntries.filter(([, { modulePaths }]) => modulePaths.length > 0)
+    resultEntries.filter(([, { modulePaths }]) => modulePaths.length > 0),
   );
 }
 
@@ -422,16 +422,16 @@ export async function findNodeApiModulePathsByDependency({
 export function determineLibraryBasename(libraryPaths: string[]) {
   assert(
     libraryPaths.length > 0,
-    "Expected at least one library path to determine its basename"
+    "Expected at least one library path to determine its basename",
   );
   const libraryNames = libraryPaths.map((p) =>
     // Strip the "lib" prefix and any file extension
-    path.basename(p, path.extname(p)).replace(/^lib/, "")
+    path.basename(p, path.extname(p)).replace(/^lib/, ""),
   );
   const candidates = new Set<string>(libraryNames);
   assert(
     candidates.size === 1,
-    `Expected all libraries to share name, got: ${[...candidates].join(", ")}`
+    `Expected all libraries to share name, got: ${[...candidates].join(", ")}`,
   );
   const [name] = candidates;
   return name;

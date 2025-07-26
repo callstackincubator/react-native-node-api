@@ -28,7 +28,7 @@ describe("gyp.assertRoot", () => {
         {
           targets: [{ target_name: "", sources: [], extra: "not allowed" }],
         },
-        true
+        true,
       );
     }, /Unexpected property: extra/);
   });

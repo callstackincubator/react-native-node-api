@@ -105,7 +105,7 @@ export function bindingGypToCmakeLists({
         ? [
             `target_compile_definitions(${targetName} PRIVATE ${escapedJoinedDefines})`,
           ]
-        : [])
+        : []),
       // or
       // `set_target_properties(${targetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
     );
@@ -117,7 +117,7 @@ export function bindingGypToCmakeLists({
     "if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)",
     "  # Generate node.lib",
     "  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})",
-    "endif()"
+    "endif()",
   );
 
   return lines.join("\n");

@@ -20,7 +20,7 @@ const clangAstDump = z.object({
           qualType: z.string(),
         })
         .optional(),
-    })
+    }),
   ),
 });
 
@@ -49,7 +49,7 @@ export function getNodeApiHeaderAST(version: NodeApiVersion) {
       encoding: "utf-8",
       // Emitting the AST can produce a lot of output
       maxBuffer: 1024 * 1024 * 10,
-    }
+    },
   );
   const parsed = JSON.parse(output);
   return clangAstDump.parse(parsed);
@@ -86,24 +86,24 @@ export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
       assert(node.type, `Expected type for ${node.name}`);
 
       const match = node.type.qualType.match(
-        /^(?<returnType>[^(]+) \((?<argumentTypes>[^)]+)\)/
+        /^(?<returnType>[^(]+) \((?<argumentTypes>[^)]+)\)/,
       );
       assert(
         match && match.groups,
-        `Failed to parse function type: ${node.type.qualType}`
+        `Failed to parse function type: ${node.type.qualType}`,
       );
       const { returnType, argumentTypes } = match.groups;
       assert(
         returnType,
-        `Failed to get return type from ${node.type.qualType}`
+        `Failed to get return type from ${node.type.qualType}`,
       );
       assert(
         argumentTypes,
-        `Failed to get argument types from ${argumentTypes}`
+        `Failed to get argument types from ${argumentTypes}`,
       );
       assert(
         returnType === "napi_status" || returnType === "void",
-        `Expected return type to be napi_status, got ${returnType}`
+        `Expected return type to be napi_status, got ${returnType}`,
       );
 
       nodeApiFunctions.push({
@@ -128,7 +128,7 @@ export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
   for (const knownSymbol of allSymbols) {
     if (!foundSymbols.has(knownSymbol)) {
       throw new Error(
-        `Missing symbol '${knownSymbol}' in the AST for Node API ${version}`
+        `Missing symbol '${knownSymbol}' in the AST for Node API ${version}`,
       );
     }
   }

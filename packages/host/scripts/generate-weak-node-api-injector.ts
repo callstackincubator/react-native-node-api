@@ -63,7 +63,7 @@ export function generateSource(functions: FunctionDecl[]) {
       ${functions
         .filter(
           ({ kind, name }) =>
-            kind === "engine" || IMPLEMENTED_RUNTIME_FUNCTIONS.includes(name)
+            kind === "engine" || IMPLEMENTED_RUNTIME_FUNCTIONS.includes(name),
         )
         .flatMap(({ name }) => `.${name} = ${name},`)
         .join("\n")}

@@ -1,5 +1,5 @@
 module.exports = {
-  presets: ['module:@react-native/babel-preset'],
+  presets: ["module:@react-native/babel-preset"],
   // plugins: [['module:react-native-node-api/babel-plugin', { stripPathSuffix: true }]],
-  plugins: ['module:react-native-node-api/babel-plugin'],
+  plugins: ["module:react-native-node-api/babel-plugin"],
 };
