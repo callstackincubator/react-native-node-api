@@ -50,13 +50,19 @@ function loadTests({
   });
 
   describeIf(nodeTests, "Node Tests", () => {
-    for (const [suiteName, examples] of Object.entries(nodeTestsSuites)) {
-      describe(suiteName, () => {
-        for (const [exampleName, requireTest] of Object.entries(examples)) {
-          it(exampleName, requireTest);
+    function registerTestSuite(suite: typeof nodeTestsSuites) {
+      for (const [name, suiteOrTest] of Object.entries(suite)) {
+        if (typeof suiteOrTest === "function") {
+          it(name, suiteOrTest);
+        } else {
+          describe(name, () => {
+            registerTestSuite(suiteOrTest);
+          });
         }
-      });
+      }
     }
+
+    registerTestSuite(nodeTestsSuites);
   });
 
   describeIf(ferricExample, "ferric-example", () => {
