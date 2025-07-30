@@ -10,8 +10,8 @@ for (const projectPath of projectPaths) {
   console.log(
     `Running "cmake-rn" in ${path.relative(
       rootPath,
-      projectPath
-    )} to build for React Native`
+      projectPath,
+    )} to build for React Native`,
   );
   spawnSync("cmake-rn", [], { cwd: projectPath, stdio: "inherit" });
 }

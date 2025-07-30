@@ -9,7 +9,7 @@ function readGypTargetNames(gypFilePath: string): string[] {
   const contents = JSON.parse(fs.readFileSync(gypFilePath, "utf-8")) as unknown;
   assert(
     typeof contents === "object" && contents !== null,
-    "Expected gyp file to contain a valid JSON object"
+    "Expected gyp file to contain a valid JSON object",
   );
   assert("targets" in contents, "Expected targets in gyp file");
   const { targets } = contents;
@@ -17,7 +17,7 @@ function readGypTargetNames(gypFilePath: string): string[] {
   return targets.map(({ target_name }) => {
     assert(
       typeof target_name === "string",
-      "Expected target_name to be a string"
+      "Expected target_name to be a string",
     );
     return target_name;
   });
@@ -46,11 +46,11 @@ function testSuiteConfig(suitePath: string): RolldownOptions[] {
           targetNames.map((targetName) => [
             `require(\`./build/\${common.buildType}/${targetName}\`)`,
             `require("./build/Release/${targetName}")`,
-          ])
+          ]),
         ),
         {
           delimiters: ["", ""],
-        }
+        },
       ),
       replacePlugin(
         Object.fromEntries(
@@ -58,11 +58,11 @@ function testSuiteConfig(suitePath: string): RolldownOptions[] {
             // Replace "__require" statement with a regular "require" to allow Metro to resolve it
             `__require("./build/Release/${targetName}")`,
             `require("./build/Release/${targetName}")`,
-          ])
+          ]),
         ),
         {
           delimiters: ["", ""],
-        }
+        },
       ),
       aliasPlugin({
         entries: [
@@ -86,8 +86,8 @@ const suitePaths = fs
   .map((dirent) =>
     path.join(
       path.relative(import.meta.dirname, dirent.parentPath),
-      dirent.name
-    )
+      dirent.name,
+    ),
   );
 
 export default defineConfig(suitePaths.flatMap(testSuiteConfig));

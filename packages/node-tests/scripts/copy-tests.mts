@@ -24,7 +24,7 @@ console.log("Copying files to", TESTS_DIR);
 if (!fs.existsSync(NODE_REPO_DIR)) {
   console.log(
     "Sparse and shallow cloning Node.js repository to",
-    NODE_REPO_DIR
+    NODE_REPO_DIR,
   );
 
   // Init a new git repository
@@ -43,7 +43,7 @@ if (!fs.existsSync(NODE_REPO_DIR)) {
     {
       stdio: "inherit",
       cwd: NODE_REPO_DIR,
-    }
+    },
   );
   // Pull the latest changes from the master branch
   console.log("Pulling latest changes from Node.js repository...");
@@ -61,7 +61,7 @@ for (const src of ALLOW_LIST) {
 
   if (fs.existsSync(destPath)) {
     console.warn(
-      `Destination path ${destPath} already exists - skipping copy of ${src}.`
+      `Destination path ${destPath} already exists - skipping copy of ${src}.`,
     );
     continue;
   }
