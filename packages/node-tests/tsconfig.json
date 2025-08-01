@@ -1,5 +1,11 @@
 {
-  "files": [],
+  "extends": "@tsconfig/node22",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "emitDeclarationOnly": true
+  },
+  "files": ["rolldown.config.mts"],
   "references": [
     { "path": "./tsconfig.common.json" },
     { "path": "./tsconfig.node-scripts.json" }

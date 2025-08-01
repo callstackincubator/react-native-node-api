@@ -1,5 +1,9 @@
 {
-  "files": [],
+  "extends": "@tsconfig/node22",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "files": ["prettier.config.mjs", "eslint.config.js"],
   "references": [
     { "path": "./packages/host/tsconfig.json" },
     { "path": "./packages/gyp-to-cmake/tsconfig.json" },
