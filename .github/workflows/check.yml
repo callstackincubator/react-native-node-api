@@ -133,9 +133,9 @@ jobs:
       - name: Build weak-node-api for all architectures
         run: npm run build-weak-node-api -- --android
         working-directory: packages/host
-      - name: Build ferric-example for all architectures
+      - name: Build lib_in_rust for android architectures
         run: npm run build -- --android
-        working-directory: packages/ferric-example
+        working-directory: apps/test-app/lib_in_rust
       - name: Run tests (Android)
         timeout-minutes: 75
         uses: reactivecircus/android-emulator-runner@v2

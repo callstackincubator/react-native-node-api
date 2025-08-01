@@ -1,5 +1,5 @@
 [package]
-name = "ferric-example"
+name = "lib_in_rust"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
@@ -23,3 +23,5 @@ napi-build = "2"
 [profile.release]
 lto = true
 codegen-units = 1
+strip = "symbols"
+opt-level = "z"

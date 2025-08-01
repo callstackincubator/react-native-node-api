@@ -1,0 +1,8 @@
+target
+Cargo.lock
+
+*.xcframework/
+*.apple.node/
+*.android.node/
+
+dist
