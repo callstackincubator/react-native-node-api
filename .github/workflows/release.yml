@@ -17,6 +17,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: "latest"
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: lts/jod
@@ -30,13 +35,13 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npm run release
+          publish: pnpm release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

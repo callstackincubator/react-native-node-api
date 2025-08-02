@@ -11,3 +11,5 @@ packages/node-addon-examples/examples
 packages/node-tests/node
 packages/node-tests/tests
 packages/node-tests/*.generated.js
+
+pnpm-lock.yaml
