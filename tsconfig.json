@@ -1,7 +1,8 @@
 {
   "extends": "@tsconfig/node22",
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "allowJs": true
   },
   "files": ["prettier.config.mjs", "eslint.config.js"],
   "references": [
