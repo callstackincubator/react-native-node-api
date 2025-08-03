@@ -99,6 +99,6 @@ export function filterTargetsByPlatform(
   } else if (platform === "apple") {
     return [...targets].filter(isAppleTarget);
   } else {
-    throw new Error(`Unexpected platform ${platform}`);
+    throw new Error(`Unexpected platform ${platform as string}`);
   }
 }

@@ -24,10 +24,7 @@ export type PathSuffixChoice = (typeof PATH_SUFFIX_CHOICES)[number];
 export function assertPathSuffix(
   value: unknown,
 ): asserts value is PathSuffixChoice {
-  assert(
-    typeof value === "string",
-    `Expected a string, got ${typeof value} (${value})`,
-  );
+  assert(typeof value === "string", `Expected a string, got ${typeof value}`);
   assert(
     (PATH_SUFFIX_CHOICES as readonly string[]).includes(value),
     `Expected one of ${PATH_SUFFIX_CHOICES.join(", ")}`,
@@ -259,17 +256,15 @@ export function findPackageDependencyPaths(
   const { dependencies = {} } = readPackageSync({ cwd: packageRoot });
 
   return Object.fromEntries(
-    Object.keys(dependencies)
-      .map((dependencyName) => {
-        const resolvedDependencyRoot = resolvePackageRoot(
-          requireFromPackageRoot,
-          dependencyName,
-        );
-        return resolvedDependencyRoot
-          ? [dependencyName, resolvedDependencyRoot]
-          : undefined;
-      })
-      .filter((item) => typeof item !== "undefined"),
+    Object.keys(dependencies).flatMap((dependencyName) => {
+      const resolvedDependencyRoot = resolvePackageRoot(
+        requireFromPackageRoot,
+        dependencyName,
+      );
+      return resolvedDependencyRoot
+        ? [[dependencyName, resolvedDependencyRoot]]
+        : [];
+    }),
   );
 }
 

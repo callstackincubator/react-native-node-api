@@ -152,6 +152,6 @@ export function getLinkedModuleOutputPath(
   } else if (platform === "apple") {
     return path.join(getAutolinkPath(platform), libraryName + ".xcframework");
   } else {
-    throw new Error(`Unsupported platform: ${platform}`);
+    throw new Error(`Unsupported platform: ${platform as string}`);
   }
 }

@@ -38,7 +38,7 @@ function getLinker(platform: PlatformName): ModuleLinker {
   } else if (platform === "apple") {
     return linkXcframework;
   } else {
-    throw new Error(`Unknown platform: ${platform}`);
+    throw new Error(`Unknown platform: ${platform as string}`);
   }
 }
 
@@ -48,7 +48,7 @@ function getPlatformDisplayName(platform: PlatformName) {
   } else if (platform === "apple") {
     return "Apple";
   } else {
-    throw new Error(`Unknown platform: ${platform}`);
+    throw new Error(`Unknown platform: ${platform as string}`);
   }
 }
 

@@ -399,7 +399,7 @@ describe("findNodeApiModulePaths", () => {
 });
 
 describe("findNodeApiModulePathsByDependency", () => {
-  it.only("should find Node-API paths by dependency (excluding certain packages)", async (context) => {
+  it("should find Node-API paths by dependency (excluding certain packages)", async (context) => {
     const packagesNames = ["lib-a", "lib-b", "lib-c"];
     const tempDir = setupTempDirectory(context, {
       "app/package.json": JSON.stringify({
@@ -489,16 +489,13 @@ describe("findNodeAddonForBindings()", () => {
   };
 
   for (const [name, relPath] of Object.entries(expectedPaths)) {
-    it(`should look for addons in common paths (${name} in "${relPath}")`, async (context) => {
+    it(`should look for addons in common paths (${name} in "${relPath}")`, (context) => {
       // Arrange
       const tempDirectoryPath = setupTempDirectory(context, {
         [relPath]: "// This is supposed to be a binary file",
       });
       // Act
-      const actualPath = await findNodeAddonForBindings(
-        name,
-        tempDirectoryPath,
-      );
+      const actualPath = findNodeAddonForBindings(name, tempDirectoryPath);
       // Assert
       const expectedAbsPath = path.join(tempDirectoryPath, relPath);
       assert.equal(actualPath, expectedAbsPath);

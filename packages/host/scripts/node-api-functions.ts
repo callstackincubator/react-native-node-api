@@ -51,7 +51,7 @@ export function getNodeApiHeaderAST(version: NodeApiVersion) {
       maxBuffer: 1024 * 1024 * 10,
     },
   );
-  const parsed = JSON.parse(output);
+  const parsed = JSON.parse(output) as unknown;
   return clangAstDump.parse(parsed);
 }
 

@@ -37,7 +37,7 @@ export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
     assert(fs.existsSync(libraryPath), `Expected library at ${libraryPath}`);
     return libraryPath;
   } else {
-    throw new Error(`Unexpected triplet: ${triplet}`);
+    throw new Error(`Unexpected triplet: ${triplet as string}`);
   }
 }
 

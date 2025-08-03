@@ -10,7 +10,7 @@ import { setupTempDirectory } from "../test-utils.js";
 type TestTransformationOptions = {
   files: Record<string, string>;
   inputFilePath: string;
-  assertion(code: string): void;
+  assertion: (code: string) => void;
   options?: PluginOptions;
 };
 

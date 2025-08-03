@@ -223,6 +223,6 @@ export function getTargetEnvironmentVariables({
       ].join(String.fromCharCode(0x1f)),
     };
   } else {
-    throw new Error(`Unexpected target: ${target}`);
+    throw new Error(`Unexpected target: ${target as string}`);
   }
 }

@@ -1,5 +1,3 @@
 import native from "./NativeNodeApiHost";
 
-const { requireNodeAddon } = native;
-
-export { requireNodeAddon };
+export const requireNodeAddon = native.requireNodeAddon.bind(native);

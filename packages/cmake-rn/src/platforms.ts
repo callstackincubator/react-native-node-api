@@ -18,6 +18,11 @@ export function findPlatformForTarget(target: unknown) {
   const platform = Object.values(platforms).find((platform) =>
     platformHasTarget(platform, target),
   );
-  assert(platform, `Unable to determine platform from target: ${target}`);
+  assert(
+    platform,
+    `Unable to determine platform from target: ${
+      typeof target === "string" ? target : JSON.stringify(target)
+    }`,
+  );
   return platform;
 }

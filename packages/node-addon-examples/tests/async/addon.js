@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable no-undef */
 const assert = require("assert");
 const test_async = require("bindings")("addon.node");
 

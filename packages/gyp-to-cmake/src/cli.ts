@@ -78,6 +78,6 @@ export const program = new Command("gyp-to-cmake")
     } else if (stat.isDirectory()) {
       transformBindingGypsRecursively(targetPath, options);
     } else {
-      throw new Error(`Expected either a file or a directory: ${path}`);
+      throw new Error(`Expected either a file or a directory: ${targetPath}`);
     }
   });
