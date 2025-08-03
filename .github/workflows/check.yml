@@ -26,6 +26,8 @@ jobs:
           node-version: lts/jod
       - run: npm ci
       - run: npm run lint
+        env:
+          DEBUG: eslint:eslint
       - run: npm run prettier:check
   unit-tests:
     strategy:
