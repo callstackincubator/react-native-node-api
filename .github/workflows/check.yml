@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: lts/jod
       - run: npm ci
+      - run: npm run build
       - run: npm run lint
         env:
           DEBUG: eslint:eslint
