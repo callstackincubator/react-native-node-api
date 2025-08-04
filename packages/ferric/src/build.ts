@@ -82,8 +82,13 @@ function getDefaultTargets() {
 const targetOption = new Option("--target <target...>", "Target triple")
   .choices(ALL_TARGETS)
   .default(getDefaultTargets());
-const appleTarget = new Option("--apple", "Use all Apple targets");
-const androidTarget = new Option("--android", "Use all Android targets");
+const appleTargetOption = new Option("--apple", "Use all Apple targets");
+const androidTargetOption = new Option("--android", "Use all Android targets");
+const noDefaultTargetsOption = new Option(
+  "--no-default-targets",
+  "Skip default targets (useful if all you want is types)",
+);
+
 const ndkVersionOption = new Option(
   "--ndk-version <version>",
   "The NDK version to use for Android builds",
@@ -107,8 +112,9 @@ const configurationOption = new Option(
 export const buildCommand = new Command("build")
   .description("Build Rust Node-API module")
   .addOption(targetOption)
-  .addOption(appleTarget)
-  .addOption(androidTarget)
+  .addOption(appleTargetOption)
+  .addOption(androidTargetOption)
+  .addOption(noDefaultTargetsOption)
   .addOption(ndkVersionOption)
   .addOption(outputPathOption)
   .addOption(configurationOption)
@@ -122,6 +128,7 @@ export const buildCommand = new Command("build")
       output: outputPath,
       configuration,
       xcframeworkExtension,
+      defaultTargets,
     }) => {
       try {
         const targets = new Set([...targetArg]);
@@ -136,7 +143,7 @@ export const buildCommand = new Command("build")
           }
         }
 
-        if (targets.size === 0) {
+        if (targets.size === 0 && defaultTargets) {
           if (isAndroidSupported()) {
             if (process.arch === "arm64") {
               targets.add("aarch64-linux-android");
