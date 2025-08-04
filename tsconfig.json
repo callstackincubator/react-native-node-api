@@ -4,7 +4,7 @@
     "noEmit": true,
     "allowJs": true
   },
-  "files": ["prettier.config.mjs", "eslint.config.js"],
+  "files": ["prettier.config.js", "eslint.config.js"],
   "references": [
     { "path": "./packages/host/tsconfig.json" },
     { "path": "./packages/gyp-to-cmake/tsconfig.json" },
