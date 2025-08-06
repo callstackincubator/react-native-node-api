@@ -8,7 +8,6 @@ import { spawn, SpawnFailure } from "bufout";
 import { oraPromise } from "ora";
 import chalk from "chalk";
 
-import { getWeakNodeApiVariables } from "./weak-node-api.js";
 import {
   platforms,
   allTargets,
@@ -17,7 +16,6 @@ import {
 } from "./platforms.js";
 import { toDeclarationArguments } from "./cmake.js";
 import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
-import { isSupportedTriplet } from "react-native-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -261,18 +259,7 @@ async function configureProject<T extends string>(
   options: BaseOpts,
 ) {
   const { target, buildPath, outputPath } = context;
-  const { verbose, source, weakNodeApiLinkage } = options;
-
-  const nodeApiVariables =
-    weakNodeApiLinkage && isSupportedTriplet(target)
-      ? getWeakNodeApiVariables(target)
-      : // TODO: Make this a part of the platform definition
-        {};
-
-  const declarations = {
-    ...nodeApiVariables,
-    CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
-  };
+  const { verbose, source } = options;
 
   await spawn(
     "cmake",
@@ -282,7 +269,9 @@ async function configureProject<T extends string>(
       "-B",
       buildPath,
       ...platform.configureArgs(context, options),
-      ...toDeclarationArguments(declarations),
+      ...toDeclarationArguments({
+        CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
+      }),
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",

@@ -10,7 +10,7 @@ import {
 } from "react-native-node-api";
 
 import { ANDROID_ARCHITECTURES } from "./platforms/android.js";
-import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
+import { getNodeApiIncludeDirectories } from "./headers.js";
 
 export function toCmakePath(input: string) {
   return input.split(path.win32.sep).join(path.posix.sep);
@@ -42,15 +42,9 @@ export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
 }
 
 export function getWeakNodeApiVariables(triplet: SupportedTriplet) {
-  const includePaths = [getNodeApiHeadersPath(), getNodeAddonHeadersPath()];
-  for (const includePath of includePaths) {
-    assert(
-      !includePath.includes(";"),
-      `Include path with a ';' is not supported: ${includePath}`,
-    );
-  }
   return {
-    CMAKE_JS_INC: includePaths.join(";"),
+    // TODO: Make these names less "cmake-js" specific with an option to use the CMAKE_JS prefix
+    CMAKE_JS_INC: getNodeApiIncludeDirectories(),
     CMAKE_JS_LIB: getWeakNodeApiPath(triplet),
   };
 }

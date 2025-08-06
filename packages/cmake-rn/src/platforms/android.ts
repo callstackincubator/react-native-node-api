@@ -12,6 +12,8 @@ import {
 import type { Platform } from "./types.js";
 import { oraPromise } from "ora";
 import chalk from "chalk";
+import { getWeakNodeApiVariables } from "../weak-node-api.js";
+import { toDeclarationArguments } from "../cmake.js";
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
@@ -61,7 +63,10 @@ export const platform: Platform<Target[], AndroidOpts> = {
       .addOption(ndkVersionOption)
       .addOption(androidSdkVersionOption);
   },
-  configureArgs({ target }, { ndkVersion, androidSdkVersion }) {
+  configureArgs(
+    { target },
+    { ndkVersion, androidSdkVersion, weakNodeApiLinkage },
+  ) {
     const { ANDROID_HOME } = process.env;
     assert(
       typeof ANDROID_HOME === "string",
@@ -82,38 +87,26 @@ export const platform: Platform<Target[], AndroidOpts> = {
       ndkPath,
       "build/cmake/android.toolchain.cmake",
     );
-    const architecture = ANDROID_ARCHITECTURES[target];
 
     return [
       "-G",
       "Ninja",
       "--toolchain",
       toolchainPath,
-      "-D",
-      "CMAKE_SYSTEM_NAME=Android",
-      // "-D",
-      // `CPACK_SYSTEM_NAME=Android-${architecture}`,
-      // "-D",
-      // `CMAKE_INSTALL_PREFIX=${installPath}`,
-      // "-D",
-      // `CMAKE_BUILD_TYPE=${configuration}`,
-      "-D",
-      "CMAKE_MAKE_PROGRAM=ninja",
-      // "-D",
-      // "CMAKE_C_COMPILER_LAUNCHER=ccache",
-      // "-D",
-      // "CMAKE_CXX_COMPILER_LAUNCHER=ccache",
-      "-D",
-      `ANDROID_NDK=${ndkPath}`,
-      "-D",
-      `ANDROID_ABI=${architecture}`,
-      "-D",
-      "ANDROID_TOOLCHAIN=clang",
-      "-D",
-      `ANDROID_PLATFORM=${androidSdkVersion}`,
-      "-D",
-      // TODO: Make this configurable
-      "ANDROID_STL=c++_shared",
+      ...toDeclarationArguments({
+        CMAKE_SYSTEM_NAME: "Android",
+        CMAKE_MAKE_PROGRAM: "ninja",
+        // "CMAKE_BUILD_TYPE": configuration,
+        // "CMAKE_C_COMPILER_LAUNCHER": "ccache",
+        // "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        ANDROID_NDK: ndkPath,
+        ANDROID_ABI: ANDROID_ARCHITECTURES[target],
+        ANDROID_TOOLCHAIN: "clang",
+        ANDROID_PLATFORM: androidSdkVersion,
+        // TODO: Make this configurable
+        ANDROID_STL: "c++_shared",
+        ...(weakNodeApiLinkage ? getWeakNodeApiVariables(target) : {}),
+      }),
     ];
   },
   buildArgs() {

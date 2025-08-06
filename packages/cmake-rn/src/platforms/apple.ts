@@ -13,6 +13,8 @@ import {
 
 import type { Platform } from "./types.js";
 import chalk from "chalk";
+import { toDeclarationArguments } from "../cmake.js";
+import { getWeakNodeApiVariables } from "../weak-node-api.js";
 
 type XcodeSDKName =
   | "iphoneos"
@@ -114,16 +116,16 @@ export const platform: Platform<Target[], AppleOpts> = {
   amendCommand(command) {
     return command.addOption(xcframeworkExtensionOption);
   },
-  configureArgs({ target }) {
+  configureArgs({ target }, { weakNodeApiLinkage }) {
     return [
       "-G",
       "Xcode",
-      "-D",
-      `CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAMES[target]}`,
-      "-D",
-      `CMAKE_OSX_SYSROOT=${XCODE_SDK_NAMES[target]}`,
-      "-D",
-      `CMAKE_OSX_ARCHITECTURES=${APPLE_ARCHITECTURES[target]}`,
+      ...toDeclarationArguments({
+        CMAKE_SYSTEM_NAME: CMAKE_SYSTEM_NAMES[target],
+        CMAKE_OSX_SYSROOT: XCODE_SDK_NAMES[target],
+        CMAKE_OSX_ARCHITECTURES: APPLE_ARCHITECTURES[target],
+        ...(weakNodeApiLinkage ? getWeakNodeApiVariables(target) : {}),
+      }),
     ];
   },
   buildArgs() {
