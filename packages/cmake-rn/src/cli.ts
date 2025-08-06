@@ -15,6 +15,7 @@ import {
   findPlatformForTarget,
   platformHasTarget,
 } from "./platforms.js";
+import { toDeclarationArguments } from "./cmake.js";
 import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
 import { isSupportedTriplet } from "react-native-node-api";
 
@@ -312,13 +313,6 @@ async function buildProject<T extends string>(
       outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,
     },
   );
-}
-
-function toDeclarationArguments(declarations: Record<string, string>) {
-  return Object.entries(declarations).flatMap(([key, value]) => [
-    "-D",
-    `${key}=${value}`,
-  ]);
 }
 
 export { program };
