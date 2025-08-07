@@ -6,7 +6,8 @@ import { Option } from "@commander-js/extra-typings";
 import {
   createAndroidLibsDirectory,
   determineAndroidLibsFilename,
-  AndroidTriplet as Target,
+  AndroidTriplet,
+  isAndroidTriplet,
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
@@ -14,6 +15,8 @@ import { oraPromise } from "ora";
 import chalk from "chalk";
 import { getWeakNodeApiVariables } from "../weak-node-api.js";
 import { toDeclarationArguments } from "../cmake.js";
+
+type Target = `${AndroidTriplet}-reactnative`;
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
@@ -26,7 +29,7 @@ export const ANDROID_ARCHITECTURES = {
   "aarch64-linux-android": "arm64-v8a",
   "i686-linux-android": "x86",
   "x86_64-linux-android": "x86_64",
-} satisfies Record<Target, AndroidArchitecture>;
+} satisfies Record<AndroidTriplet, AndroidArchitecture>;
 
 const ndkVersionOption = new Option(
   "--ndk-version <version>",
@@ -40,20 +43,26 @@ const androidSdkVersionOption = new Option(
 
 type AndroidOpts = { ndkVersion: string; androidSdkVersion: string };
 
+function tripletFromTarget(target: Target): AndroidTriplet {
+  const result = target.replaceAll(/-reactnative$/g, "") as AndroidTriplet;
+  assert(isAndroidTriplet(result), `Invalid Android triplet: ${target}`);
+  return result;
+}
+
 export const platform: Platform<Target[], AndroidOpts> = {
   id: "android",
   name: "Android",
   targets: [
-    "aarch64-linux-android",
-    "armv7a-linux-androideabi",
-    "i686-linux-android",
-    "x86_64-linux-android",
+    "aarch64-linux-android-reactnative",
+    "armv7a-linux-androideabi-reactnative",
+    "i686-linux-android-reactnative",
+    "x86_64-linux-android-reactnative",
   ],
   defaultTargets() {
     if (process.arch === "arm64") {
-      return ["aarch64-linux-android"];
+      return ["aarch64-linux-android-reactnative"];
     } else if (process.arch === "x64") {
-      return ["x86_64-linux-android"];
+      return ["x86_64-linux-android-reactnative"];
     } else {
       return [];
     }
@@ -88,6 +97,8 @@ export const platform: Platform<Target[], AndroidOpts> = {
       "build/cmake/android.toolchain.cmake",
     );
 
+    const triplet = tripletFromTarget(target);
+
     return [
       "-G",
       "Ninja",
@@ -100,12 +111,12 @@ export const platform: Platform<Target[], AndroidOpts> = {
         // "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         // "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         ANDROID_NDK: ndkPath,
-        ANDROID_ABI: ANDROID_ARCHITECTURES[target],
+        ANDROID_ABI: ANDROID_ARCHITECTURES[triplet],
         ANDROID_TOOLCHAIN: "clang",
         ANDROID_PLATFORM: androidSdkVersion,
         // TODO: Make this configurable
         ANDROID_STL: "c++_shared",
-        ...(weakNodeApiLinkage ? getWeakNodeApiVariables(target) : {}),
+        ...(weakNodeApiLinkage ? getWeakNodeApiVariables(triplet) : {}),
       }),
     ];
   },
@@ -137,10 +148,11 @@ export const platform: Platform<Target[], AndroidOpts> = {
             )
             .map((dirent) => path.join(dirent.parentPath, dirent.name));
           assert.equal(result.length, 1, "Expected exactly one library file");
-          return [target, result[0]] as const;
+          const triplet = tripletFromTarget(target);
+          return [triplet, result[0]] as const;
         }),
       ),
-    ) as Record<Target, string>;
+    ) as Record<AndroidTriplet, string>;
     const androidLibsFilename = determineAndroidLibsFilename(
       Object.values(libraryPathByTriplet),
     );

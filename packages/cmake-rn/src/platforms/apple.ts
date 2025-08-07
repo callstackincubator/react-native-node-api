@@ -5,16 +5,19 @@ import fs from "node:fs";
 import { Option } from "@commander-js/extra-typings";
 import { oraPromise } from "ora";
 import {
-  AppleTriplet as Target,
+  AppleTriplet,
   createAppleFramework,
   createXCframework,
   determineXCFrameworkFilename,
+  isAppleTriplet,
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
 import chalk from "chalk";
 import { toDeclarationArguments } from "../cmake.js";
 import { getWeakNodeApiVariables } from "../weak-node-api.js";
+
+type Target = `${AppleTriplet}-reactnative`;
 
 type XcodeSDKName =
   | "iphoneos"
@@ -37,7 +40,7 @@ const XCODE_SDK_NAMES = {
   "arm64-apple-tvos-sim": "appletvsimulator",
   "arm64-apple-visionos": "xros",
   "arm64-apple-visionos-sim": "xrsimulator",
-} satisfies Record<Target, XcodeSDKName>;
+} satisfies Record<AppleTriplet, XcodeSDKName>;
 
 type CMakeSystemName = "Darwin" | "iOS" | "tvOS" | "watchOS" | "visionOS";
 
@@ -52,7 +55,7 @@ const CMAKE_SYSTEM_NAMES = {
   "arm64-apple-tvos-sim": "tvOS",
   "arm64-apple-visionos": "visionOS",
   "arm64-apple-visionos-sim": "visionOS",
-} satisfies Record<Target, CMakeSystemName>;
+} satisfies Record<AppleTriplet, CMakeSystemName>;
 
 type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
 
@@ -67,7 +70,13 @@ export const APPLE_ARCHITECTURES = {
   "arm64-apple-tvos-sim": "arm64",
   "arm64-apple-visionos": "arm64",
   "arm64-apple-visionos-sim": "arm64",
-} satisfies Record<Target, AppleArchitecture>;
+} satisfies Record<AppleTriplet, AppleArchitecture>;
+
+function tripletFromTarget(target: Target): AppleTriplet {
+  const result = target.replaceAll(/-reactnative$/g, "") as AppleTriplet;
+  assert(isAppleTriplet(result), `Invalid Apple triplet: ${target}`);
+  return result;
+}
 
 export function createPlistContent(values: Record<string, string>) {
   return [
@@ -102,29 +111,30 @@ export const platform: Platform<Target[], AppleOpts> = {
   id: "apple",
   name: "Apple",
   targets: [
-    "arm64;x86_64-apple-darwin",
-    "arm64-apple-ios",
-    "arm64-apple-ios-sim",
-    "arm64-apple-tvos",
-    "arm64-apple-tvos-sim",
-    "arm64-apple-visionos",
-    "arm64-apple-visionos-sim",
+    "arm64;x86_64-apple-darwin-reactnative",
+    "arm64-apple-ios-reactnative",
+    "arm64-apple-ios-sim-reactnative",
+    "arm64-apple-tvos-reactnative",
+    "arm64-apple-tvos-sim-reactnative",
+    "arm64-apple-visionos-reactnative",
+    "arm64-apple-visionos-sim-reactnative",
   ],
   defaultTargets() {
-    return process.arch === "arm64" ? ["arm64-apple-ios-sim"] : [];
+    return process.arch === "arm64" ? ["arm64-apple-ios-sim-reactnative"] : [];
   },
   amendCommand(command) {
     return command.addOption(xcframeworkExtensionOption);
   },
   configureArgs({ target }, { weakNodeApiLinkage }) {
+    const triplet = tripletFromTarget(target);
     return [
       "-G",
       "Xcode",
       ...toDeclarationArguments({
-        CMAKE_SYSTEM_NAME: CMAKE_SYSTEM_NAMES[target],
-        CMAKE_OSX_SYSROOT: XCODE_SDK_NAMES[target],
-        CMAKE_OSX_ARCHITECTURES: APPLE_ARCHITECTURES[target],
-        ...(weakNodeApiLinkage ? getWeakNodeApiVariables(target) : {}),
+        CMAKE_SYSTEM_NAME: CMAKE_SYSTEM_NAMES[triplet],
+        CMAKE_OSX_SYSROOT: XCODE_SDK_NAMES[triplet],
+        CMAKE_OSX_ARCHITECTURES: APPLE_ARCHITECTURES[triplet],
+        ...(weakNodeApiLinkage ? getWeakNodeApiVariables(triplet) : {}),
       }),
     ];
   },

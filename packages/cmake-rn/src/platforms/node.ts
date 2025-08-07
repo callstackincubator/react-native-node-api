@@ -7,16 +7,25 @@ import chalk from "chalk";
 import {
   createNodeLibsDirectory,
   determineNodeLibsFilename,
-  NodeTriplet as Target,
+  isNodeTriplet,
+  NodeTriplet,
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
 import { toDeclarationArguments } from "../cmake.js";
 import { getNodeApiIncludeDirectories } from "../headers.js";
 
+type Target = `${NodeTriplet}-node`;
+
 type NodeOpts = Record<string, unknown>;
 
-function getLinkerFlags(target: Target): string {
+function tripletFromTarget(target: Target): NodeTriplet {
+  const result = target.replaceAll(/-node$/g, "") as NodeTriplet;
+  assert(isNodeTriplet(result), `Invalid Node triplet: ${target}`);
+  return result;
+}
+
+function getLinkerFlags(target: NodeTriplet): string {
   if (
     target === "arm64-apple-darwin" ||
     target === "x86_64-apple-darwin" ||
@@ -38,16 +47,16 @@ export const platform: Platform<Target[], NodeOpts> = {
   id: "nodejs",
   name: "Node.js",
   targets: [
-    "arm64-apple-darwin",
-    "x86_64-apple-darwin",
-    "arm64;x86_64-apple-darwin",
+    "arm64-apple-darwin-node",
+    "x86_64-apple-darwin-node",
+    "arm64;x86_64-apple-darwin-node",
   ],
   defaultTargets() {
     if (process.platform === "darwin") {
       if (process.arch === "arm64") {
-        return ["arm64-apple-darwin"];
+        return ["arm64-apple-darwin-node"];
       } else if (process.arch === "x64") {
-        return ["x86_64-apple-darwin"];
+        return ["x86_64-apple-darwin-node"];
       }
     }
     return [];
@@ -56,17 +65,19 @@ export const platform: Platform<Target[], NodeOpts> = {
     return command;
   },
   configureArgs({ target }) {
+    const triplet = tripletFromTarget(target);
     return [
       "-G",
       "Ninja",
       ...toDeclarationArguments({
         // TODO: Make this names less "cmake-js" specific with an option to use the CMAKE_JS prefix
         CMAKE_JS_INC: getNodeApiIncludeDirectories(),
-        CMAKE_SHARED_LINKER_FLAGS: getLinkerFlags(target),
+        CMAKE_SHARED_LINKER_FLAGS: getLinkerFlags(triplet),
       }),
     ];
   },
   buildArgs() {
+    // TODO: Include the arch in the build command
     return [];
   },
   isSupportedByHost() {
@@ -96,10 +107,11 @@ export const platform: Platform<Target[], NodeOpts> = {
             )
             .map((dirent) => path.join(dirent.parentPath, dirent.name));
           assert.equal(result.length, 1, "Expected exactly one library file");
-          return [target, result[0]] as const;
+          const triplet = tripletFromTarget(target);
+          return [triplet, result[0]] as const;
         }),
       ),
-    ) as Record<Target, string>;
+    ) as Record<NodeTriplet, string>;
     const nodeLibsFilename = determineNodeLibsFilename(
       Object.values(libraryPathByTriplet),
     );
