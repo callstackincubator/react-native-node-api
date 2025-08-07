@@ -15,6 +15,14 @@ import type { Platform } from "./types.js";
 import { toDeclarationArguments } from "../cmake.js";
 import { getNodeApiIncludeDirectories } from "../headers.js";
 
+type Architecture = "arm64" | "x86_64" | "arm64;x86_64";
+
+const ARCHITECTURES = {
+  "arm64-apple-darwin": "arm64",
+  "x86_64-apple-darwin": "x86_64",
+  "arm64;x86_64-apple-darwin": "arm64;x86_64",
+} satisfies Record<NodeTriplet, Architecture>;
+
 type Target = `${NodeTriplet}-node`;
 
 type NodeOpts = Record<string, unknown>;
@@ -51,6 +59,7 @@ export const platform: Platform<Target[], NodeOpts> = {
     "x86_64-apple-darwin-node",
     "arm64;x86_64-apple-darwin-node",
   ],
+  redundantTargets: ["arm64-apple-darwin-node", "x86_64-apple-darwin-node"],
   defaultTargets() {
     if (process.platform === "darwin") {
       if (process.arch === "arm64") {
@@ -64,12 +73,14 @@ export const platform: Platform<Target[], NodeOpts> = {
   amendCommand(command) {
     return command;
   },
-  configureArgs({ target }) {
+  configureArgs({ target }, { configuration }) {
     const triplet = tripletFromTarget(target);
     return [
       "-G",
       "Ninja",
       ...toDeclarationArguments({
+        CMAKE_BUILD_TYPE: configuration,
+        CMAKE_OSX_ARCHITECTURES: ARCHITECTURES[triplet],
         // TODO: Make this names less "cmake-js" specific with an option to use the CMAKE_JS prefix
         CMAKE_JS_INC: getNodeApiIncludeDirectories(),
         CMAKE_SHARED_LINKER_FLAGS: getLinkerFlags(triplet),

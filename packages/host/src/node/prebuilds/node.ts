@@ -7,10 +7,10 @@ import { NodeTriplet } from "./triplets.js";
 
 type OSArchName =
   | `${typeof process.platform}-${typeof process.arch}`
-  | "darwin-arm64;x86_64";
+  | "darwin-arm64;x64";
 
 const DIRECTORY_NAMES_PER_TARGET = {
-  "arm64;x86_64-apple-darwin": "darwin-arm64;x86_64",
+  "arm64;x86_64-apple-darwin": "darwin-arm64;x64",
   "arm64-apple-darwin": "darwin-arm64",
   "x86_64-apple-darwin": "darwin-x64",
 } satisfies Record<NodeTriplet, OSArchName>;

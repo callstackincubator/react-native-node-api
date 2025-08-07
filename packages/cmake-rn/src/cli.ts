@@ -117,6 +117,10 @@ program = program.action(
         // Forcing the types a bit here, since the platform id option is dynamically added
         if ((baseOptions as Record<string, unknown>)[platform.id]) {
           for (const target of platform.targets) {
+            // Skip redundant targets
+            if (platform.redundantTargets?.includes(target)) {
+              continue;
+            }
             targets.add(target);
           }
         }
