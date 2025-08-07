@@ -241,7 +241,6 @@ function getTargetsSummary(
 }
 
 function getBuildPath({ build, source }: BaseOpts) {
-  // TODO: Add configuration (debug vs release)
   return path.resolve(process.cwd(), build || path.join(source, "build"));
 }
 
@@ -250,6 +249,7 @@ function getBuildPath({ build, source }: BaseOpts) {
  */
 function getTargetBuildPath(buildPath: string, target: unknown) {
   assert(typeof target === "string", "Expected target to be a string");
+  // TODO: Add configuration (debug vs release) for platforms using single-config CMake generators
   return path.join(buildPath, target.replace(/;/g, "_"));
 }
 
@@ -286,17 +286,10 @@ async function buildProject<T extends string>(
   options: BaseOpts,
 ) {
   const { target, buildPath } = context;
-  const { verbose, configuration } = options;
+  const { verbose } = options;
   await spawn(
     "cmake",
-    [
-      "--build",
-      buildPath,
-      "--config",
-      configuration,
-      "--",
-      ...platform.buildArgs(context, options),
-    ],
+    ["--build", buildPath, ...platform.buildArgs(context, options)],
     {
       outputMode: verbose ? "inherit" : "buffered",
       outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,

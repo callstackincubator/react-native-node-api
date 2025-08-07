@@ -74,7 +74,7 @@ export const platform: Platform<Target[], AndroidOpts> = {
   },
   configureArgs(
     { target },
-    { ndkVersion, androidSdkVersion, weakNodeApiLinkage },
+    { configuration, ndkVersion, androidSdkVersion, weakNodeApiLinkage },
   ) {
     const { ANDROID_HOME } = process.env;
     assert(
@@ -107,7 +107,7 @@ export const platform: Platform<Target[], AndroidOpts> = {
       ...toDeclarationArguments({
         CMAKE_SYSTEM_NAME: "Android",
         CMAKE_MAKE_PROGRAM: "ninja",
-        // "CMAKE_BUILD_TYPE": configuration,
+        CMAKE_BUILD_TYPE: configuration,
         // "CMAKE_C_COMPILER_LAUNCHER": "ccache",
         // "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
         ANDROID_NDK: ndkPath,
