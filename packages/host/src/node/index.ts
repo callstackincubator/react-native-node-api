@@ -32,4 +32,4 @@ export {
 
 export { determineLibraryBasename, prettyPath } from "./path-utils.js";
 
-export { weakNodeApiPath } from "./weak-node-api.js";
+export { weakNodeApiPath, getWeakNodeApiPath } from "./weak-node-api.js";
