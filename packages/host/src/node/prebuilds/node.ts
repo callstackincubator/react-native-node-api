@@ -50,12 +50,11 @@ export async function createNodeLibsDirectory({
     const osArch = DIRECTORY_NAMES_PER_TARGET[triplet];
     const osArchOutputPath = path.join(outputPath, osArch);
     await fs.promises.mkdir(osArchOutputPath, { recursive: true });
-    // Strip the ".so" extension from the library name
-    const libraryName = path.basename(libraryPath, ".so");
-    const nodeSuffixedName =
-      path.extname(libraryName) === ".node"
-        ? libraryName
-        : `${libraryName}.node`;
+    // Strip any extension from the library name and rename it to .node
+    const libraryName = path
+      .basename(libraryPath)
+      .replaceAll(/\.so$|\.dylib$|\.node$/g, "");
+    const nodeSuffixedName = `${libraryName}.node`;
     const libraryOutputPath = path.join(osArchOutputPath, nodeSuffixedName);
     await fs.promises.copyFile(libraryPath, libraryOutputPath);
   }

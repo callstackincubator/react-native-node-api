@@ -90,7 +90,9 @@ export const platform: Platform<Target[], NodeOpts> = {
             .filter(
               (dirent) =>
                 dirent.isFile() &&
-                (dirent.name.endsWith(".so") || dirent.name.endsWith(".node")),
+                (dirent.name.endsWith(".so") ||
+                  dirent.name.endsWith(".dylib") ||
+                  dirent.name.endsWith(".node")),
             )
             .map((dirent) => path.join(dirent.parentPath, dirent.name));
           assert.equal(result.length, 1, "Expected exactly one library file");
