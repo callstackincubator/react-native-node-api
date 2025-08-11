@@ -17,7 +17,7 @@ The app developer has to install both `calculator-lib` as well as `react-native-
 The reason for the latter is a current limitation of the React Native Community CLI which doesn't consider transitive dependencies when enumerating packages for auto-linking.
 
 > [!WARNING]
-> It's important to match the version range of the `react-native-node-api` declared as peer dependency by `calculator-lib`.
+> It's important to match the version range of the `react-native-node-api` declared as a peer dependency by `calculator-lib`.
 
 For the app to resolve the Node-API dynamic library files, the app developer must update their Babel config to use a `requireNodeAddon` function exported from `react-native-node-api`:
 
