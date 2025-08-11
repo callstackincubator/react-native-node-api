@@ -4,11 +4,11 @@ This document codifies the naming and directory structure of prebuilt binaries, 
 
 At the time of writing, our auto-linking host package (`react-native-node-api`) support two kinds of prebuilds:
 
-## `*.android.node` (for Android)
+## `{name}.android.node` (for Android)
 
-A jniLibs-like directory structure of CPU-architecture specific directories containing a single `.so` library file.
+A jniLibs-like directory structure of CPU-architecture specific directories containing a single shared object / dynamic library file.
 
-The name of all the `.so` library files:
+The name of all the library files:
 
 - must be the same across all CPU-architectures
 - can have a "lib" prefix, but doesn't have to
@@ -21,7 +21,7 @@ The name of all the `.so` library files:
 
 The directory must have a `react-native-node-api-module` file (the content doesn't matter), to signal that the directory is intended for auto-linking by the `react-native-node-api-module` package.
 
-## `*.apple.node` (for Apple)
+## `{name}.apple.node` (for Apple)
 
 An XCFramework of dynamic libraries wrapped in `.framework` bundles, renamed from `.xcframework` to `.apple.node` to ease discoverability.
 
@@ -30,6 +30,16 @@ The Apple Developer documentation on ["Creating a multiplatform binary framework
 > An XCFramework can include dynamic library files, but only macOS supports these libraries for dynamic linking. Dynamic linking on iOS, watchOS, and tvOS requires the XCFramework to contain .framework bundles.
 
 The directory must have a `react-native-node-api-module` file (the content doesn't matter), to signal that the directory is intended for auto-linking by the `react-native-node-api-module` package.
+
+## `{name}.nodejs.node` (for Node.js)
+
+A directory of OS + CPU architecture -specific directories (named `{process.platform}-{process.arch}`) containing a single shared object / dynamic library file.
+
+The name of all the library files:
+
+- must be the same across all CPU-architectures
+- can have a "lib" prefix, but doesn't have to
+- must have a `.node` file extension
 
 ## Why did we choose this naming scheme?
 

@@ -25,9 +25,18 @@ export const APPLE_TRIPLETS = [
 
 export type AppleTriplet = (typeof APPLE_TRIPLETS)[number];
 
+export const NODE_TRIPLETS = [
+  "arm64;x86_64-apple-darwin",
+  "x86_64-apple-darwin",
+  "arm64-apple-darwin",
+] as const;
+
+export type NodeTriplet = (typeof NODE_TRIPLETS)[number];
+
 export const SUPPORTED_TRIPLETS = [
   ...APPLE_TRIPLETS,
   ...ANDROID_TRIPLETS,
+  ...NODE_TRIPLETS,
 ] as const;
 
 export type SupportedTriplet = (typeof SUPPORTED_TRIPLETS)[number];
@@ -48,4 +57,10 @@ export function isAppleTriplet(
   triplet: SupportedTriplet,
 ): triplet is AppleTriplet {
   return (APPLE_TRIPLETS as readonly unknown[]).includes(triplet);
+}
+
+export function isNodeTriplet(
+  triplet: SupportedTriplet,
+): triplet is NodeTriplet {
+  return (NODE_TRIPLETS as readonly unknown[]).includes(triplet);
 }

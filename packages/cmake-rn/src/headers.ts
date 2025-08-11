@@ -45,3 +45,18 @@ export function getNodeAddonHeadersPath(): string {
     );
   }
 }
+
+/**
+ * @returns A semicolon-separated list of include directories for Node-API headers.
+ * @note Using semicolon as a path separator for CMake regardless of platform
+ */
+export function getNodeApiIncludeDirectories(): string {
+  const includePaths = [getNodeApiHeadersPath(), getNodeAddonHeadersPath()];
+  for (const includePath of includePaths) {
+    assert(
+      !includePath.includes(";"),
+      `Include path with a ';' is not supported: ${includePath}`,
+    );
+  }
+  return includePaths.join(";");
+}

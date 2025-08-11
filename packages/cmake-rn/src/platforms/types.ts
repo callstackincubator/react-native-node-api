@@ -38,6 +38,11 @@ export type Platform<
    */
   targets: Readonly<Targets>;
   /**
+   * Targets which are redundant when building all supported targets.
+   * Ex. universal / multi-arch targets that are already produced by other targets.
+   */
+  redundantTargets?: Readonly<Targets>;
+  /**
    * Get the limited subset of targets that should be built by default for this platform, to support a development workflow.
    */
   defaultTargets(): Targets[number][] | Promise<Targets[number][]>;

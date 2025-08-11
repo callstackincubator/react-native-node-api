@@ -8,15 +8,14 @@ import { spawn, SpawnFailure } from "bufout";
 import { oraPromise } from "ora";
 import chalk from "chalk";
 
-import { getWeakNodeApiVariables } from "./weak-node-api.js";
 import {
   platforms,
   allTargets,
   findPlatformForTarget,
   platformHasTarget,
 } from "./platforms.js";
+import { toDeclarationArguments } from "./cmake.js";
 import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
-import { isSupportedTriplet } from "react-native-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -118,6 +117,10 @@ program = program.action(
         // Forcing the types a bit here, since the platform id option is dynamically added
         if ((baseOptions as Record<string, unknown>)[platform.id]) {
           for (const target of platform.targets) {
+            // Skip redundant targets
+            if (platform.redundantTargets?.includes(target)) {
+              continue;
+            }
             targets.add(target);
           }
         }
@@ -242,7 +245,6 @@ function getTargetsSummary(
 }
 
 function getBuildPath({ build, source }: BaseOpts) {
-  // TODO: Add configuration (debug vs release)
   return path.resolve(process.cwd(), build || path.join(source, "build"));
 }
 
@@ -251,6 +253,7 @@ function getBuildPath({ build, source }: BaseOpts) {
  */
 function getTargetBuildPath(buildPath: string, target: unknown) {
   assert(typeof target === "string", "Expected target to be a string");
+  // TODO: Add configuration (debug vs release) for platforms using single-config CMake generators
   return path.join(buildPath, target.replace(/;/g, "_"));
 }
 
@@ -260,18 +263,7 @@ async function configureProject<T extends string>(
   options: BaseOpts,
 ) {
   const { target, buildPath, outputPath } = context;
-  const { verbose, source, weakNodeApiLinkage } = options;
-
-  const nodeApiVariables =
-    weakNodeApiLinkage && isSupportedTriplet(target)
-      ? getWeakNodeApiVariables(target)
-      : // TODO: Make this a part of the platform definition
-        {};
-
-  const declarations = {
-    ...nodeApiVariables,
-    CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
-  };
+  const { verbose, source } = options;
 
   await spawn(
     "cmake",
@@ -281,7 +273,9 @@ async function configureProject<T extends string>(
       "-B",
       buildPath,
       ...platform.configureArgs(context, options),
-      ...toDeclarationArguments(declarations),
+      ...toDeclarationArguments({
+        CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
+      }),
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",
@@ -296,29 +290,15 @@ async function buildProject<T extends string>(
   options: BaseOpts,
 ) {
   const { target, buildPath } = context;
-  const { verbose, configuration } = options;
+  const { verbose } = options;
   await spawn(
     "cmake",
-    [
-      "--build",
-      buildPath,
-      "--config",
-      configuration,
-      "--",
-      ...platform.buildArgs(context, options),
-    ],
+    ["--build", buildPath, ...platform.buildArgs(context, options)],
     {
       outputMode: verbose ? "inherit" : "buffered",
       outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,
     },
   );
-}
-
-function toDeclarationArguments(declarations: Record<string, string>) {
-  return Object.entries(declarations).flatMap(([key, value]) => [
-    "-D",
-    `${key}=${value}`,
-  ]);
 }
 
 export { program };
