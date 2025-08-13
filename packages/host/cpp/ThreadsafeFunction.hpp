@@ -70,9 +70,7 @@ class ThreadSafeFunction
   std::queue<void*> queue_;
   std::atomic<bool> closing_{false};
   std::atomic<bool> referenced_{true};
-  std::atomic<size_t> refCount_;
-  std::mutex finalizeMutex_;
-  bool handlesClosing_{false};
+  std::atomic<bool> handlesClosing_{false};
 };
 
 }  // namespace callstack::nodeapihost
