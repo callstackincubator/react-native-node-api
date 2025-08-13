@@ -21,6 +21,8 @@ add_library(node-api-host SHARED
   ../cpp/RuntimeNodeApi.hpp
   ../cpp/RuntimeNodeApiAsync.cpp
   ../cpp/RuntimeNodeApiAsync.hpp  
+  ../cpp/ThreadsafeFunction.cpp
+  ../cpp/ThreadsafeFunction.hpp
 )
 
 target_include_directories(node-api-host PRIVATE
