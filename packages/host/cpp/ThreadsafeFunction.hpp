@@ -40,14 +40,15 @@ class ThreadSafeFunction
 
   static std::shared_ptr<ThreadSafeFunction> get(napi_threadsafe_function func);
 
-  napi_status getContext(void** result);
-  napi_status call(void* data, napi_threadsafe_function_call_mode isBlocking);
-  napi_status acquire();
-  napi_status release(napi_threadsafe_function_release_mode mode);
+  [[nodiscard]] napi_status getContext(void** result);
+  [[nodiscard]] napi_status call(
+      void* data, napi_threadsafe_function_call_mode isBlocking);
+  [[nodiscard]] napi_status acquire();
+  [[nodiscard]] napi_status release(napi_threadsafe_function_release_mode mode);
   // Node-API compatibility: These do not affect RN's lifecycle. We only track
   // the state for diagnostics and API parity with libuv's ref/unref.
-  napi_status ref();
-  napi_status unref();
+  [[nodiscard]] napi_status ref();
+  [[nodiscard]] napi_status unref();
 
  private:
   void finalize();
@@ -70,7 +71,7 @@ class ThreadSafeFunction
   std::queue<void*> queue_;
   std::atomic<bool> closing_{false};
   std::atomic<bool> referenced_{true};
-  std::atomic<bool> handlesClosing_{false};
+  std::atomic<bool> finalizeScheduled_{false};
 };
 
 }  // namespace callstack::nodeapihost
