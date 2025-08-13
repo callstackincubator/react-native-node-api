@@ -171,10 +171,6 @@ napi_status ThreadSafeFunction::call(
     // Auto-finalize when: no remaining threads (acquire/release balance),
     // queue drained, and not already closing.
     if (!self->threadCount_ && empty) {
-      // if (self->maxQueueSize_) {
-      // std::lock_guard lock{self->queueMutex_};
-      // self->queueCv_.notify_all();
-      // }
       self->finalize();
     }
   });
@@ -228,10 +224,10 @@ napi_status ThreadSafeFunction::unref() {
 }
 
 void ThreadSafeFunction::finalize() {
-  if (handlesClosing_) {
+  if (finalizeScheduled_) {
     return;
   }
-  handlesClosing_ = true;
+  finalizeScheduled_ = true;
   closing_ = true;
 
   const auto onFinalize = [self = shared_from_this()] {
