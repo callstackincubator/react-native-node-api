@@ -36,8 +36,7 @@ ThreadSafeFunction::ThreadSafeFunction(
       threadFinalizeData_{threadFinalizeData},
       threadFinalizeCb_{threadFinalizeCb},
       context_{context},
-      callJsCb_{callJsCb},
-      refCount_{initialThreadCount} {
+      callJsCb_{callJsCb} {
   if (jsFunc) {
     // Keep JS function alive across async hops; fatal here mirrors Node-API's
     // behavior when environment is irrecoverable.
@@ -135,48 +134,48 @@ napi_status ThreadSafeFunction::call(
   }
   // Hop to JS thread; we drain one item per hop to keep latency predictable
   // and avoid long monopolization of the JS queue.
-  invoker->invokeAsync([this] {
+  invoker->invokeAsync([self = shared_from_this()] {
     void* queuedData{nullptr};
     auto empty{false};
     {
-      std::lock_guard lock{queueMutex_};
-      if (!queue_.empty()) {
-        queuedData = queue_.front();
-        const auto size = queue_.size();
-        queue_.pop();
-        empty = queue_.empty();
-        if (size == maxQueueSize_ && maxQueueSize_) {
-          queueCv_.notify_one();
+      std::lock_guard lock{self->queueMutex_};
+      if (!self->queue_.empty()) {
+        queuedData = self->queue_.front();
+        const auto size = self->queue_.size();
+        self->queue_.pop();
+        empty = self->queue_.empty();
+        if (size == self->maxQueueSize_ && self->maxQueueSize_) {
+          self->queueCv_.notify_one();
         }
       }
     }
-    if (queuedData && !aborted_) {
+    if (queuedData && !self->aborted_) {
       // Prefer the user-provided callJsCb_ (Node-API compatible). If absent
       // but we have a JS function ref, call it directly with no args.
-      if (callJsCb_) {
+      if (self->callJsCb_) {
         napi_value fn{nullptr};
-        if (jsFuncRef_) {
-          napi_get_reference_value(env_, jsFuncRef_, &fn);
+        if (self->jsFuncRef_) {
+          napi_get_reference_value(self->env_, self->jsFuncRef_, &fn);
         }
-        callJsCb_(env_, fn, context_, queuedData);
-      } else if (jsFuncRef_) {
+        self->callJsCb_(self->env_, fn, self->context_, queuedData);
+      } else if (self->jsFuncRef_) {
         napi_value fn;
-        napi_get_reference_value(env_, jsFuncRef_, &fn);
+        napi_get_reference_value(self->env_, self->jsFuncRef_, &fn);
         napi_value recv;
-        napi_get_undefined(env_, &recv);
+        napi_get_undefined(self->env_, &recv);
         napi_value result;
-        napi_call_function(env_, recv, fn, 0, nullptr, &result);
+        napi_call_function(self->env_, recv, fn, 0, nullptr, &result);
       }
     }
 
     // Auto-finalize when: no remaining threads (acquire/release balance),
     // queue drained, and not already closing.
-    if (!threadCount_ && empty && !closing_) {
-      if (maxQueueSize_) {
-        std::lock_guard lock{queueMutex_};
-        queueCv_.notify_all();
-      }
-      finalize();
+    if (!self->threadCount_ && empty) {
+      // if (self->maxQueueSize_) {
+      // std::lock_guard lock{self->queueMutex_};
+      // self->queueCv_.notify_all();
+      // }
+      self->finalize();
     }
   });
   return napi_ok;
@@ -186,7 +185,6 @@ napi_status ThreadSafeFunction::acquire() {
   if (closing_) {
     return napi_closing;
   }
-  refCount_++;
   threadCount_++;
   return napi_ok;
 }
@@ -198,21 +196,19 @@ napi_status ThreadSafeFunction::release(
     aborted_ = true;
     closing_ = true;
   }
-  if (refCount_) {
-    refCount_--;
-  }
   if (threadCount_) {
     threadCount_--;
   }
-  // When the last ref is gone (or we're closing), queue is drained, notify and
-  // finalize.
-  std::lock_guard lock{queueMutex_};
-  if (!refCount_ && !threadCount_ && queue_.empty() || closing_) {
-    closing_ = true;
+  // When the last thread is gone (or we're closing), notify and finalize.
+  if (!threadCount_ || closing_) {
+    std::lock_guard lock{queueMutex_};
+    auto emptyQueue{queue_.empty()};
     if (maxQueueSize_) {
       queueCv_.notify_all();
     }
-    finalize();
+    if (aborted_ || emptyQueue) {
+      finalize();
+    }
   }
   return napi_ok;
 }
@@ -232,26 +228,26 @@ napi_status ThreadSafeFunction::unref() {
 }
 
 void ThreadSafeFunction::finalize() {
-  std::lock_guard lock{finalizeMutex_};
   if (handlesClosing_) {
     return;
   }
   handlesClosing_ = true;
   closing_ = true;
 
-  const auto onFinalize = [this] {
+  const auto onFinalize = [self = shared_from_this()] {
     // Invoke user finalizer and unregister the handle from the global map.
-    if (threadFinalizeCb_) {
-      threadFinalizeCb_(env_, threadFinalizeData_, context_);
+    if (self->threadFinalizeCb_) {
+      self->threadFinalizeCb_(
+          self->env_, self->threadFinalizeData_, self->context_);
     }
     std::lock_guard lock{registryMutex};
-    registry.erase(reinterpret_cast<napi_threadsafe_function>(this));
+    registry.erase(reinterpret_cast<napi_threadsafe_function>(self.get()));
   };
 
   // Prefer running the finalizer on the JS thread to match expectations;
   // if CallInvoker is gone, run synchronously.
   if (const auto invoker = callInvoker_.lock()) {
-    invoker->invokeAsync([=]() { onFinalize(); });
+    invoker->invokeAsync(onFinalize);
   } else {
     onFinalize();
   }
