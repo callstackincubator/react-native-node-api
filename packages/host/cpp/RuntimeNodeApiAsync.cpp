@@ -211,7 +211,7 @@ napi_status napi_create_threadsafe_function(napi_env env,
       thread_finalize_cb,
       context,
       call_js_cb);
-  *result = reinterpret_cast<napi_threadsafe_function>(function.get());
+	*result = function->getHandle();
   return napi_ok;
 }
 
