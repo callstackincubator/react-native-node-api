@@ -2,19 +2,14 @@
 #include <unordered_map>
 #include "Logger.hpp"
 
-// This file provides a React Native-friendly implementation of Node-API's
-// thread-safe function primitive. In RN we don't own/libuv, so we:
-// - Use CallInvoker to hop onto the JS thread instead of uv_async.
-// - Track a registry mapping unique IDs to shared_ptrs for lookup/lifetime.
-// - Emulate ref/unref semantics without affecting any event loop.
-
+// Global registry to map unique IDs to ThreadSafeFunction instances.
+// We use IDs instead of raw pointers to avoid any use-after-free issues.
 static std::unordered_map<std::uintptr_t,
     std::shared_ptr<callstack::nodeapihost::ThreadSafeFunction>>
     registry;
 static std::mutex registryMutex;
 static std::atomic<std::uintptr_t> nextId{1};
 
-// Constants for better readability
 static constexpr size_t INITIAL_REF_COUNT = 1;
 
 namespace callstack::nodeapihost {
@@ -44,13 +39,10 @@ ThreadSafeFunction::ThreadSafeFunction(
       context_{context},
       callJsCb_{callJsCb} {
   if (jsFunc) {
-    // Keep JS function alive across async hops; fatal here mirrors Node-API's
-    // behavior when environment is irrecoverable.
+    // Keep JS function alive across async hops
     const auto status =
         napi_create_reference(env, jsFunc, INITIAL_REF_COUNT, &jsFuncRef_);
     if (status != napi_ok) {
-      // Consider throwing an exception instead of fatal error in future
-      // versions
       napi_fatal_error(nullptr,
           0,
           "Failed to create JS function reference",
@@ -101,6 +93,7 @@ std::shared_ptr<ThreadSafeFunction> ThreadSafeFunction::create(
 std::shared_ptr<ThreadSafeFunction> ThreadSafeFunction::get(
     napi_threadsafe_function func) {
   std::lock_guard lock{registryMutex};
+  // Cast the handle back to ID for registry lookup
   const auto id = reinterpret_cast<std::uintptr_t>(func);
   const auto it = registry.find(id);
   return it != registry.end() ? it->second : nullptr;
@@ -120,7 +113,7 @@ napi_status ThreadSafeFunction::getContext(void** result) noexcept {
 }
 
 napi_status ThreadSafeFunction::call(
-    void* data, napi_threadsafe_function_call_mode isBlocking) {
+    void* data, napi_threadsafe_function_call_mode isBlocking) noexcept {
   if (isClosingOrAborted()) {
     return napi_closing;
   }
@@ -152,7 +145,7 @@ napi_status ThreadSafeFunction::call(
   return napi_ok;
 }
 
-napi_status ThreadSafeFunction::acquire() {
+napi_status ThreadSafeFunction::acquire() noexcept {
   if (closing_.load(std::memory_order_acquire)) {
     return napi_closing;
   }
@@ -161,7 +154,7 @@ napi_status ThreadSafeFunction::acquire() {
 }
 
 napi_status ThreadSafeFunction::release(
-    napi_threadsafe_function_release_mode mode) {
+    napi_threadsafe_function_release_mode mode) noexcept {
   // Node-API semantics: abort prevents further JS calls and wakes any waiters.
   if (mode == napi_tsfn_abort) {
     aborted_.store(true, std::memory_order_relaxed);
@@ -185,8 +178,8 @@ napi_status ThreadSafeFunction::release(
 }
 
 napi_status ThreadSafeFunction::ref() noexcept {
-  // In libuv, this would keep the loop alive. In RN we don't own or expose a
-  // libuv loop. We just track the state for API parity.
+  // In libuv, this allows the loop to exit if nothing else is keeping it
+  // alive. In RN this is a no-op beyond state tracking.
   referenced_.store(true, std::memory_order_relaxed);
   return napi_ok;
 }
@@ -199,6 +192,7 @@ napi_status ThreadSafeFunction::unref() noexcept {
 }
 
 void ThreadSafeFunction::finalize() {
+  // Ensure finalization happens exactly once
   bool expected = false;
   if (!finalizeScheduled_.compare_exchange_strong(
           expected, true, std::memory_order_acq_rel)) {
@@ -208,7 +202,6 @@ void ThreadSafeFunction::finalize() {
   closing_.store(true, std::memory_order_release);
 
   const auto onFinalize = [self = shared_from_this()] {
-    // Invoke user finalizer and unregister the handle from the global map.
     if (self->threadFinalizeCb_) {
       self->threadFinalizeCb_(
           self->env_, self->threadFinalizeData_, self->context_);
@@ -249,12 +242,14 @@ void ThreadSafeFunction::processQueue() {
   // Execute JS callback if we have data and aren't aborted
   if (queuedData && !aborted_.load(std::memory_order_relaxed)) {
     if (callJsCb_) {
+      // Prefer the user-provided callJsCb_ (Node-API compatible)
       napi_value fn{nullptr};
       if (jsFuncRef_) {
         napi_get_reference_value(env_, jsFuncRef_, &fn);
       }
       callJsCb_(env_, fn, context_, queuedData);
     } else if (jsFuncRef_) {
+      // Fallback: call JS function directly with no args
       napi_value fn{nullptr};
       if (napi_get_reference_value(env_, jsFuncRef_, &fn) == napi_ok) {
         napi_value recv{nullptr};
@@ -271,14 +266,13 @@ void ThreadSafeFunction::processQueue() {
   }
 }
 
-[[nodiscard]] bool ThreadSafeFunction::isClosingOrAborted() const noexcept {
+bool ThreadSafeFunction::isClosingOrAborted() const noexcept {
   return aborted_.load(std::memory_order_relaxed) ||
          closing_.load(std::memory_order_relaxed);
 }
 
-[[nodiscard]] bool ThreadSafeFunction::shouldFinalize() const noexcept {
+bool ThreadSafeFunction::shouldFinalize() const noexcept {
   return threadCount_.load(std::memory_order_acquire) == 0 &&
          !closing_.load(std::memory_order_acquire);
 }
-
 }  // namespace callstack::nodeapihost
