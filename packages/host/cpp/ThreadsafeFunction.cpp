@@ -43,8 +43,8 @@ ThreadSafeFunction::ThreadSafeFunction(
     const auto status =
         napi_create_reference(env, jsFunc, INITIAL_REF_COUNT, &jsFuncRef_);
     if (status != napi_ok) {
-      napi_fatal_error(nullptr,
-          0,
+      napi_fatal_error("ThreadSafeFunction::ThreadSafeFunction",
+          NAPI_AUTO_LENGTH,
           "Failed to create JS function reference",
           NAPI_AUTO_LENGTH);
     }
