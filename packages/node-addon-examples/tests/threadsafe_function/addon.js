@@ -18,19 +18,14 @@ function testWithJSMarshaller({
   maxQueueSize,
   launchSecondary,
 }) {
-  console.log(
-    `[JS {${cnt++}}] Starting thread: ${threadStarter}, quitAfter: ${quitAfter}, abort: ${abort}, maxQueueSize: ${maxQueueSize}, launchSecondary: ${launchSecondary}`
-  );
   return new Promise((resolve) => {
     const array = [];
     binding[threadStarter](
       function testCallback(value) {
         array.push(value);
         if (array.length === quitAfter) {
-          // console.log("[JS] Reached quitAfter, calling StopThread");
           setImmediate(() => {
             binding.StopThread(() => {
-              // console.log("[JS] StopThread callback called, resolving promise");
               resolve(array);
             }, !!abort);
           });
@@ -38,31 +33,18 @@ function testWithJSMarshaller({
       },
       !!abort,
       !!launchSecondary,
-      maxQueueSize
+      maxQueueSize,
     );
   });
 }
 
 module.exports = () => {
-  // console.log("[JS] Test entry");
-  // return testWithJSMarshaller({
-  //   threadStarter: "StartThread",
-  //   maxQueueSize: binding.MAX_QUEUE_SIZE,
-  //   quitAfter: binding.ARRAY_LENGTH,
-  // }).then((result) => {
-  //   console.log("Test completed successfully");
-  //   assert.deepStrictEqual(result, expectedArray);
-  // });
   return (
     new Promise(function testWithoutJSMarshaller(resolve) {
       let callCount = 0;
       binding.StartThreadNoNative(
         function testCallback() {
           callCount++;
-
-          // console.log("Callback called with arguments:", arguments);
-          // The default call-into-JS implementation passes no arguments.
-          // assert.strictEqual(arguments.length, 0);
           if (callCount === binding.ARRAY_LENGTH) {
             setImmediate(() => {
               binding.StopThread(() => {
@@ -73,7 +55,7 @@ module.exports = () => {
         },
         false /* abort */,
         false /* launchSecondary */,
-        binding.MAX_QUEUE_SIZE
+        binding.MAX_QUEUE_SIZE,
       );
     })
       .then(() =>
@@ -81,14 +63,14 @@ module.exports = () => {
           threadStarter: "StartThread",
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           quitAfter: binding.ARRAY_LENGTH,
-        })
+        }),
       )
       .then(() =>
         testWithJSMarshaller({
           threadStarter: "StartThreadNoJsFunc",
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           quitAfter: binding.ARRAY_LENGTH,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -99,7 +81,7 @@ module.exports = () => {
           threadStarter: "StartThread",
           maxQueueSize: 0,
           quitAfter: binding.ARRAY_LENGTH,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -110,7 +92,7 @@ module.exports = () => {
           threadStarter: "StartThreadNonblocking",
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           quitAfter: binding.ARRAY_LENGTH,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -121,7 +103,7 @@ module.exports = () => {
           threadStarter: "StartThread",
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           quitAfter: 1,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -132,7 +114,7 @@ module.exports = () => {
           threadStarter: "StartThread",
           maxQueueSize: 0,
           quitAfter: 1,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -143,7 +125,7 @@ module.exports = () => {
           threadStarter: "StartThreadNonblocking",
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           quitAfter: 1,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -156,7 +138,7 @@ module.exports = () => {
           quitAfter: 1,
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           launchSecondary: true,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -169,7 +151,7 @@ module.exports = () => {
           quitAfter: 1,
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           launchSecondary: true,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
 
@@ -181,7 +163,7 @@ module.exports = () => {
           quitAfter: 1,
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           abort: true,
-        })
+        }),
       )
       .then((result) => assert.strictEqual(result.indexOf(0), -1))
 
@@ -193,7 +175,7 @@ module.exports = () => {
           quitAfter: 1,
           maxQueueSize: 0,
           abort: true,
-        })
+        }),
       )
       .then((result) => assert.strictEqual(result.indexOf(0), -1))
 
@@ -205,7 +187,7 @@ module.exports = () => {
           quitAfter: 1,
           maxQueueSize: binding.MAX_QUEUE_SIZE,
           abort: true,
-        })
+        }),
       )
       .then((result) => assert.strictEqual(result.indexOf(0), -1))
 
@@ -216,7 +198,7 @@ module.exports = () => {
           threadStarter: "StartThreadNonblocking",
           maxQueueSize: binding.ARRAY_LENGTH >>> 1,
           quitAfter: binding.ARRAY_LENGTH,
-        })
+        }),
       )
       .then((result) => assert.deepStrictEqual(result, expectedArray))
   );
