@@ -43,11 +43,10 @@ class ThreadSafeFunction
   [[nodiscard]] napi_threadsafe_function getHandle() const noexcept;
   [[nodiscard]] napi_status getContext(void** result) noexcept;
   [[nodiscard]] napi_status call(
-      void* data, napi_threadsafe_function_call_mode isBlocking);
-  [[nodiscard]] napi_status acquire();
-  [[nodiscard]] napi_status release(napi_threadsafe_function_release_mode mode);
-  // Node-API compatibility: These do not affect RN's lifecycle. We only track
-  // the state for diagnostics and API parity with libuv's ref/unref.
+      void* data, napi_threadsafe_function_call_mode isBlocking) noexcept;
+  [[nodiscard]] napi_status acquire() noexcept;
+  [[nodiscard]] napi_status release(
+      napi_threadsafe_function_release_mode mode) noexcept;
   [[nodiscard]] napi_status ref() noexcept;
   [[nodiscard]] napi_status unref() noexcept;
 
