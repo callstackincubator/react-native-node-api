@@ -1,5 +1,5 @@
 [package]
-name = "ferric-example"
+name = "project_name"
 version = "1.0.0"
 edition = "2021"
 license = "MIT"
@@ -8,13 +8,13 @@ license = "MIT"
 crate-type = ["cdylib"]
 
 [dependencies.napi]
-version = "3.1"
+version = "3"
 default-features = false
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
 features = ["napi3"]
 
 [dependencies.napi-derive]
-version = "3.1"
+version = "3"
 features = ["type-def"]
 
 [build-dependencies]
@@ -23,3 +23,5 @@ napi-build = "2"
 [profile.release]
 lto = true
 codegen-units = 1
+strip = "symbols"
+opt-level = "z"

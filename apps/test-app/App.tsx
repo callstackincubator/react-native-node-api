@@ -23,14 +23,12 @@ type Context = {
   allTests?: boolean;
   nodeAddonExamples?: boolean;
   nodeTests?: boolean;
-  ferricExample?: boolean;
 };
 
 function loadTests({
   allTests = false,
   nodeAddonExamples = allTests,
   nodeTests = allTests,
-  ferricExample = allTests,
 }: Context) {
   describeIf(nodeAddonExamples, "Node Addon Examples", () => {
     for (const [suiteName, examples] of Object.entries(
@@ -66,18 +64,6 @@ function loadTests({
     }
 
     registerTestSuite(nodeTestsSuites);
-  });
-
-  describeIf(ferricExample, "ferric-example", () => {
-    it("exports a callable sum function", () => {
-      const exampleAddon =
-        /* eslint-disable-next-line @typescript-eslint/no-require-imports -- TODO: Determine why a dynamic import doesn't work on Android */
-        require("ferric-example") as typeof import("ferric-example");
-      const result = exampleAddon.sum(1, 3);
-      if (result !== 4) {
-        throw new Error(`Expected 1 + 3 to equal 4, but got ${result}`);
-      }
-    });
   });
 }
 
