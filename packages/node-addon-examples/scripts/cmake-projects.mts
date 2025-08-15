@@ -1,4 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, statSync, existsSync } from "node:fs";
 import path from "node:path";
 
 export const EXAMPLES_DIR = path.resolve(import.meta.dirname, "../examples");
@@ -7,6 +7,9 @@ export const DIRS = [EXAMPLES_DIR, TESTS_DIR];
 
 export function findCMakeProjectsRecursively(dir: string): string[] {
   let results: string[] = [];
+  if (!existsSync(dir)) {
+    return results;
+  }
   const files = readdirSync(dir);
 
   for (const file of files) {
