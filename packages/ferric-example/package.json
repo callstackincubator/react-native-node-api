@@ -9,8 +9,8 @@
     "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
     "directory": "packages/ferric-example"
   },
-  "main": "ferric_example.js",
-  "types": "ferric_example.d.ts",
+  "main": "dist/ferric_example.js",
+  "types": "dist/ferric_example.d.ts",
   "scripts": {
     "build": "ferric build",
     "bootstrap": "npm run build"
