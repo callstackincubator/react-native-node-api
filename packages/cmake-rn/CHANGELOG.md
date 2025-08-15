@@ -1,5 +1,20 @@
 # cmake-rn
 
+## 0.3.0
+
+### Minor Changes
+
+- 8557768: Derive default targets from the CMAKE_RN_TARGETS environment variable
+
+### Patch Changes
+
+- 4924f66: Refactor into a platform abstraction
+- Updated dependencies [a477b84]
+- Updated dependencies [dc33f3c]
+- Updated dependencies [4924f66]
+- Updated dependencies [acf1a7c]
+  - react-native-node-api@0.3.3
+
 ## 0.2.3
 
 ### Patch Changes
