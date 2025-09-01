@@ -20,7 +20,6 @@
   },
   "devDependencies": {
     "cmake-rn": "workspace:*",
-    "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
     "gyp-to-cmake": "workspace:*",
     "read-pkg": "^9.0.1"
   },
