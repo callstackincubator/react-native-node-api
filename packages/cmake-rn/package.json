@@ -1,6 +1,6 @@
 {
   "name": "cmake-rn",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Build React Native Node API modules with CMake",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
@@ -28,7 +28,7 @@
     "cmake-js": "^7.3.1",
     "commander": "^13.1.0",
     "ora": "^8.2.0",
-    "react-native-node-api": "0.3.2"
+    "react-native-node-api": "0.3.3"
   },
   "peerDependencies": {
     "node-addon-api": "^8.3.1",

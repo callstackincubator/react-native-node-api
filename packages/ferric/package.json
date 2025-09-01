@@ -1,6 +1,6 @@
 {
   "name": "ferric-cli",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Rust Node-API Modules for React Native",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
@@ -21,7 +21,7 @@
     "bufout": "^0.3.2",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
-    "react-native-node-api": "0.3.2",
+    "react-native-node-api": "0.3.3",
     "ora": "^8.2.0"
   }
 }
