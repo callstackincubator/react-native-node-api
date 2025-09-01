@@ -45,8 +45,8 @@ importers:
         specifier: 0.79.5
         version: 0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)
       tsx:
-        specifier: ^4.20.3
-        version: 4.20.3
+        specifier: ^4.20.5
+        version: 4.20.5
       typescript:
         specifier: ^5.8.0
         version: 5.8.3
@@ -278,8 +278,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       react-native-node-api:
-        specifier: ^0.3.2
-        version: 0.3.2(@babel/core@7.28.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
+        specifier: ^0.3.3
+        version: 0.3.3(@babel/core@7.28.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
@@ -4409,6 +4409,13 @@ packages:
       '@babel/core': ^7.26.10
       react-native: 0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5
 
+  react-native-node-api@0.3.3:
+    resolution: {integrity: sha512-93/A3pcJsNbsNfaXhnvmx1WTCs4emlUyLK+dzKZvW8CE6WfaG7N2KCUns5/qEdea8nVNYxYyrk/OOmch0sKLpg==}
+    hasBin: true
+    peerDependencies:
+      '@babel/core': ^7.26.10
+      react-native: 0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5
+
   react-native-test-app@4.4.4:
     resolution: {integrity: sha512-4Bq3zODRa0JRioeTfIiUUU0W/e4L6P6kr4kdDUDD9KU6BeyJq3vfeKdiA1Y6IKdwDrZgR/yFpRCauNdeLx+XKQ==}
     engines: {node: '>=16.17'}
@@ -4813,8 +4820,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx@4.20.3:
-    resolution: {integrity: sha512-qjbnuR9Tr+FJOMBqJCW5ehvIo/buZq7vH7qD7JziU98h6l3qGy0a/yPFjwO+y0/T7GFpNgNAvEcPPVfyT8rrPQ==}
+  tsx@4.20.5:
+    resolution: {integrity: sha512-+wKjMNU9w/EaQayHXb7WA7ZaHY6hN8WgfvHNQ3t1PnU91/7O8TcTnIhCDYTZwnt8JsO9IBqZ30Ln1r7pPF52Aw==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -9827,6 +9834,18 @@ snapshots:
       react-native: 0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)
       read-pkg: 9.0.1
 
+  react-native-node-api@0.3.3(@babel/core@7.28.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)):
+    dependencies:
+      '@babel/core': 7.28.0
+      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
+      bufout: 0.3.4
+      chalk: 5.4.1
+      commander: 13.1.0
+      ora: 8.2.0
+      pkg-dir: 8.0.0
+      react-native: 0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)
+      read-pkg: 9.0.1
+
   react-native-test-app@4.4.4(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))(react@19.0.0):
     dependencies:
       '@rnx-kit/react-native-host': 0.5.11(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
@@ -10286,7 +10305,7 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsx@4.20.3:
+  tsx@4.20.5:
     dependencies:
       esbuild: 0.25.8
       get-tsconfig: 4.10.1
