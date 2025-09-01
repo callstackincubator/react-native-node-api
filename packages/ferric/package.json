@@ -13,15 +13,21 @@
     "ferric": "./bin/ferric.js"
   },
   "scripts": {
-    "start": "tsx src/run.ts"
+    "start": "tsx src/run.ts",
+    "build": "tsc --build && npm run copy-templates",
+    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/**/*.test.ts",
+    "copy-templates": "copyfiles -u 1 src/templates/**/* dist"
   },
   "dependencies": {
-    "@napi-rs/cli": "~3.0.3",
     "@commander-js/extra-typings": "^13.1.0",
+    "@napi-rs/cli": "^3.1",
     "bufout": "^0.3.2",
     "chalk": "^5.4.1",
     "commander": "^13.1.0",
     "react-native-node-api": "0.3.3",
     "ora": "^8.2.0"
+  },
+  "devDependencies": {
+    "copyfiles": "^2.4.1"
   }
 }

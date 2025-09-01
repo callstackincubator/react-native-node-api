@@ -41,7 +41,6 @@ jobs:
       # Bootstrap host package to get weak-node-api and ferric-example to get types
       # TODO: Solve this by adding an option to ferric to build only types or by committing the types into the repo as a fixture for an "init" command
       - run: npm run bootstrap --workspace react-native-node-api
-      - run: npm run bootstrap --workspace @react-native-node-api/ferric-example
       - run: npm run lint
         env:
           DEBUG: eslint:eslint
@@ -152,9 +151,9 @@ jobs:
       - name: Build weak-node-api for all architectures
         run: npm run build-weak-node-api -- --android
         working-directory: packages/host
-      - name: Build ferric-example for all architectures
+      - name: Build lib_in_rust for android architectures
         run: npm run build -- --android
-        working-directory: packages/ferric-example
+        working-directory: apps/test-app/lib_in_rust
       - name: Run tests (Android)
         timeout-minutes: 75
         uses: reactivecircus/android-emulator-runner@v2

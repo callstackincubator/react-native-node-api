@@ -1,0 +1,14 @@
+{
+  "name": "project_name",
+  "private": true,
+  "version": "0.1.0",
+  "main": "dist/project_name.js",
+  "types": "dist/project_name.d.ts",
+  "scripts": {
+    "build": "ferric build",
+    "build:release": "npm run build -- --configuration release"
+  },
+  "devDependencies": {
+    "ferric-cli": "latest"
+  }
+}
