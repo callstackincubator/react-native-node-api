@@ -1,5 +1,14 @@
 # react-native-node-api
 
+## 0.3.3
+
+### Patch Changes
+
+- a477b84: Added implementation of napi_fatal_error, napi_get_node_version and napi_get_version. Improved the Logger functionalities
+- dc33f3c: Added implementation of async work runtime functions
+- 4924f66: Refactor into a platform abstraction
+- acf1a7c: Treating failures when scanning filesystems for Node-API prebuilds more gracefully
+
 ## 0.3.2
 
 ### Patch Changes
