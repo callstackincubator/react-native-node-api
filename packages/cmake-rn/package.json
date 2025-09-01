@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "bootstrap": "pnpm build",
     "start": "tsx src/run.ts",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
