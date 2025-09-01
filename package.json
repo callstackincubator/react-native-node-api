@@ -1,51 +1,51 @@
 {
-	"name": "@react-native-node-api/root",
-	"description": "Node-API Modules for React Native",
-	"type": "module",
-	"private": true,
-	"homepage": "https://github.com/callstackincubator/react-native-node-api#readme",
-	"scripts": {
-		"build": "tsc --build",
-		"clean": "tsc --build --clean",
-		"dev": "tsc --build --watch",
-		"lint": "eslint .",
-		"test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter node-addon-examples test",
-		"bootstrap": "pnpm --recursive --no-sort --if-present build",
-		"prerelease": "pnpm --recursive --no-sort --if-present prerelease",
-		"prettier:check": "prettier --experimental-cli --check .",
-		"prettier:write": "prettier --experimental-cli --write .",
-		"release": "changeset publish"
-	},
-	"author": {
-		"name": "Callstack",
-		"url": "https://github.com/callstackincubator"
-	},
-	"contributors": [
-		{
-			"name": "Kræn Hansen",
-			"url": "https://github.com/kraenhansen"
-		},
-		{
-			"name": "Jamie Birch",
-			"url": "https://github.com/shirakaba"
-		}
-	],
-	"license": "MIT",
-	"devDependencies": {
-		"@changesets/cli": "^2.29.5",
-		"@eslint/js": "^9.32.0",
-		"@prettier/plugin-oxc": "^0.0.4",
-		"@reporters/github": "^1.7.2",
-		"@tsconfig/node22": "^22.0.0",
-		"@tsconfig/react-native": "3.0.5",
-		"@types/node": "^22",
-		"eslint": "^9.32.0",
-		"eslint-config-prettier": "^10.1.8",
-		"globals": "^16.0.0",
-		"prettier": "^3.6.2",
-		"react-native": "0.79.5",
-		"tsx": "^4.20.5",
-		"typescript": "^5.8.0",
-		"typescript-eslint": "^8.38.0"
-	}
+  "name": "@react-native-node-api/root",
+  "description": "Node-API Modules for React Native",
+  "type": "module",
+  "private": true,
+  "homepage": "https://github.com/callstackincubator/react-native-node-api#readme",
+  "scripts": {
+    "build": "tsc --build",
+    "clean": "tsc --build --clean",
+    "dev": "tsc --build --watch",
+    "lint": "eslint .",
+    "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter node-addon-examples test",
+    "bootstrap": "pnpm --recursive --no-sort --if-present build",
+    "prerelease": "pnpm --recursive --no-sort --if-present prerelease",
+    "prettier:check": "prettier --experimental-cli --check .",
+    "prettier:write": "prettier --experimental-cli --write .",
+    "release": "changeset publish"
+  },
+  "author": {
+    "name": "Callstack",
+    "url": "https://github.com/callstackincubator"
+  },
+  "contributors": [
+    {
+      "name": "Kræn Hansen",
+      "url": "https://github.com/kraenhansen"
+    },
+    {
+      "name": "Jamie Birch",
+      "url": "https://github.com/shirakaba"
+    }
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/cli": "^2.29.5",
+    "@eslint/js": "^9.32.0",
+    "@prettier/plugin-oxc": "^0.0.4",
+    "@reporters/github": "^1.7.2",
+    "@tsconfig/node22": "^22.0.0",
+    "@tsconfig/react-native": "3.0.5",
+    "@types/node": "^22",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.0.0",
+    "prettier": "^3.6.2",
+    "react-native": "0.79.5",
+    "tsx": "^4.20.5",
+    "typescript": "^5.8.0",
+    "typescript-eslint": "^8.38.0"
+  }
 }

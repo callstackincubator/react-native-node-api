@@ -45,7 +45,7 @@ jobs:
       - run: pnpm build
       # Bootstrap host package to get weak-node-api and ferric-example to get types
       # TODO: Solve this by adding an option to ferric to build only types or by committing the types into the repo as a fixture for an "init" command
-      - run: pnpm bootstrap
+      - run: pnpm --filter cmake-rn --filter react-native-node-api --filter @react-native-node-api/ferric-example bootstrap
       - run: pnpm lint
         env:
           DEBUG: eslint:eslint
