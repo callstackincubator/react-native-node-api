@@ -254,11 +254,11 @@ importers:
         version: 2.1.0
     devDependencies:
       cmake-rn:
-        specifier: '*'
-        version: 0.2.3(@babel/core@7.28.0)(node-addon-api@8.5.0)(node-api-headers@1.5.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
+        specifier: workspace:*
+        version: link:../cmake-rn
       gyp-to-cmake:
-        specifier: '*'
-        version: 0.2.0
+        specifier: workspace:*
+        version: link:../gyp-to-cmake
       node-addon-examples:
         specifier: github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a
         version: https://codeload.github.com/nodejs/node-addon-examples/tar.gz/4213d4c9d07996ae68629c67926251e117f8e52a
@@ -269,11 +269,11 @@ importers:
   packages/node-tests:
     devDependencies:
       cmake-rn:
-        specifier: '*'
-        version: 0.2.3(@babel/core@7.28.0)(node-addon-api@8.5.0)(node-api-headers@1.5.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
+        specifier: workspace:*
+        version: link:../cmake-rn
       gyp-to-cmake:
-        specifier: '*'
-        version: 0.2.0
+        specifier: workspace:*
+        version: link:../gyp-to-cmake
       prebuildify:
         specifier: ^6.0.1
         version: 6.0.1
@@ -2857,13 +2857,6 @@ packages:
     engines: {node: '>= 14.15.0'}
     hasBin: true
 
-  cmake-rn@0.2.3:
-    resolution: {integrity: sha512-ErMKvAhi3oxiKcthv4XK5TKPxBLQyl5wQCZFnIYoLcrekZzFqKYZ+FGa33XVx9GuGjBOlYSZEZyQwlAcLqcw4Q==}
-    hasBin: true
-    peerDependencies:
-      node-addon-api: ^8.3.1
-      node-api-headers: ^1.5.0
-
   color-convert@1.9.3:
     resolution: {integrity: sha512-QfAUtd+vFdAtFQcC8CCyYt1fYWxSqAiK2cSD6zDB8N3cpsEBAvRxp9zOGg6G/SHHJYAT88/az/IuDGALsNVbGg==}
 
@@ -3420,10 +3413,6 @@ packages:
 
   gyp-parser@1.0.4:
     resolution: {integrity: sha512-ixRWukp/mQ+XTbKMxLoFqk0dScpCrJHln6NIv/ks8mmEnXaqtFg520T2grF7WpCjYbGA797vKkpNnOJBwd6rKA==}
-
-  gyp-to-cmake@0.2.0:
-    resolution: {integrity: sha512-ShG+ZoMEtYGnjndsdxpCX4wdf8cV8joGaEsRuFvFx+9o1LtgCQ58FpQY/IALB5UIjC59kV6E7opvfssItMBq6A==}
-    hasBin: true
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -7954,22 +7943,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  cmake-rn@0.2.3(@babel/core@7.28.0)(node-addon-api@8.5.0)(node-api-headers@1.5.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0)):
-    dependencies:
-      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
-      bufout: 0.3.4
-      chalk: 5.4.1
-      cmake-js: 7.3.1
-      commander: 13.1.0
-      node-addon-api: 8.5.0
-      node-api-headers: 1.5.0
-      ora: 8.2.0
-      react-native-node-api: 0.3.2(@babel/core@7.28.0)(react-native@0.79.5(@babel/core@7.28.0)(@react-native-community/cli@18.0.0(typescript@5.8.3))(@types/react@19.1.8)(react@19.0.0))
-    transitivePeerDependencies:
-      - '@babel/core'
-      - react-native
-      - supports-color
-
   color-convert@1.9.3:
     dependencies:
       color-name: 1.1.3
@@ -8575,12 +8548,6 @@ snapshots:
   graphemer@1.4.0: {}
 
   gyp-parser@1.0.4: {}
-
-  gyp-to-cmake@0.2.0:
-    dependencies:
-      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
-      commander: 13.1.0
-      gyp-parser: 1.0.4
 
   has-flag@4.0.0: {}
 

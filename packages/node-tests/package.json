@@ -19,8 +19,8 @@
     "bootstrap": "node --run copy-tests && node --run gyp-to-cmake && node --run build-tests && node --run bundle && node --run generate-entrypoint"
   },
   "devDependencies": {
-    "cmake-rn": "*",
-    "gyp-to-cmake": "*",
+    "cmake-rn": "workspace:*",
+    "gyp-to-cmake": "workspace:*",
     "prebuildify": "^6.0.1",
     "react-native-node-api": "^0.3.3",
     "read-pkg": "^9.0.1",
