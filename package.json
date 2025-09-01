@@ -10,8 +10,8 @@
     "dev": "tsc --build --watch",
     "lint": "eslint .",
     "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter node-addon-examples test",
-    "bootstrap": "pnpm --recursive --no-sort --if-present build",
-    "prerelease": "pnpm --recursive --no-sort --if-present prerelease",
+    "bootstrap": "pnpm --recursive --if-present build",
+    "prerelease": "pnpm --recursive --if-present prerelease",
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
     "release": "changeset publish"
