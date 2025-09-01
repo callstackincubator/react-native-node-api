@@ -17,16 +17,15 @@ The app developer has to install both `calculator-lib` as well as `react-native-
 The reason for the latter is a current limitation of the React Native Community CLI which doesn't consider transitive dependencies when enumerating packages for auto-linking.
 
 > [!WARNING]
-> It's important to match the exact version of the `react-native-node-api` declared as peer dependency by `calculator-lib`.
+> It's important to match the version range of the `react-native-node-api` declared as a peer dependency by `calculator-lib`.
 
-For the app to resolve the Node-API dynamic library files, the app developer must update their Metro config to use a `resolveRequest` function exported from `react-native-node-api`:
+For the app to resolve the Node-API dynamic library files, the app developer must update their Babel config to use a `requireNodeAddon` function exported from `react-native-node-api`:
 
 ```javascript
-const { getDefaultConfig, mergeConfig } = require("@react-native/metro-config");
-const nodeApi = require("react-native-node-api/metro-config");
-module.exports = mergeConfig(getDefaultConfig(__dirname), {
-  resolver: { resolveRequest: nodeApi.resolveRequest },
-});
+module.exports = {
+  presets: ["module:@react-native/babel-preset"],
+  plugins: ["module:react-native-node-api/babel-plugin"], // 👈 This needs to be added to the babel.config.js of the app
+};
 ```
 
 At some point the app code will import (or require) the entrypoint of `calculator-lib`:
@@ -121,18 +120,36 @@ NAPI_MODULE_INIT(/* napi_env env, napi_value exports */) {
 }
 ```
 
+```cmake
+# CMakeLists.txt
+
+cmake_minimum_required(VERSION 3.15...3.31)
+project(addon)
+
+add_compile_definitions(-DNAPI_VERSION=4)
+
+file(GLOB SOURCE_FILES "addon.c")
+
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES} ${CMAKE_JS_SRC})
+set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "" SUFFIX ".node")
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_JS_INC})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${CMAKE_JS_LIB})
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)
+  # Generate node.lib
+  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})
+endif()
+```
+
 ### Build the prebuilt binaries
 
 ```
-npx react-native-node-api build ./addon.c
+npx cmake-rn
 ```
-
-This is a shorthand command which generates a CMake project from the single source-file and prebuilds for both the Apple and Android platforms. See the [CLI documentation](./CLI.md) for more information on the options available and [documentation on prebuilds](./PREBUILDS.md) for the specifics on their format and structure.
-
-<!-- TODO: Add a listing of the files produced when running command: Some temp (cached) CMakeList.txt, the CMake project dir, 2x platform specific prebuild directories -->
 
 ### Load and export the native module
 
 ```javascript
-module.exports = require("./prebuild.node");
+module.exports = require("./build/Release/addon.node");
 ```
