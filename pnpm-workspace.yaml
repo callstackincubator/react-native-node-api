@@ -1,0 +1,12 @@
+packages:
+  - packages/gyp-to-cmake
+  - packages/cmake-rn
+  - packages/host
+  - packages/ferric
+  - packages/node-addon-examples
+  - packages/node-tests
+  - packages/ferric-example
+  - apps/test-app
+
+onlyBuiltDependencies:
+  - esbuild

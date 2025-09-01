@@ -21,6 +21,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: "latest"
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: lts/jod
@@ -36,16 +41,15 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
       # Bootstrap host package to get weak-node-api and ferric-example to get types
       # TODO: Solve this by adding an option to ferric to build only types or by committing the types into the repo as a fixture for an "init" command
-      - run: npm run bootstrap --workspace react-native-node-api
-      - run: npm run bootstrap --workspace @react-native-node-api/ferric-example
-      - run: npm run lint
+      - run: pnpm --no-sort --filter react-native-node-api --filter @react-native-node-api/ferric-example bootstrap
+      - run: pnpm lint
         env:
           DEBUG: eslint:eslint
-      - run: npm run prettier:check
+      - run: pnpm prettier:check
   unit-tests:
     strategy:
       fail-fast: false
@@ -58,6 +62,11 @@ jobs:
     name: Unit tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: "latest"
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: lts/jod
@@ -71,15 +80,20 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
-      - run: npm run bootstrap
-      - run: npm test
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm bootstrap
+      - run: pnpm test
   test-ios:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: "latest"
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: lts/jod
@@ -93,17 +107,17 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
-      - run: npm run bootstrap
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm bootstrap
         env:
           CMAKE_RN_TARGETS: arm64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim
-      - run: npm run pod-install
+      - run: pnpm pod-install
         working-directory: apps/test-app
       - name: Run tests (iOS)
-        run: npm run test:ios:allTests
+        run: pnpm test:ios:allTests
         # TODO: Enable release mode when it works
-        # run: npm run test:ios -- --mode Release
+        # run: pnpm test:ios -- --mode Release
         working-directory: apps/test-app
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
@@ -111,6 +125,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          version: "latest"
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: lts/jod
@@ -124,8 +143,8 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
-      - run: npm run bootstrap
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm bootstrap
         env:
           CMAKE_RN_TARGETS: i686-linux-android
           FERRIC_TARGETS: i686-linux-android
@@ -150,10 +169,10 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all architectures
-        run: npm run build-weak-node-api -- --android
+        run: pnpm build-weak-node-api -- --android
         working-directory: packages/host
       - name: Build ferric-example for all architectures
-        run: npm run build -- --android
+        run: pnpm build -- --android
         working-directory: packages/ferric-example
       - name: Run tests (Android)
         timeout-minutes: 75
@@ -176,7 +195,7 @@ jobs:
             adb logcat > emulator-logcat.txt 2>&1 &
             LOGCAT_PID=$!
             # Build, install and run the app
-            npm run test:android:allTests -- --mode Release
+            pnpm test:android:allTests -- --mode Release
             # Wait a bit for the sub-process to terminate, before terminating the emulator
             sleep 5
             # Stop logcat

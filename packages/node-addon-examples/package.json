@@ -13,15 +13,14 @@
     "copy-examples": "tsx scripts/copy-examples.mts",
     "gyp-to-cmake": "gyp-to-cmake .",
     "build": "tsx scripts/build-examples.mts",
-    "copy-and-build": "npm run copy-examples && npm run gyp-to-cmake && npm run build",
+    "copy-and-build": "pnpm copy-examples && pnpm gyp-to-cmake && pnpm build",
     "verify": "tsx scripts/verify-prebuilds.mts",
-    "test": "npm run copy-and-build && npm run verify",
-    "bootstrap": "npm run copy-and-build"
+    "test": "pnpm copy-and-build && pnpm verify",
+    "bootstrap": "pnpm copy-and-build"
   },
   "devDependencies": {
-    "cmake-rn": "*",
-    "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
-    "gyp-to-cmake": "*",
+    "cmake-rn": "latest",
+    "gyp-to-cmake": "latest",
     "read-pkg": "^9.0.1"
   },
   "dependencies": {
