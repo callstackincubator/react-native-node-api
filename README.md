@@ -54,6 +54,10 @@ A wrapper around CMake making it easier to produce [prebuilt binaries](./docs/PR
 
 Serves the same purpose as `cmake-js` does for the Node.js community and could potentially be upstreamed into `cmake-js` eventually.
 
+### [`ferric-cli`](packages/ferric)
+
+A wrapper around [Cargo](https://doc.rust-lang.org/cargo/) making it easier to produce prebuilt binaries targeting iOS and Android matching the the prebuilt binary specification as well as [napi.rs](https://napi.rs/) to generate Node-API bindings from annotated Rust code.
+
 ### [`gyp-to-cmake`](packages/gyp-to-cmake)
 
 A tool to transform `binding.gyp` files into `CMakeLists.txt` files, intended for `cmake-js` or `cmake-rn` to build from.
@@ -67,3 +71,7 @@ The main purpose is to use these as tests to verify the implementation. We choos
 ### [`@react-native-node-api/test-app`](apps/test-app)
 
 A test app using `react-native-test-app` to exercise the implementation of it all.
+
+### [`@react-native-node-api/ferric-example`](packages/ferric-example)
+
+A simple example of using the `ferric` CLI to build a Node-API module for React Native in Rust.

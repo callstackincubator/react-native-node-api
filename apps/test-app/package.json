@@ -1,7 +1,7 @@
 {
   "name": "@react-native-node-api/test-app",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "scripts": {
     "metro": "react-native start --no-interactive",
     "android": "react-native run-android --no-packager --active-arch-only",

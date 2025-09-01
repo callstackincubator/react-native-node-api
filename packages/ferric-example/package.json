@@ -2,7 +2,7 @@
   "name": "@react-native-node-api/ferric-example",
   "private": true,
   "type": "commonjs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
