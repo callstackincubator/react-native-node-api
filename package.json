@@ -21,9 +21,9 @@
     "lint": "eslint .",
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
-    "test": "npm run test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
-    "bootstrap": "npm run build && npm run bootstrap --workspaces --if-present",
-    "prerelease": "npm run build && npm run prerelease --workspaces --if-present",
+    "test": "npm test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
+    "bootstrap": "node --run build && npm run bootstrap --workspaces --if-present",
+    "prerelease": "node --run build && npm run prerelease --workspaces --if-present",
     "release": "changeset publish"
   },
   "author": {
