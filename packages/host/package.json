@@ -47,8 +47,8 @@
     "build-weak-node-api": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api --out ./weak-node-api",
     "build-weak-node-api:all-triplets": "cmake-rn --android --apple --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api --out ./weak-node-api",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
-    "bootstrap": "npm run copy-node-api-headers && npm run generate-weak-node-api-injector && npm run generate-weak-node-api && npm run build-weak-node-api",
-    "prerelease": "npm run copy-node-api-headers && npm run generate-weak-node-api-injector && npm run generate-weak-node-api && npm run build-weak-node-api:all-triplets"
+    "bootstrap": "node --run copy-node-api-headers && node --run generate-weak-node-api-injector && node --run generate-weak-node-api && node --run build-weak-node-api",
+    "prerelease": "node --run copy-node-api-headers && node --run generate-weak-node-api-injector && node --run generate-weak-node-api && node --run build-weak-node-api:all-triplets"
   },
   "keywords": [
     "react-native",

@@ -13,10 +13,10 @@
     "copy-examples": "tsx scripts/copy-examples.mts",
     "gyp-to-cmake": "gyp-to-cmake .",
     "build": "tsx scripts/build-examples.mts",
-    "copy-and-build": "npm run copy-examples && npm run gyp-to-cmake && npm run build",
+    "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
-    "test": "npm run copy-and-build && npm run verify",
-    "bootstrap": "npm run copy-and-build"
+    "test": "node --run copy-and-build && node --run verify",
+    "bootstrap": "node --run copy-and-build"
   },
   "devDependencies": {
     "cmake-rn": "*",
