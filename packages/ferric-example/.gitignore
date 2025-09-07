@@ -5,6 +5,4 @@ Cargo.lock
 /*.apple.node/
 /*.android.node/
 
-# Generated files
-/ferric_example.d.ts
-/ferric_example.js
+dist
