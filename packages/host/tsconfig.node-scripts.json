@@ -3,6 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "emitDeclarationOnly": true,
+    "esModuleInterop": true,
     "outDir": "dist",
     "rootDir": "scripts",
     "types": ["node"]
