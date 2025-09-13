@@ -6,10 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(ReactAndroid REQUIRED CONFIG)
 find_package(hermes-engine REQUIRED CONFIG)
 
-add_library(weak-node-api SHARED IMPORTED)
-set_target_properties(weak-node-api PROPERTIES
-  IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/../weak-node-api/weak-node-api.android.node/${ANDROID_ABI}/libweak-node-api.so"
-)
+add_library(weak-node-api INTERFACE)
 target_include_directories(weak-node-api INTERFACE
   ../weak-node-api
   ../weak-node-api/include
@@ -31,6 +28,7 @@ target_include_directories(node-api-host PRIVATE
 )
 
 target_link_libraries(node-api-host
+  PRIVATE
   # android
   log
   ReactAndroid::reactnative

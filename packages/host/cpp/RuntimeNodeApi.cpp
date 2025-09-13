@@ -31,8 +31,9 @@ napi_status napi_create_buffer_copy(napi_env env,
     return napi_invalid_arg;
   }
 
-  void* buffer = nullptr;
-  if (const auto status = ::napi_create_buffer(env, length, &buffer, result);
+  void *buffer = nullptr;
+  if (const auto status = callstack::nodeapihost::napi_create_buffer(
+          env, length, &buffer, result);
       status != napi_ok) {
     return status;
   }
