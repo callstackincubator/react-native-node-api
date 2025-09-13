@@ -1,5 +1,20 @@
 # react-native-node-api-test-app
 
+## 0.2.0
+
+### Minor Changes
+
+- a0212c8: Add explicit support for React Native 0.81.1 (0.79.6, 0.80.0, 0.80.1, 0.80.2 & 0.81.0)
+
+### Patch Changes
+
+- a0212c8: Renamed ferric-example in test app to match mono-repo packages
+- Updated dependencies [a0212c8]
+- Updated dependencies [a0212c8]
+  - react-native-node-api@0.4.0
+  - @react-native-node-api/node-tests@undefined
+  - @react-native-node-api/node-addon-examples@undefined
+
 ## 0.1.2
 
 ### Patch Changes

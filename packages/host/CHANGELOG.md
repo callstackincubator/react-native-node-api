@@ -1,5 +1,15 @@
 # react-native-node-api
 
+## 0.4.0
+
+### Minor Changes
+
+- a0212c8: Add explicit support for React Native 0.81.1 (0.79.6, 0.80.0, 0.80.1, 0.80.2 & 0.81.0)
+
+### Patch Changes
+
+- a0212c8: Fix host library to not explicitly link with weak-node-api and instead rely on dlopen
+
 ## 0.3.3
 
 ### Patch Changes
