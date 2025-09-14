@@ -134,6 +134,22 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 
+task checkHermesOverride {
+    doFirst {
+        if (!System.getenv("REACT_NATIVE_OVERRIDE_HERMES_DIR")) {
+            throw new GradleException([
+                "React Native Node-API needs a custom version of Hermes with Node-API enabled.",
+                "Run the following in your terminal, to clone Hermes and instruct React Native to use it:",
+                "",
+                "export REACT_NATIVE_OVERRIDE_HERMES_DIR=`npx react-native-node-api vendor-hermes --silent --force`",
+                "",
+                "And follow this guide to build React Native from source:",
+                "https://reactnative.dev/contributing/how-to-build-from-source#update-your-project-to-build-from-source"
+            ].join('\n'))
+        }
+    }
+}
+
 // Custom task to fetch jniLibs paths via CLI
 task linkNodeApiModules {
   doLast {
@@ -150,5 +166,5 @@ task linkNodeApiModules {
   }
 }
 
-preBuild.dependsOn linkNodeApiModules
+preBuild.dependsOn checkHermesOverride, linkNodeApiModules
 
