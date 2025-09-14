@@ -76,16 +76,8 @@ jobs:
       - run: npm test
   test-ios:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
-    name: Test app (iOS${{ matrix.rn-deps-prebuilds && ' / RN deps prebuilds' || '' }}${{ matrix.rn-core-prebuilds && ' / RN core prebuilds' || '' }})
+    name: Test app (iOS)
     runs-on: macos-latest
-    strategy:
-      matrix:
-        rn-deps-prebuilds:
-          - true
-          - false
-        rn-core-prebuilds:
-          - true
-          - false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -108,11 +100,6 @@ jobs:
           FERRIC_TARGETS: aarch64-apple-ios-sim
       - run: npm run pod-install
         working-directory: apps/test-app
-        env:
-          # Optionally enable experimental prebuilds
-          # https://reactnative.dev/blog/2025/08/12/react-native-0.81#experimental-precompiled-ios-builds
-          RCT_USE_PREBUILT_RNCORE: ${{ matrix.rn-core-prebuilds && '1' || '0' }}
-          RCT_USE_RN_DEP: ${{ matrix.rn-deps-prebuilds && '1' || '0' }}
       - name: Run tests (iOS)
         run: npm run test:ios:allTests
         # TODO: Enable release mode when it works
