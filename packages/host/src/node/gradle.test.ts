@@ -42,4 +42,20 @@ describe("Gradle tasks", () => {
       );
     });
   });
+
+  describe("linkNodeApiModules task", () => {
+    it("should call the CLI to autolink", () => {
+      const { status, stdout, stderr } = cp.spawnSync(
+        "sh",
+        ["gradlew", "react-native-node-api:linkNodeApiModules"],
+        {
+          cwd: TEST_APP_ANDROID_PATH,
+          encoding: "utf-8",
+        },
+      );
+
+      assert.equal(status, 0, `Expected failure: ${stdout} ${stderr}`);
+      assert.match(stdout, /Auto-linking Node-API modules/);
+    });
+  });
 });
