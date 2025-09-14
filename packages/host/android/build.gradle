@@ -150,12 +150,13 @@ task checkHermesOverride {
     }
 }
 
+def cliPath = file("../bin/react-native-node-api.mjs")
+
 // Custom task to fetch jniLibs paths via CLI
 task linkNodeApiModules {
   doLast {
     exec {
-      // TODO: Support --strip-path-suffix
-      commandLine 'npx', 'react-native-node-api', 'link', '--android', rootProject.rootDir.absolutePath
+      commandLine cliPath, 'link', '--android', rootProject.rootDir.absolutePath
       standardOutput = System.out
       errorOutput = System.err
       // Enable color output
