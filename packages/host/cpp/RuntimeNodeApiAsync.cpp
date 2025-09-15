@@ -2,87 +2,74 @@
 #include <ReactCommon/CallInvoker.h>
 #include "Logger.hpp"
 
-struct AsyncJob {
-  using IdType = uint64_t;
-  enum State { Created, Queued, Completed, Cancelled, Deleted };
+using IdType = uint64_t;
 
+struct AsyncContext {
   IdType id{};
-  State state{};
   napi_env env;
   napi_value async_resource;
   napi_value async_resource_name;
+
+  AsyncContext(
+      napi_env env, napi_value async_resource, napi_value async_resource_name)
+      : env{env},
+        async_resource{async_resource},
+        async_resource_name{async_resource_name} {}
+};
+
+struct AsyncJob : AsyncContext {
+  enum State { Created, Queued, Completed, Cancelled, Deleted };
+
+  State state{State::Created};
   napi_async_execute_callback execute;
   napi_async_complete_callback complete;
   void* data{nullptr};
 
-  static AsyncJob* fromWork(napi_async_work work) {
-    return reinterpret_cast<AsyncJob*>(work);
-  }
-  static napi_async_work toWork(AsyncJob* job) {
-    return reinterpret_cast<napi_async_work>(job);
-  }
-};
-
-class AsyncWorkRegistry {
- public:
-  using IdType = AsyncJob::IdType;
-
-  std::shared_ptr<AsyncJob> create(napi_env env,
+  AsyncJob(napi_env env,
       napi_value async_resource,
       napi_value async_resource_name,
       napi_async_execute_callback execute,
       napi_async_complete_callback complete,
-      void* data) {
-    const auto job = std::shared_ptr<AsyncJob>(new AsyncJob{
-        .id = next_id(),
-        .state = AsyncJob::State::Created,
-        .env = env,
-        .async_resource = async_resource,
-        .async_resource_name = async_resource_name,
-        .execute = execute,
-        .complete = complete,
-        .data = data,
-    });
+      void* data)
+      : AsyncContext{env, async_resource, async_resource_name},
+        execute{execute},
+        complete{complete},
+        data{data} {}
+};
 
-    jobs_[job->id] = job;
-    return job;
+template <class T, class U>
+class Container {
+ public:
+  void push(std::shared_ptr<T>&& obj) {
+    const auto id = nextId();
+    obj->id = id;
+    map_[id] = std::move(obj);
   }
-
-  std::shared_ptr<AsyncJob> get(napi_async_work work) const {
-    const auto job = AsyncJob::fromWork(work);
-    if (!job) {
-      return {};
-    }
-    if (const auto it = jobs_.find(job->id); it != jobs_.end()) {
-      return it->second;
-    }
-    return {};
+  std::shared_ptr<T> get(const U obj) {
+    return map_.contains(id(obj)) ? map_[id(obj)] : nullptr;
   }
-
-  bool release(IdType id) {
-    if (const auto it = jobs_.find(id); it != jobs_.end()) {
-      it->second->state = AsyncJob::State::Deleted;
-      jobs_.erase(it);
-      return true;
-    }
-    return false;
-  }
+  bool release(const U obj) { return map_.erase(id(obj)) > 0; }
 
  private:
-  IdType next_id() {
-    if (current_id_ == std::numeric_limits<IdType>::max()) [[unlikely]] {
-      current_id_ = 0;
+  IdType id(const U obj) const {
+    auto casted = reinterpret_cast<T*>(obj);
+    return casted ? casted->id : 0;
+  }
+  IdType nextId() {
+    if (currentId_ == std::numeric_limits<IdType>::max()) [[unlikely]] {
+      currentId_ = 0;
     }
-    return ++current_id_;
+    return ++currentId_;
   }
 
-  IdType current_id_{0};
-  std::unordered_map<IdType, std::shared_ptr<AsyncJob>> jobs_;
+  IdType currentId_{0};
+  std::unordered_map<IdType, std::shared_ptr<T>> map_;
 };
 
 static std::unordered_map<napi_env, std::weak_ptr<facebook::react::CallInvoker>>
     callInvokers;
-static AsyncWorkRegistry asyncWorkRegistry;
+static Container<AsyncJob, napi_async_work> jobs_;
+static Container<AsyncContext, napi_async_context> contexts_;
 
 namespace callstack::nodeapihost {
 
@@ -104,20 +91,16 @@ napi_status napi_create_async_work(napi_env env,
     napi_async_complete_callback complete,
     void* data,
     napi_async_work* result) {
-  const auto job = asyncWorkRegistry.create(
+  auto job = std::make_shared<AsyncJob>(
       env, async_resource, async_resource_name, execute, complete, data);
-  if (!job) {
-    log_debug("Error: Failed to create async work job");
-    return napi_generic_failure;
-  }
-
-  *result = AsyncJob::toWork(job.get());
+  *result = reinterpret_cast<napi_async_work>(job.get());
+  jobs_.push(std::move(job));
   return napi_ok;
 }
 
 napi_status napi_queue_async_work(
     node_api_basic_env env, napi_async_work work) {
-  const auto job = asyncWorkRegistry.get(work);
+  const auto job = jobs_.get(work);
   if (!job) {
     log_debug("Error: Received null job in napi_queue_async_work");
     return napi_invalid_arg;
@@ -151,13 +134,14 @@ napi_status napi_queue_async_work(
 
 napi_status napi_delete_async_work(
     node_api_basic_env env, napi_async_work work) {
-  const auto job = asyncWorkRegistry.get(work);
+  const auto job = jobs_.get(work);
   if (!job) {
     log_debug("Error: Received non-existent job in napi_delete_async_work");
     return napi_invalid_arg;
   }
 
-  if (!asyncWorkRegistry.release(job->id)) {
+  job->state = AsyncJob::State::Deleted;
+  if (!jobs_.release(work)) {
     log_debug("Error: Failed to release async work job");
     return napi_generic_failure;
   }
@@ -167,7 +151,7 @@ napi_status napi_delete_async_work(
 
 napi_status napi_cancel_async_work(
     node_api_basic_env env, napi_async_work work) {
-  const auto job = asyncWorkRegistry.get(work);
+  const auto job = jobs_.get(work);
   if (!job) {
     log_debug("Error: Received null job in napi_cancel_async_work");
     return napi_invalid_arg;
@@ -186,5 +170,43 @@ napi_status napi_cancel_async_work(
 
   job->state = AsyncJob::State::Cancelled;
   return napi_ok;
+}
+
+napi_status napi_async_init(napi_env env,
+    napi_value async_resource,
+    napi_value async_resource_name,
+    napi_async_context* result) {
+  if (!result) {
+    return napi_invalid_arg;
+  }
+  auto context =
+      std::make_shared<AsyncContext>(env, async_resource, async_resource_name);
+  *result = reinterpret_cast<napi_async_context>(context.get());
+  contexts_.push(std::move(context));
+  return napi_ok;
+}
+
+napi_status napi_async_destroy(napi_env env, napi_async_context async_context) {
+  if (!async_context) {
+    return napi_invalid_arg;
+  }
+  if (!contexts_.release(async_context)) {
+    return napi_generic_failure;
+  }
+  return napi_ok;
+}
+
+napi_status napi_make_callback(napi_env env,
+    napi_async_context async_context,
+    napi_value recv,
+    napi_value func,
+    size_t argc,
+    const napi_value* argv,
+    napi_value* result) {
+  const auto status = napi_call_function(env, recv, func, argc, argv, result);
+  if (status == napi_pending_exception && async_context) {
+    contexts_.release(async_context);
+  }
+  return status;
 }
 }  // namespace callstack::nodeapihost
