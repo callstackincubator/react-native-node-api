@@ -23,7 +23,11 @@ describe("bin", () => {
         0,
         `Expected success (got ${status}): ${stdout} ${stderr}`,
       );
-      assert.match(stdout, /Usage: react-native-node-api/);
+      assert.match(
+        stdout,
+        /Usage: react-native-node-api/,
+        `Failed to find expected output (stdout: ${stdout} stderr: ${stderr})`,
+      );
     });
   });
 
@@ -43,7 +47,11 @@ describe("bin", () => {
         0,
         `Expected success (got ${status}): ${stdout} ${stderr}`,
       );
-      assert.match(stdout, /Auto-linking Node-API modules/);
+      assert.match(
+        stdout + stderr,
+        /Auto-linking Node-API modules/,
+        `Failed to find expected output (stdout: ${stdout} stderr: ${stderr})`,
+      );
     });
   });
 });
