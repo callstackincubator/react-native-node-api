@@ -1,0 +1,14 @@
+{
+  "name": "threadsafe-function-test",
+  "version": "0.0.0",
+  "description": "Tests of runtime threadsafe functions",
+  "main": "addon.js",
+  "private": true,
+  "dependencies": {
+    "bindings": "~1.5.0"
+  },
+  "scripts": {
+    "test": "node addon.js"
+  },
+  "gypfile": true
+}
