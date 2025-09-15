@@ -58,7 +58,7 @@ describe(
           },
         );
 
-        assert.equal(status, 0, `Expected failure: ${stdout} ${stderr}`);
+        assert.equal(status, 0, `Expected success: ${stdout} ${stderr}`);
         assert.match(stdout, /Auto-linking Node-API modules/);
       });
     });
