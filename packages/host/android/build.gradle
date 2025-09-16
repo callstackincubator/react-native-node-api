@@ -142,7 +142,7 @@ task checkHermesOverride {
                 "React Native Node-API needs a custom version of Hermes with Node-API enabled.",
                 "Run the following in your terminal, to clone Hermes and instruct React Native to use it:",
                 "",
-                "export REACT_NATIVE_OVERRIDE_HERMES_DIR=`npx react-native-node-api vendor-hermes --silent --force`",
+                "export REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent --force)",
                 "",
                 "And follow this guide to build React Native from source:",
                 "https://reactnative.dev/contributing/how-to-build-from-source#update-your-project-to-build-from-source"
