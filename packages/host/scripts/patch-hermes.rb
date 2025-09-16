@@ -1,5 +1,9 @@
 Pod::UI.warn "!!! PATCHING HERMES WITH NODE-API SUPPORT !!!"
 
+if ENV['RCT_USE_PREBUILT_RNCORE'] == '1'
+  raise "React Native Node-API cannot reliably patch JSI when React Native Core is prebuilt."
+end
+
 VENDORED_HERMES_DIR ||= `npx react-native-node-api vendor-hermes --silent '#{Pod::Config.instance.installation_root}'`.strip
 if Dir.exist?(VENDORED_HERMES_DIR)
   Pod::UI.info "Hermes vendored into #{VENDORED_HERMES_DIR.inspect}"
