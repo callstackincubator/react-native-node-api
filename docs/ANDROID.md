@@ -34,7 +34,7 @@ This will print a path which needs to be stored in `REACT_NATIVE_OVERRIDE_HERMES
 This can be combined into a single line:
 
 ```
-export REACT_NATIVE_OVERRIDE_HERMES_DIR=`npx react-native-node-api vendor-hermes --silent`
+export REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
 ```
 
 ## Cleaning your React Native build folders
