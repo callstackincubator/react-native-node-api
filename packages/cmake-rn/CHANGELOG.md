@@ -1,5 +1,15 @@
 # cmake-rn
 
+## 0.3.2
+
+### Patch Changes
+
+- ad2ec51: Removing an extraneous dependency on cmake-js
+- Updated dependencies [90a1471]
+- Updated dependencies [75aaed1]
+- Updated dependencies [90a1471]
+  - react-native-node-api@0.5.0
+
 ## 0.3.1
 
 ### Patch Changes
