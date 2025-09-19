@@ -74,6 +74,26 @@ const outPathOption = new Option(
   "Specify the output directory to store the final build artifacts",
 ).default(false, "./{build}/{configuration}");
 
+const defineOption = new Option(
+  "-D,--define <entry...>",
+  "Define cache variables passed when configuring projects",
+).argParser<Record<string, string | CmakeTypedDefinition>>(
+  (input, previous = {}) => {
+    // TODO: Implement splitting of value using a regular expression (using named groups) for the format <var>[:<type>]=<value>
+    // and return an object keyed by variable name with the string value as value or alternatively an array of [value, type]
+    const match = input.match(
+      /^(?<name>[^:=]+)(:(?<type>[^=]+))?=(?<value>.+)$/,
+    );
+    if (!match || !match.groups) {
+      throw new Error(
+        `Invalid format for -D/--define argument: ${input}. Expected <var>[:<type>]=<value>`,
+      );
+    }
+    const { name, type, value } = match.groups;
+    return { ...previous, [name]: type ? { value, type } : value };
+  },
+);
+
 const noAutoLinkOption = new Option(
   "--no-auto-link",
   "Don't mark the output as auto-linkable by react-native-node-api",
@@ -92,6 +112,7 @@ let program = new Command("cmake-rn")
   .addOption(buildPathOption)
   .addOption(outPathOption)
   .addOption(configurationOption)
+  .addOption(defineOption)
   .addOption(cleanOption)
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption);
@@ -269,14 +290,15 @@ async function configureProject<T extends string>(
   const { target, buildPath, outputPath } = context;
   const { verbose, source, weakNodeApiLinkage } = options;
 
-  const nodeApiVariables =
+  const nodeApiDefinitions =
     weakNodeApiLinkage && isSupportedTriplet(target)
       ? getWeakNodeApiVariables(target)
       : // TODO: Make this a part of the platform definition
         {};
 
-  const declarations = {
-    ...nodeApiVariables,
+  const definitions = {
+    ...nodeApiDefinitions,
+    ...options.define,
     CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
   };
 
@@ -288,7 +310,7 @@ async function configureProject<T extends string>(
       "-B",
       buildPath,
       ...platform.configureArgs(context, options),
-      ...toDeclarationArguments(declarations),
+      ...toDefineArguments(definitions),
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",
@@ -321,11 +343,18 @@ async function buildProject<T extends string>(
   );
 }
 
-function toDeclarationArguments(declarations: Record<string, string>) {
-  return Object.entries(declarations).flatMap(([key, value]) => [
-    "-D",
-    `${key}=${value}`,
-  ]);
+type CmakeTypedDefinition = { value: string; type: string };
+
+function toDefineArguments(
+  declarations: Record<string, string | CmakeTypedDefinition>,
+) {
+  return Object.entries(declarations).flatMap(([key, definition]) => {
+    if (typeof definition === "string") {
+      return ["-D", `${key}=${definition}`];
+    } else {
+      return ["-D", `${key}:${definition.type}=${definition.value}`];
+    }
+  });
 }
 
 export { program };
