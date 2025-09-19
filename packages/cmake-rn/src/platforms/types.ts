@@ -1,12 +1,13 @@
-import * as commander from "@commander-js/extra-typings";
+import * as cli from "@react-native-node-api/cli-utils";
+
 import type { program } from "../cli.js";
 
-type InferOptionValues<Command extends commander.Command> = ReturnType<
+type InferOptionValues<Command extends cli.Command> = ReturnType<
   Command["opts"]
 >;
 
 type BaseCommand = typeof program;
-type ExtendedCommand<Opts extends commander.OptionValues> = commander.Command<
+type ExtendedCommand<Opts extends cli.OptionValues> = cli.Command<
   [],
   Opts & InferOptionValues<BaseCommand>,
   Record<string, unknown> // Global opts are not supported
@@ -22,7 +23,7 @@ export type TargetContext<Target extends string> = {
 
 export type Platform<
   Targets extends string[] = string[],
-  Opts extends commander.OptionValues = Record<string, unknown>,
+  Opts extends cli.OptionValues = Record<string, unknown>,
   Command = ExtendedCommand<Opts>,
 > = {
   /**

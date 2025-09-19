@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 
-import { Option } from "@commander-js/extra-typings";
-import { oraPromise } from "ora";
+import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
 import {
   AppleTriplet as Target,
   createAppleFramework,
@@ -12,7 +11,6 @@ import {
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
-import chalk from "chalk";
 
 type XcodeSDKName =
   | "iphoneos"

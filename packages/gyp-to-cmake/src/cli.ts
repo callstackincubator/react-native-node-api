@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Command } from "@commander-js/extra-typings";
+
+import { Command } from "@react-native-node-api/cli-utils";
 
 import { readBindingFile } from "./gyp.js";
 import {

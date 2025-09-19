@@ -78,11 +78,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@commander-js/extra-typings": "^13.1.0",
-    "bufout": "^0.3.2",
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
-    "ora": "^8.2.0",
+    "@react-native-node-api/cli-utils": "0.1.0",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1"
   },

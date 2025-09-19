@@ -1,7 +1,8 @@
 import path from "node:path";
 import fs from "node:fs";
 
-import { SpawnFailure } from "bufout";
+import { chalk, SpawnFailure } from "@react-native-node-api/cli-utils";
+
 import {
   findNodeApiModulePathsByDependency,
   getAutolinkPath,
@@ -11,7 +12,6 @@ import {
   PlatformName,
   prettyPath,
 } from "../path-utils";
-import chalk from "chalk";
 
 export type ModuleLinker = (
   options: LinkModuleOptions,

@@ -3,18 +3,20 @@ import cp from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { spawn } from "bufout";
-import chalk from "chalk";
+import {
+  chalk,
+  assertFixable,
+  UsageError,
+  spawn,
+} from "@react-native-node-api/cli-utils";
+import { weakNodeApiPath } from "react-native-node-api";
 
-import { assertFixable, UsageError } from "./errors.js";
 import {
   AndroidTargetName,
   AppleTargetName,
   isAndroidTarget,
   isAppleTarget,
 } from "./targets.js";
-
-import { weakNodeApiPath } from "react-native-node-api";
 
 const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   "aarch64-apple-darwin": "macos-arm64_x86_64", // Universal

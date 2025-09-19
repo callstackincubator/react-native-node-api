@@ -1,6 +1,6 @@
-import cp from "child_process";
+import cp from "node:child_process";
 
-import { UsageError } from "./errors.js";
+import { UsageError } from "@react-native-node-api/cli-utils";
 
 export function getInstalledTargets() {
   try {

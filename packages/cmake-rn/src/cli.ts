@@ -3,10 +3,15 @@ import path from "node:path";
 import fs from "node:fs";
 import { EventEmitter } from "node:events";
 
-import { Command, Option } from "@commander-js/extra-typings";
-import { spawn, SpawnFailure } from "bufout";
-import { oraPromise } from "ora";
-import chalk from "chalk";
+import {
+  chalk,
+  Command,
+  Option,
+  spawn,
+  SpawnFailure,
+  oraPromise,
+} from "@react-native-node-api/cli-utils";
+import { isSupportedTriplet } from "react-native-node-api";
 
 import { getWeakNodeApiVariables } from "./weak-node-api.js";
 import {
@@ -16,7 +21,6 @@ import {
   platformHasTarget,
 } from "./platforms.js";
 import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
-import { isSupportedTriplet } from "react-native-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;

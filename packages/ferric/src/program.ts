@@ -1,4 +1,4 @@
-import { Command } from "@commander-js/extra-typings";
+import { Command } from "@react-native-node-api/cli-utils";
 
 import { printBanner } from "./banner.js";
 import { buildCommand } from "./build.js";
