@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
 import {
-  AppleTriplet as Target,
+  AppleTriplet as Triplet,
   createAppleFramework,
   createXCframework,
   determineXCFrameworkFilename,
@@ -33,7 +33,7 @@ const XCODE_SDK_NAMES = {
   "arm64-apple-tvos-sim": "appletvsimulator",
   "arm64-apple-visionos": "xros",
   "arm64-apple-visionos-sim": "xrsimulator",
-} satisfies Record<Target, XcodeSDKName>;
+} satisfies Record<Triplet, XcodeSDKName>;
 
 type CMakeSystemName = "Darwin" | "iOS" | "tvOS" | "watchOS" | "visionOS";
 
@@ -48,7 +48,7 @@ const CMAKE_SYSTEM_NAMES = {
   "arm64-apple-tvos-sim": "tvOS",
   "arm64-apple-visionos": "visionOS",
   "arm64-apple-visionos-sim": "visionOS",
-} satisfies Record<Target, CMakeSystemName>;
+} satisfies Record<Triplet, CMakeSystemName>;
 
 type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
 
@@ -63,7 +63,7 @@ export const APPLE_ARCHITECTURES = {
   "arm64-apple-tvos-sim": "arm64",
   "arm64-apple-visionos": "arm64",
   "arm64-apple-visionos-sim": "arm64",
-} satisfies Record<Target, AppleArchitecture>;
+} satisfies Record<Triplet, AppleArchitecture>;
 
 export function createPlistContent(values: Record<string, string>) {
   return [
@@ -94,10 +94,10 @@ type AppleOpts = {
   xcframeworkExtension: boolean;
 };
 
-export const platform: Platform<Target[], AppleOpts> = {
+export const platform: Platform<Triplet[], AppleOpts> = {
   id: "apple",
   name: "Apple",
-  targets: [
+  triplets: [
     "arm64;x86_64-apple-darwin",
     "arm64-apple-ios",
     "arm64-apple-ios-sim",
@@ -106,22 +106,22 @@ export const platform: Platform<Target[], AppleOpts> = {
     "arm64-apple-visionos",
     "arm64-apple-visionos-sim",
   ],
-  defaultTargets() {
+  defaultTriplets() {
     return process.arch === "arm64" ? ["arm64-apple-ios-sim"] : [];
   },
   amendCommand(command) {
     return command.addOption(xcframeworkExtensionOption);
   },
-  configureArgs({ target }) {
+  configureArgs({ triplet }) {
     return [
       "-G",
       "Xcode",
       "-D",
-      `CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAMES[target]}`,
+      `CMAKE_SYSTEM_NAME=${CMAKE_SYSTEM_NAMES[triplet]}`,
       "-D",
-      `CMAKE_OSX_SYSROOT=${XCODE_SDK_NAMES[target]}`,
+      `CMAKE_OSX_SYSROOT=${XCODE_SDK_NAMES[triplet]}`,
       "-D",
-      `CMAKE_OSX_ARCHITECTURES=${APPLE_ARCHITECTURES[target]}`,
+      `CMAKE_OSX_ARCHITECTURES=${APPLE_ARCHITECTURES[triplet]}`,
     ];
   },
   buildArgs() {
@@ -132,11 +132,11 @@ export const platform: Platform<Target[], AppleOpts> = {
     return process.platform === "darwin";
   },
   async postBuild(
-    { outputPath, targets },
+    { outputPath, triplets },
     { configuration, autoLink, xcframeworkExtension },
   ) {
     const libraryPaths = await Promise.all(
-      targets.map(async ({ outputPath }) => {
+      triplets.map(async ({ outputPath }) => {
         const configSpecificPath = path.join(outputPath, configuration);
         assert(
           fs.existsSync(configSpecificPath),

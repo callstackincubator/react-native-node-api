@@ -5,23 +5,23 @@ import { platform as apple } from "./platforms/apple.js";
 import { Platform } from "./platforms/types.js";
 
 export const platforms: Platform[] = [android, apple] as const;
-export const allTargets = [...android.targets, ...apple.targets] as const;
+export const allTriplets = [...android.triplets, ...apple.triplets] as const;
 
-export function platformHasTarget<P extends Platform>(
+export function platformHasTriplet<P extends Platform>(
   platform: P,
-  target: unknown,
-): target is P["targets"][number] {
-  return (platform.targets as unknown[]).includes(target);
+  triplet: unknown,
+): triplet is P["triplets"][number] {
+  return (platform.triplets as unknown[]).includes(triplet);
 }
 
-export function findPlatformForTarget(target: unknown) {
+export function findPlatformForTriplet(triplet: unknown) {
   const platform = Object.values(platforms).find((platform) =>
-    platformHasTarget(platform, target),
+    platformHasTriplet(platform, triplet),
   );
   assert(
     platform,
-    `Unable to determine platform from target: ${
-      typeof target === "string" ? target : JSON.stringify(target)
+    `Unable to determine platform from triplet: ${
+      typeof triplet === "string" ? triplet : JSON.stringify(triplet)
     }`,
   );
   return platform;

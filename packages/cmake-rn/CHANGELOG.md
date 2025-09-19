@@ -22,7 +22,7 @@
 
 ### Minor Changes
 
-- 8557768: Derive default targets from the CMAKE_RN_TARGETS environment variable
+- 8557768: Derive default targets from the CMAKE_RN_TRIPLETS environment variable
 
 ### Patch Changes
 
