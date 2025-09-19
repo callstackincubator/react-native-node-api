@@ -1,0 +1,12 @@
+{
+  "extends": "@tsconfig/node22/tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src",
+    "types": ["node"]
+  },
+  "include": ["${configDir}/src/*.ts"],
+  "exclude": ["${configDir}/**.test.ts"]
+}

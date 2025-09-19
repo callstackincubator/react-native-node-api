@@ -5,6 +5,7 @@
   "private": true,
   "workspaces": [
     "apps/test-app",
+    "packages/cli-utils",
     "packages/gyp-to-cmake",
     "packages/cmake-rn",
     "packages/ferric",
