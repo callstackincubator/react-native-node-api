@@ -18,11 +18,18 @@ export function wrapAction<
       process.exitCode = 1;
       if (error instanceof SpawnFailure) {
         error.flushOutput("both");
+      } else if (
+        error instanceof Error &&
+        error.cause instanceof SpawnFailure
+      ) {
+        error.cause.flushOutput("both");
       }
+      // Ensure some visual distance to the previous output
+      console.error();
       if (error instanceof UsageError || error instanceof SpawnFailure) {
         console.error(chalk.red("ERROR"), error.message);
         if (error.cause instanceof Error) {
-          console.error(chalk.red("CAUSE"), error.cause.message);
+          console.error(chalk.blue("CAUSE"), error.cause.message);
         }
         if (error instanceof UsageError && error.fix) {
           console.error(
