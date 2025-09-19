@@ -1,5 +1,11 @@
 # react-native-node-api
 
+## 0.5.1
+
+### Patch Changes
+
+- 2a30d8d: Refactored CLIs to use a shared utility package
+
 ## 0.5.0
 
 ### Minor Changes
