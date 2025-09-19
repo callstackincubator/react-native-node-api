@@ -7,6 +7,7 @@ import {
   Option,
   oraPromise,
   assertFixable,
+  wrapAction,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -116,195 +117,197 @@ export const buildCommand = new Command("build")
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
   .action(
-    async ({
-      target: targetArg,
-      apple,
-      android,
-      ndkVersion,
-      output: outputPath,
-      configuration,
-      xcframeworkExtension,
-    }) => {
-      const targets = new Set([...targetArg]);
-      if (apple) {
-        for (const target of APPLE_TARGETS) {
-          targets.add(target);
-        }
-      }
-      if (android) {
-        for (const target of ANDROID_TARGETS) {
-          targets.add(target);
-        }
-      }
-
-      if (targets.size === 0) {
-        if (isAndroidSupported()) {
-          if (process.arch === "arm64") {
-            targets.add("aarch64-linux-android");
-          } else if (process.arch === "x64") {
-            targets.add("x86_64-linux-android");
+    wrapAction(
+      async ({
+        target: targetArg,
+        apple,
+        android,
+        ndkVersion,
+        output: outputPath,
+        configuration,
+        xcframeworkExtension,
+      }) => {
+        const targets = new Set([...targetArg]);
+        if (apple) {
+          for (const target of APPLE_TARGETS) {
+            targets.add(target);
           }
         }
-        if (isAppleSupported()) {
-          if (process.arch === "arm64") {
-            targets.add("aarch64-apple-ios-sim");
+        if (android) {
+          for (const target of ANDROID_TARGETS) {
+            targets.add(target);
           }
         }
-        console.error(
-          chalk.yellowBright("ℹ"),
-          chalk.dim(
-            `Using default targets, pass ${chalk.italic(
-              "--android",
-            )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
-              "--target",
-            )} options, to avoid this.`,
-          ),
-        );
-      }
-      ensureCargo();
-      ensureInstalledTargets(targets);
 
-      const appleTargets = filterTargetsByPlatform(targets, "apple");
-      const androidTargets = filterTargetsByPlatform(targets, "android");
-
-      const targetsDescription =
-        targets.size +
-        (targets.size === 1 ? " target" : " targets") +
-        chalk.dim(" (" + [...targets].join(", ") + ")");
-      const [appleLibraries, androidLibraries] = await oraPromise(
-        Promise.all([
-          Promise.all(
-            appleTargets.map(
-              async (target) =>
-                [target, await build({ configuration, target })] as const,
+        if (targets.size === 0) {
+          if (isAndroidSupported()) {
+            if (process.arch === "arm64") {
+              targets.add("aarch64-linux-android");
+            } else if (process.arch === "x64") {
+              targets.add("x86_64-linux-android");
+            }
+          }
+          if (isAppleSupported()) {
+            if (process.arch === "arm64") {
+              targets.add("aarch64-apple-ios-sim");
+            }
+          }
+          console.error(
+            chalk.yellowBright("ℹ"),
+            chalk.dim(
+              `Using default targets, pass ${chalk.italic(
+                "--android",
+              )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
+                "--target",
+              )} options, to avoid this.`,
             ),
-          ),
-          Promise.all(
-            androidTargets.map(
-              async (target) =>
-                [
-                  target,
-                  await build({
-                    configuration,
+          );
+        }
+        ensureCargo();
+        ensureInstalledTargets(targets);
+
+        const appleTargets = filterTargetsByPlatform(targets, "apple");
+        const androidTargets = filterTargetsByPlatform(targets, "android");
+
+        const targetsDescription =
+          targets.size +
+          (targets.size === 1 ? " target" : " targets") +
+          chalk.dim(" (" + [...targets].join(", ") + ")");
+        const [appleLibraries, androidLibraries] = await oraPromise(
+          Promise.all([
+            Promise.all(
+              appleTargets.map(
+                async (target) =>
+                  [target, await build({ configuration, target })] as const,
+              ),
+            ),
+            Promise.all(
+              androidTargets.map(
+                async (target) =>
+                  [
                     target,
-                    ndkVersion,
-                    androidApiLevel: ANDROID_API_LEVEL,
-                  }),
-                ] as const,
+                    await build({
+                      configuration,
+                      target,
+                      ndkVersion,
+                      androidApiLevel: ANDROID_API_LEVEL,
+                    }),
+                  ] as const,
+              ),
             ),
-          ),
-        ]),
-        {
-          text: `Building ${targetsDescription}`,
-          successText: `Built ${targetsDescription}`,
-          failText: (error: Error) => `Failed to build: ${error.message}`,
-        },
-      );
-
-      if (androidLibraries.length > 0) {
-        const libraryPathByTriplet = Object.fromEntries(
-          androidLibraries.map(([target, outputPath]) => [
-            ANDROID_TRIPLET_PER_TARGET[target],
-            outputPath,
           ]),
-        ) as Record<AndroidTriplet, string>;
-
-        const androidLibsFilename = determineAndroidLibsFilename(
-          Object.values(libraryPathByTriplet),
-        );
-        const androidLibsOutputPath = path.resolve(
-          outputPath,
-          androidLibsFilename,
-        );
-
-        await oraPromise(
-          createAndroidLibsDirectory({
-            outputPath: androidLibsOutputPath,
-            libraryPathByTriplet,
-            autoLink: true,
-          }),
           {
-            text: "Assembling Android libs directory",
-            successText: `Android libs directory assembled into ${prettyPath(
-              androidLibsOutputPath,
-            )}`,
-            failText: ({ message }) =>
-              `Failed to assemble Android libs directory: ${message}`,
+            text: `Building ${targetsDescription}`,
+            successText: `Built ${targetsDescription}`,
+            failText: (error: Error) => `Failed to build: ${error.message}`,
           },
         );
-      }
 
-      if (appleLibraries.length > 0) {
-        const libraryPaths = await combineLibraries(appleLibraries);
-        const frameworkPaths = libraryPaths.map(createAppleFramework);
-        const xcframeworkFilename = determineXCFrameworkFilename(
-          frameworkPaths,
-          xcframeworkExtension ? ".xcframework" : ".apple.node",
-        );
+        if (androidLibraries.length > 0) {
+          const libraryPathByTriplet = Object.fromEntries(
+            androidLibraries.map(([target, outputPath]) => [
+              ANDROID_TRIPLET_PER_TARGET[target],
+              outputPath,
+            ]),
+          ) as Record<AndroidTriplet, string>;
 
-        // Create the xcframework
-        const xcframeworkOutputPath = path.resolve(
-          outputPath,
-          xcframeworkFilename,
-        );
+          const androidLibsFilename = determineAndroidLibsFilename(
+            Object.values(libraryPathByTriplet),
+          );
+          const androidLibsOutputPath = path.resolve(
+            outputPath,
+            androidLibsFilename,
+          );
 
-        await oraPromise(
-          createXCframework({
-            outputPath: xcframeworkOutputPath,
+          await oraPromise(
+            createAndroidLibsDirectory({
+              outputPath: androidLibsOutputPath,
+              libraryPathByTriplet,
+              autoLink: true,
+            }),
+            {
+              text: "Assembling Android libs directory",
+              successText: `Android libs directory assembled into ${prettyPath(
+                androidLibsOutputPath,
+              )}`,
+              failText: ({ message }) =>
+                `Failed to assemble Android libs directory: ${message}`,
+            },
+          );
+        }
+
+        if (appleLibraries.length > 0) {
+          const libraryPaths = await combineLibraries(appleLibraries);
+          const frameworkPaths = libraryPaths.map(createAppleFramework);
+          const xcframeworkFilename = determineXCFrameworkFilename(
             frameworkPaths,
-            autoLink: true,
+            xcframeworkExtension ? ".xcframework" : ".apple.node",
+          );
+
+          // Create the xcframework
+          const xcframeworkOutputPath = path.resolve(
+            outputPath,
+            xcframeworkFilename,
+          );
+
+          await oraPromise(
+            createXCframework({
+              outputPath: xcframeworkOutputPath,
+              frameworkPaths,
+              autoLink: true,
+            }),
+            {
+              text: "Assembling XCFramework",
+              successText: `XCFramework assembled into ${chalk.dim(
+                path.relative(process.cwd(), xcframeworkOutputPath),
+              )}`,
+              failText: ({ message }) =>
+                `Failed to assemble XCFramework: ${message}`,
+            },
+          );
+        }
+
+        const libraryName = determineLibraryBasename([
+          ...androidLibraries.map(([, outputPath]) => outputPath),
+          ...appleLibraries.map(([, outputPath]) => outputPath),
+        ]);
+
+        const declarationsFilename = `${libraryName}.d.ts`;
+        const declarationsPath = path.join(outputPath, declarationsFilename);
+        await oraPromise(
+          generateTypeScriptDeclarations({
+            outputFilename: declarationsFilename,
+            createPath: process.cwd(),
+            outputPath,
           }),
           {
-            text: "Assembling XCFramework",
-            successText: `XCFramework assembled into ${chalk.dim(
-              path.relative(process.cwd(), xcframeworkOutputPath),
+            text: "Generating TypeScript declarations",
+            successText: `Generated TypeScript declarations ${prettyPath(
+              declarationsPath,
             )}`,
-            failText: ({ message }) =>
-              `Failed to assemble XCFramework: ${message}`,
+            failText: (error) =>
+              `Failed to generate TypeScript declarations: ${error.message}`,
           },
         );
-      }
 
-      const libraryName = determineLibraryBasename([
-        ...androidLibraries.map(([, outputPath]) => outputPath),
-        ...appleLibraries.map(([, outputPath]) => outputPath),
-      ]);
+        const entrypointPath = path.join(outputPath, `${libraryName}.js`);
 
-      const declarationsFilename = `${libraryName}.d.ts`;
-      const declarationsPath = path.join(outputPath, declarationsFilename);
-      await oraPromise(
-        generateTypeScriptDeclarations({
-          outputFilename: declarationsFilename,
-          createPath: process.cwd(),
-          outputPath,
-        }),
-        {
-          text: "Generating TypeScript declarations",
-          successText: `Generated TypeScript declarations ${prettyPath(
-            declarationsPath,
-          )}`,
-          failText: (error) =>
-            `Failed to generate TypeScript declarations: ${error.message}`,
-        },
-      );
-
-      const entrypointPath = path.join(outputPath, `${libraryName}.js`);
-
-      await oraPromise(
-        generateEntrypoint({
-          libraryName,
-          outputPath: entrypointPath,
-        }),
-        {
-          text: `Generating entrypoint`,
-          successText: `Generated entrypoint into ${prettyPath(
-            entrypointPath,
-          )}`,
-          failText: (error) =>
-            `Failed to generate entrypoint: ${error.message}`,
-        },
-      );
-    },
+        await oraPromise(
+          generateEntrypoint({
+            libraryName,
+            outputPath: entrypointPath,
+          }),
+          {
+            text: `Generating entrypoint`,
+            successText: `Generated entrypoint into ${prettyPath(
+              entrypointPath,
+            )}`,
+            failText: (error) =>
+              `Failed to generate entrypoint: ${error.message}`,
+          },
+        );
+      },
+    ),
   );
 
 async function combineLibraries(
