@@ -3,10 +3,14 @@ import path from "node:path";
 import fs from "node:fs";
 import { EventEmitter } from "node:events";
 
-import { Command, Option } from "@commander-js/extra-typings";
-import { spawn, SpawnFailure } from "bufout";
-import { oraPromise } from "ora";
-import chalk from "chalk";
+import {
+  chalk,
+  Command,
+  Option,
+  spawn,
+  oraPromise,
+} from "@react-native-node-api/cli-utils";
+import { isSupportedTriplet } from "react-native-node-api";
 
 import { getWeakNodeApiVariables } from "./weak-node-api.js";
 import {
@@ -16,7 +20,6 @@ import {
   platformHasTarget,
 } from "./platforms.js";
 import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
-import { isSupportedTriplet } from "react-native-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -128,126 +131,110 @@ for (const platform of platforms) {
 
 program = program.action(
   async ({ target: requestedTargets, ...baseOptions }) => {
-    try {
-      const buildPath = getBuildPath(baseOptions);
-      if (baseOptions.clean) {
-        await fs.promises.rm(buildPath, { recursive: true, force: true });
-      }
-      const targets = new Set<string>(requestedTargets);
+    const buildPath = getBuildPath(baseOptions);
+    if (baseOptions.clean) {
+      await fs.promises.rm(buildPath, { recursive: true, force: true });
+    }
+    const targets = new Set<string>(requestedTargets);
 
+    for (const platform of Object.values(platforms)) {
+      // Forcing the types a bit here, since the platform id option is dynamically added
+      if ((baseOptions as Record<string, unknown>)[platform.id]) {
+        for (const target of platform.targets) {
+          targets.add(target);
+        }
+      }
+    }
+
+    if (targets.size === 0) {
       for (const platform of Object.values(platforms)) {
-        // Forcing the types a bit here, since the platform id option is dynamically added
-        if ((baseOptions as Record<string, unknown>)[platform.id]) {
-          for (const target of platform.targets) {
+        if (platform.isSupportedByHost()) {
+          for (const target of await platform.defaultTargets()) {
             targets.add(target);
           }
         }
       }
-
       if (targets.size === 0) {
-        for (const platform of Object.values(platforms)) {
-          if (platform.isSupportedByHost()) {
-            for (const target of await platform.defaultTargets()) {
-              targets.add(target);
-            }
-          }
-        }
-        if (targets.size === 0) {
-          throw new Error(
-            "Found no default targets: Install some platform specific build tools",
-          );
-        } else {
-          console.error(
-            chalk.yellowBright("ℹ"),
-            "Using default targets",
-            chalk.dim("(" + [...targets].join(", ") + ")"),
-          );
-        }
-      }
-
-      if (!baseOptions.out) {
-        baseOptions.out = path.join(buildPath, baseOptions.configuration);
-      }
-
-      const targetContexts = [...targets].map((target) => {
-        const platform = findPlatformForTarget(target);
-        const targetBuildPath = getTargetBuildPath(buildPath, target);
-        return {
-          target,
-          platform,
-          buildPath: targetBuildPath,
-          outputPath: path.join(targetBuildPath, "out"),
-          options: baseOptions,
-        };
-      });
-
-      // Configure every triplet project
-      const targetsSummary = chalk.dim(
-        `(${getTargetsSummary(targetContexts)})`,
-      );
-      await oraPromise(
-        Promise.all(
-          targetContexts.map(({ platform, ...context }) =>
-            configureProject(platform, context, baseOptions),
-          ),
-        ),
-        {
-          text: `Configuring projects ${targetsSummary}`,
-          isSilent: baseOptions.verbose,
-          successText: `Configured projects ${targetsSummary}`,
-          failText: ({ message }) => `Failed to configure projects: ${message}`,
-        },
-      );
-
-      // Build every triplet project
-      await oraPromise(
-        Promise.all(
-          targetContexts.map(async ({ platform, ...context }) => {
-            // Delete any stale build artifacts before building
-            // This is important, since we might rename the output files
-            await fs.promises.rm(context.outputPath, {
-              recursive: true,
-              force: true,
-            });
-            await buildProject(platform, context, baseOptions);
-          }),
-        ),
-        {
-          text: "Building projects",
-          isSilent: baseOptions.verbose,
-          successText: "Built projects",
-          failText: ({ message }) => `Failed to build projects: ${message}`,
-        },
-      );
-
-      // Perform post-build steps for each platform in sequence
-      for (const platform of platforms) {
-        const relevantTargets = targetContexts.filter(({ target }) =>
-          platformHasTarget(platform, target),
+        throw new Error(
+          "Found no default targets: Install some platform specific build tools",
         );
-        if (relevantTargets.length == 0) {
-          continue;
-        }
-        await platform.postBuild(
-          {
-            outputPath: baseOptions.out || baseOptions.source,
-            targets: relevantTargets,
-          },
-          baseOptions,
-        );
-      }
-    } catch (error) {
-      if (error instanceof SpawnFailure) {
-        process.exitCode = 1;
-        error.flushOutput("both");
-        if (baseOptions.verbose) {
-          console.error(
-            `\nFailed running: ${chalk.dim(error.command, ...error.args)}\n`,
-          );
-        }
       } else {
-        throw error;
+        console.error(
+          chalk.yellowBright("ℹ"),
+          "Using default targets",
+          chalk.dim("(" + [...targets].join(", ") + ")"),
+        );
       }
+    }
+
+    if (!baseOptions.out) {
+      baseOptions.out = path.join(buildPath, baseOptions.configuration);
+    }
+
+    const targetContexts = [...targets].map((target) => {
+      const platform = findPlatformForTarget(target);
+      const targetBuildPath = getTargetBuildPath(buildPath, target);
+      return {
+        target,
+        platform,
+        buildPath: targetBuildPath,
+        outputPath: path.join(targetBuildPath, "out"),
+        options: baseOptions,
+      };
+    });
+
+    // Configure every triplet project
+    const targetsSummary = chalk.dim(`(${getTargetsSummary(targetContexts)})`);
+    await oraPromise(
+      Promise.all(
+        targetContexts.map(({ platform, ...context }) =>
+          configureProject(platform, context, baseOptions),
+        ),
+      ),
+      {
+        text: `Configuring projects ${targetsSummary}`,
+        isSilent: baseOptions.verbose,
+        successText: `Configured projects ${targetsSummary}`,
+        failText: ({ message }) => `Failed to configure projects: ${message}`,
+      },
+    );
+
+    // Build every triplet project
+    await oraPromise(
+      Promise.all(
+        targetContexts.map(async ({ platform, ...context }) => {
+          // Delete any stale build artifacts before building
+          // This is important, since we might rename the output files
+          await fs.promises.rm(context.outputPath, {
+            recursive: true,
+            force: true,
+          });
+          await buildProject(platform, context, baseOptions);
+        }),
+      ),
+      {
+        text: "Building projects",
+        isSilent: baseOptions.verbose,
+        successText: "Built projects",
+        failText: ({ message }) => `Failed to build projects: ${message}`,
+      },
+    );
+
+    // Perform post-build steps for each platform in sequence
+    for (const platform of platforms) {
+      const relevantTargets = targetContexts.filter(({ target }) =>
+        platformHasTarget(platform, target),
+      );
+      if (relevantTargets.length == 0) {
+        continue;
+      }
+      await platform.postBuild(
+        {
+          outputPath: baseOptions.out || baseOptions.source,
+          targets: relevantTargets,
+        },
+        baseOptions,
+      );
     }
   },
 );

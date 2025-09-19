@@ -1,0 +1,14 @@
+{
+  "name": "@react-native-node-api/cli-utils",
+  "version": "0.1.0",
+  "description": "Useful utilities for the CLIs in the React Native Node API mono-repo",
+  "type": "module",
+  "main": "dist/index.js",
+  "dependencies": {
+    "@commander-js/extra-typings": "^14.0.0",
+    "bufout": "^0.3.2",
+    "chalk": "^5.4.1",
+    "commander": "^14.0.1",
+    "ora": "^8.2.0"
+  }
+}

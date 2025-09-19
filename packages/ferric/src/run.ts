@@ -1,4 +1,5 @@
 import EventEmitter from "node:events";
+
 import { program } from "./program.js";
 
 // We're attaching a lot of listeners when spawning in parallel

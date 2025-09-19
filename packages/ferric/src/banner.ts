@@ -1,4 +1,4 @@
-import chalk from "chalk";
+import { chalk } from "@react-native-node-api/cli-utils";
 
 const LINES = [
   // Pagga on https://www.asciiart.eu/text-to-ascii-art

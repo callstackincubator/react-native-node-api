@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { Command } from "@commander-js/extra-typings";
-import { spawn, SpawnFailure } from "bufout";
-import { oraPromise } from "ora";
+import {
+  Command,
+  oraPromise,
+  spawn,
+  SpawnFailure,
+} from "@react-native-node-api/cli-utils";
 import { packageDirectorySync } from "pkg-dir";
 
 import { prettyPath } from "../path-utils";

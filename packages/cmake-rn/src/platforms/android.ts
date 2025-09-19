@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { Option } from "@commander-js/extra-typings";
+import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
 import {
   createAndroidLibsDirectory,
   determineAndroidLibsFilename,
@@ -10,8 +10,6 @@ import {
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
-import { oraPromise } from "ora";
-import chalk from "chalk";
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";

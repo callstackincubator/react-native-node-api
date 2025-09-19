@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
-import { findDuplicates } from "./duplicates";
-import chalk from "chalk";
 import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 import { createRequire } from "node:module";
+
+import { chalk } from "@react-native-node-api/cli-utils";
+
+import { findDuplicates } from "./duplicates";
 
 // TODO: Change to .apple.node
 export const PLATFORMS = ["android", "apple"] as const;

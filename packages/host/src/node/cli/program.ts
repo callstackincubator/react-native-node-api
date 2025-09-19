@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { EventEmitter } from "node:stream";
 
-import { Command } from "@commander-js/extra-typings";
-import { SpawnFailure } from "bufout";
-import chalk from "chalk";
-import { oraPromise } from "ora";
+import {
+  Command,
+  chalk,
+  SpawnFailure,
+  oraPromise,
+} from "@react-native-node-api/cli-utils";
 
 import {
   determineModuleContext,

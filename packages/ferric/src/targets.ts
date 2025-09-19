@@ -1,6 +1,4 @@
-import chalk from "chalk";
-
-import { UsageError } from "./errors.js";
+import { chalk, UsageError } from "@react-native-node-api/cli-utils";
 import { getInstalledTargets } from "./rustup.js";
 
 export const ANDROID_TARGETS = [
