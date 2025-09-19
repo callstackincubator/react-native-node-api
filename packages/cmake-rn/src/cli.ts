@@ -9,6 +9,7 @@ import {
   Option,
   spawn,
   oraPromise,
+  assertFixable,
 } from "@react-native-node-api/cli-utils";
 import { isSupportedTriplet } from "react-native-node-api";
 
@@ -131,6 +132,14 @@ for (const platform of platforms) {
 
 program = program.action(
   async ({ target: requestedTargets, ...baseOptions }) => {
+    assertFixable(
+      fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
+      `No CMakeLists.txt found in source directory: ${chalk.dim(baseOptions.source)}`,
+      {
+        instructions: `Change working directory into a directory with a CMakeLists.txt, create one or specify the correct source directory using --source`,
+      },
+    );
+
     const buildPath = getBuildPath(baseOptions);
     if (baseOptions.clean) {
       await fs.promises.rm(buildPath, { recursive: true, force: true });
