@@ -1,5 +1,19 @@
 # cmake-rn
 
+## 0.4.0
+
+### Minor Changes
+
+- 2ecf894: Add passing of definitions (-D) to cmake when configuring
+
+### Patch Changes
+
+- 2a30d8d: Refactored CLIs to use a shared utility package
+- f82239c: Pretty print spawn errors instead of simply rethrowing to commander.
+- 9861bad: Assert the existence of CMakeList.txt before passing control to CMake
+- Updated dependencies [2a30d8d]
+  - react-native-node-api@0.5.1
+
 ## 0.3.2
 
 ### Patch Changes

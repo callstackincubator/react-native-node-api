@@ -1,5 +1,13 @@
 # ferric-cli
 
+## 0.3.3
+
+### Patch Changes
+
+- 2a30d8d: Refactored CLIs to use a shared utility package
+- Updated dependencies [2a30d8d]
+  - react-native-node-api@0.5.1
+
 ## 0.3.2
 
 ### Patch Changes
