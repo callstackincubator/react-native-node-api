@@ -10,6 +10,7 @@ import {
   spawn,
   oraPromise,
   assertFixable,
+  wrapAction,
 } from "@react-native-node-api/cli-utils";
 import { isSupportedTriplet } from "react-native-node-api";
 
@@ -131,7 +132,7 @@ for (const platform of platforms) {
 }
 
 program = program.action(
-  async ({ target: requestedTargets, ...baseOptions }) => {
+  wrapAction(async ({ target: requestedTargets, ...baseOptions }) => {
     assertFixable(
       fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
       `No CMakeLists.txt found in source directory: ${chalk.dim(baseOptions.source)}`,
@@ -245,7 +246,7 @@ program = program.action(
         baseOptions,
       );
     }
-  },
+  }),
 );
 
 function getTargetsSummary(

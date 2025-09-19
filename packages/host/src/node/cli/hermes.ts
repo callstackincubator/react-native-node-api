@@ -3,10 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  chalk,
   Command,
   oraPromise,
   spawn,
-  SpawnFailure,
+  UsageError,
+  wrapAction,
 } from "@react-native-node-api/cli-utils";
 import { packageDirectorySync } from "pkg-dir";
 
@@ -24,8 +26,8 @@ export const command = new Command("vendor-hermes")
     "Don't check timestamps of input files to skip unnecessary rebuilds",
     false,
   )
-  .action(async (from, { force, silent }) => {
-    try {
+  .action(
+    wrapAction(async (from, { force, silent }) => {
       const appPackageRoot = packageDirectorySync({ cwd: from });
       assert(appPackageRoot, "Failed to find package root");
       const reactNativePath = path.dirname(
@@ -124,11 +126,5 @@ export const command = new Command("vendor-hermes")
         },
       );
       console.log(hermesPath);
-    } catch (error) {
-      process.exitCode = 1;
-      if (error instanceof SpawnFailure) {
-        error.flushOutput("both");
-      }
-      throw error;
-    }
-  });
+    }),
+  );

@@ -4,10 +4,14 @@ import * as commander from "@commander-js/extra-typings";
 
 import { UsageError } from "./errors.js";
 
-function wrapAction<Command extends commander.Command, Args extends unknown[]>(
-  fn: (this: Command, ...args: Args) => void | Promise<void>,
-) {
-  return async function (this: Command, ...args: Args) {
+export function wrapAction<
+  Args extends unknown[],
+  Opts extends commander.OptionValues,
+  GlobalOpts extends commander.OptionValues,
+  Command extends commander.Command<Args, Opts, GlobalOpts>,
+  ActionArgs extends unknown[],
+>(fn: (this: Command, ...args: ActionArgs) => void | Promise<void>) {
+  return async function (this: Command, ...args: ActionArgs) {
     try {
       await fn.call(this, ...args);
     } catch (error) {
@@ -34,17 +38,3 @@ function wrapAction<Command extends commander.Command, Args extends unknown[]>(
     }
   };
 }
-
-import { Command } from "@commander-js/extra-typings";
-
-// Patch Command to wrap all actions with our error handler
-
-// eslint-disable-next-line @typescript-eslint/unbound-method
-const originalAction = Command.prototype.action;
-
-Command.prototype.action = function action<Command extends commander.Command>(
-  this: Command,
-  fn: Parameters<typeof originalAction>[0],
-) {
-  return originalAction.call(this, wrapAction(fn));
-};
