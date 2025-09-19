@@ -217,9 +217,16 @@ program = program.action(
       }
     } catch (error) {
       if (error instanceof SpawnFailure) {
+        process.exitCode = 1;
         error.flushOutput("both");
+        if (baseOptions.verbose) {
+          console.error(
+            `\nFailed running: ${chalk.dim(error.command, ...error.args)}\n`,
+          );
+        }
+      } else {
+        throw error;
       }
-      throw error;
     }
   },
 );
