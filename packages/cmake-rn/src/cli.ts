@@ -17,11 +17,11 @@ import { isSupportedTriplet } from "react-native-node-api";
 import { getWeakNodeApiVariables } from "./weak-node-api.js";
 import {
   platforms,
-  allTargets,
-  findPlatformForTarget,
-  platformHasTarget,
+  allTriplets as allTriplets,
+  findPlatformForTriplet,
+  platformHasTriplet,
 } from "./platforms.js";
-import { BaseOpts, TargetContext, Platform } from "./platforms/types.js";
+import { BaseOpts, TripletContext, Platform } from "./platforms/types.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -43,25 +43,28 @@ const configurationOption = new Option("--configuration <configuration>")
   .choices(["Release", "Debug"] as const)
   .default("Release");
 
-// TODO: Derive default targets
+// TODO: Derive default build triplets
 // This is especially important when driving the build from within a React Native app package.
 
-const { CMAKE_RN_TARGETS } = process.env;
+const { CMAKE_RN_TRIPLETS } = process.env;
 
-const defaultTargets = CMAKE_RN_TARGETS ? CMAKE_RN_TARGETS.split(",") : [];
+const defaultTriplets = CMAKE_RN_TRIPLETS ? CMAKE_RN_TRIPLETS.split(",") : [];
 
-for (const target of defaultTargets) {
+for (const triplet of defaultTriplets) {
   assert(
-    (allTargets as string[]).includes(target),
-    `Unexpected target in CMAKE_RN_TARGETS: ${target}`,
+    (allTriplets as string[]).includes(triplet),
+    `Unexpected triplet in CMAKE_RN_TRIPLETS: ${triplet}`,
   );
 }
 
-const targetOption = new Option("--target <target...>", "Targets to build for")
-  .choices(allTargets)
+const tripletOption = new Option(
+  "--triplet <triplet...>",
+  "Triplets to build for",
+)
+  .choices(allTriplets)
   .default(
-    defaultTargets,
-    "CMAKE_RN_TARGETS environment variable split by ','",
+    defaultTriplets,
+    "CMAKE_RN_TRIPLETS environment variable split by ','",
   );
 
 const buildPathOption = new Option(
@@ -111,7 +114,7 @@ const noWeakNodeApiLinkageOption = new Option(
 
 let program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
-  .addOption(targetOption)
+  .addOption(tripletOption)
   .addOption(verboseOption)
   .addOption(sourcePathOption)
   .addOption(buildPathOption)
@@ -132,7 +135,7 @@ for (const platform of platforms) {
 }
 
 program = program.action(
-  wrapAction(async ({ target: requestedTargets, ...baseOptions }) => {
+  wrapAction(async ({ triplet: requestedTriplets, ...baseOptions }) => {
     assertFixable(
       fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
       `No CMakeLists.txt found in source directory: ${chalk.dim(baseOptions.source)}`,
@@ -145,34 +148,34 @@ program = program.action(
     if (baseOptions.clean) {
       await fs.promises.rm(buildPath, { recursive: true, force: true });
     }
-    const targets = new Set<string>(requestedTargets);
+    const triplets = new Set<string>(requestedTriplets);
 
     for (const platform of Object.values(platforms)) {
       // Forcing the types a bit here, since the platform id option is dynamically added
       if ((baseOptions as Record<string, unknown>)[platform.id]) {
-        for (const target of platform.targets) {
-          targets.add(target);
+        for (const triplet of platform.triplets) {
+          triplets.add(triplet);
         }
       }
     }
 
-    if (targets.size === 0) {
+    if (triplets.size === 0) {
       for (const platform of Object.values(platforms)) {
         if (platform.isSupportedByHost()) {
-          for (const target of await platform.defaultTargets()) {
-            targets.add(target);
+          for (const triplet of await platform.defaultTriplets()) {
+            triplets.add(triplet);
           }
         }
       }
-      if (targets.size === 0) {
+      if (triplets.size === 0) {
         throw new Error(
-          "Found no default targets: Install some platform specific build tools",
+          "Found no default build triplets: Install some platform specific build tools",
         );
       } else {
         console.error(
           chalk.yellowBright("ℹ"),
-          "Using default targets",
-          chalk.dim("(" + [...targets].join(", ") + ")"),
+          "Using default build triplets",
+          chalk.dim("(" + [...triplets].join(", ") + ")"),
         );
       }
     }
@@ -181,30 +184,32 @@ program = program.action(
       baseOptions.out = path.join(buildPath, baseOptions.configuration);
     }
 
-    const targetContexts = [...targets].map((target) => {
-      const platform = findPlatformForTarget(target);
-      const targetBuildPath = getTargetBuildPath(buildPath, target);
+    const tripletContexts = [...triplets].map((triplet) => {
+      const platform = findPlatformForTriplet(triplet);
+      const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
       return {
-        target,
+        triplet,
         platform,
-        buildPath: targetBuildPath,
-        outputPath: path.join(targetBuildPath, "out"),
+        buildPath: tripletBuildPath,
+        outputPath: path.join(tripletBuildPath, "out"),
         options: baseOptions,
       };
     });
 
     // Configure every triplet project
-    const targetsSummary = chalk.dim(`(${getTargetsSummary(targetContexts)})`);
+    const tripletsSummary = chalk.dim(
+      `(${getTripletsSummary(tripletContexts)})`,
+    );
     await oraPromise(
       Promise.all(
-        targetContexts.map(({ platform, ...context }) =>
+        tripletContexts.map(({ platform, ...context }) =>
           configureProject(platform, context, baseOptions),
         ),
       ),
       {
-        text: `Configuring projects ${targetsSummary}`,
+        text: `Configuring projects ${tripletsSummary}`,
         isSilent: baseOptions.verbose,
-        successText: `Configured projects ${targetsSummary}`,
+        successText: `Configured projects ${tripletsSummary}`,
         failText: ({ message }) => `Failed to configure projects: ${message}`,
       },
     );
@@ -212,7 +217,7 @@ program = program.action(
     // Build every triplet project
     await oraPromise(
       Promise.all(
-        targetContexts.map(async ({ platform, ...context }) => {
+        tripletContexts.map(async ({ platform, ...context }) => {
           // Delete any stale build artifacts before building
           // This is important, since we might rename the output files
           await fs.promises.rm(context.outputPath, {
@@ -232,16 +237,16 @@ program = program.action(
 
     // Perform post-build steps for each platform in sequence
     for (const platform of platforms) {
-      const relevantTargets = targetContexts.filter(({ target }) =>
-        platformHasTarget(platform, target),
+      const relevantTriplets = tripletContexts.filter(({ triplet }) =>
+        platformHasTriplet(platform, triplet),
       );
-      if (relevantTargets.length == 0) {
+      if (relevantTriplets.length == 0) {
         continue;
       }
       await platform.postBuild(
         {
           outputPath: baseOptions.out || baseOptions.source,
-          targets: relevantTargets,
+          triplets: relevantTriplets,
         },
         baseOptions,
       );
@@ -249,19 +254,19 @@ program = program.action(
   }),
 );
 
-function getTargetsSummary(
-  targetContexts: { target: string; platform: Platform }[],
+function getTripletsSummary(
+  tripletContexts: { triplet: string; platform: Platform }[],
 ) {
-  const targetsPerPlatform: Record<string, string[]> = {};
-  for (const { target, platform } of targetContexts) {
-    if (!targetsPerPlatform[platform.id]) {
-      targetsPerPlatform[platform.id] = [];
+  const tripletsPerPlatform: Record<string, string[]> = {};
+  for (const { triplet, platform } of tripletContexts) {
+    if (!tripletsPerPlatform[platform.id]) {
+      tripletsPerPlatform[platform.id] = [];
     }
-    targetsPerPlatform[platform.id].push(target);
+    tripletsPerPlatform[platform.id].push(triplet);
   }
-  return Object.entries(targetsPerPlatform)
-    .map(([platformId, targets]) => {
-      return `${platformId}: ${targets.join(", ")}`;
+  return Object.entries(tripletsPerPlatform)
+    .map(([platformId, triplets]) => {
+      return `${platformId}: ${triplets.join(", ")}`;
     })
     .join(" / ");
 }
@@ -272,24 +277,24 @@ function getBuildPath({ build, source }: BaseOpts) {
 }
 
 /**
- * Namespaces the output path with a target name
+ * Namespaces the output path with a triplet name
  */
-function getTargetBuildPath(buildPath: string, target: unknown) {
-  assert(typeof target === "string", "Expected target to be a string");
-  return path.join(buildPath, target.replace(/;/g, "_"));
+function getTripletBuildPath(buildPath: string, triplet: unknown) {
+  assert(typeof triplet === "string", "Expected triplet to be a string");
+  return path.join(buildPath, triplet.replace(/;/g, "_"));
 }
 
 async function configureProject<T extends string>(
   platform: Platform<T[], Record<string, unknown>>,
-  context: TargetContext<T>,
+  context: TripletContext<T>,
   options: BaseOpts,
 ) {
-  const { target, buildPath, outputPath } = context;
+  const { triplet, buildPath, outputPath } = context;
   const { verbose, source, weakNodeApiLinkage } = options;
 
   const nodeApiDefinitions =
-    weakNodeApiLinkage && isSupportedTriplet(target)
-      ? getWeakNodeApiVariables(target)
+    weakNodeApiLinkage && isSupportedTriplet(triplet)
+      ? getWeakNodeApiVariables(triplet)
       : // TODO: Make this a part of the platform definition
         {};
 
@@ -311,17 +316,17 @@ async function configureProject<T extends string>(
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",
-      outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,
+      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     },
   );
 }
 
 async function buildProject<T extends string>(
   platform: Platform<T[], Record<string, unknown>>,
-  context: TargetContext<T>,
+  context: TripletContext<T>,
   options: BaseOpts,
 ) {
-  const { target, buildPath } = context;
+  const { triplet, buildPath } = context;
   const { verbose, configuration } = options;
   await spawn(
     "cmake",
@@ -335,7 +340,7 @@ async function buildProject<T extends string>(
     ],
     {
       outputMode: verbose ? "inherit" : "buffered",
-      outputPrefix: verbose ? chalk.dim(`[${target}] `) : undefined,
+      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     },
   );
 }
