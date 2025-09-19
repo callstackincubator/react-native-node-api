@@ -102,6 +102,11 @@ const defineOption = new Option(
   },
 );
 
+const targetOption = new Option(
+  "--target <target...>",
+  "CMake targets to build",
+).default([] as string[], "Build all targets of the CMake project");
+
 const noAutoLinkOption = new Option(
   "--no-auto-link",
   "Don't mark the output as auto-linkable by react-native-node-api",
@@ -122,6 +127,7 @@ let program = new Command("cmake-rn")
   .addOption(configurationOption)
   .addOption(defineOption)
   .addOption(cleanOption)
+  .addOption(targetOption)
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption);
 
@@ -335,6 +341,7 @@ async function buildProject<T extends string>(
       buildPath,
       "--config",
       configuration,
+      ...(options.target.length > 0 ? ["--target", ...options.target] : []),
       "--",
       ...platform.buildArgs(context, options),
     ],
