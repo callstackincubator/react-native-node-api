@@ -113,7 +113,10 @@ export function bindingGypToCmakeLists({
       escapedIncludes.push("${CMAKE_JS_INC}");
     }
 
-    lines.push(`add_library(${targetName} SHARED ${escapedSources.join(" ")})`);
+    lines.push(
+      `add_library(${targetName} SHARED ${escapedSources.join(" ")})`,
+      `set_target_properties(${targetName} PROPERTIES PREFIX "" SUFFIX ".node")`,
+    );
 
     if (libraries.length > 0) {
       lines.push(
