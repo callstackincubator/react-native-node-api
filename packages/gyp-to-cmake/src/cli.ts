@@ -62,25 +62,38 @@ export const program = new Command("gyp-to-cmake")
     "--no-path-transforms",
     "Don't transform output from command expansions (replacing '\\' with '/')",
   )
+  .option("--weak-node-api", "Link against the weak-node-api library", false)
+  .option("--define-napi-version", "Define NAPI_VERSION for all targets", false)
+  .option("--cpp <version>", "C++ standard version", "17")
   .argument(
     "[path]",
     "Path to the binding.gyp file or directory to traverse recursively",
     process.cwd(),
   )
   .action(
-    wrapAction((targetPath: string, { pathTransforms }) => {
-      const options: TransformOptions = {
-        unsupportedBehaviour: "throw",
-        disallowUnknownProperties: false,
-        transformWinPathsToPosix: pathTransforms,
-      };
-      const stat = fs.statSync(targetPath);
-      if (stat.isFile()) {
-        transformBindingGypFile(targetPath, options);
-      } else if (stat.isDirectory()) {
-        transformBindingGypsRecursively(targetPath, options);
-      } else {
-        throw new Error(`Expected either a file or a directory: ${targetPath}`);
-      }
-    }),
+    wrapAction(
+      (
+        targetPath: string,
+        { pathTransforms, cpp, defineNapiVersion, weakNodeApi },
+      ) => {
+        const options: TransformOptions = {
+          unsupportedBehaviour: "throw",
+          disallowUnknownProperties: false,
+          transformWinPathsToPosix: pathTransforms,
+          compileFeatures: cpp ? [`cxx_std_${cpp}`] : [],
+          defineNapiVersion,
+          weakNodeApi,
+        };
+        const stat = fs.statSync(targetPath);
+        if (stat.isFile()) {
+          transformBindingGypFile(targetPath, options);
+        } else if (stat.isDirectory()) {
+          transformBindingGypsRecursively(targetPath, options);
+        } else {
+          throw new Error(
+            `Expected either a file or a directory: ${targetPath}`,
+          );
+        }
+      },
+    ),
   );
