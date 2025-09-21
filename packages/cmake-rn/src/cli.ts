@@ -14,7 +14,10 @@ import {
 } from "@react-native-node-api/cli-utils";
 import { isSupportedTriplet } from "react-native-node-api";
 
-import { getWeakNodeApiVariables } from "./weak-node-api.js";
+import {
+  getCmakeJSVariables,
+  getWeakNodeApiVariables,
+} from "./weak-node-api.js";
 import {
   platforms,
   allTriplets as allTriplets,
@@ -117,6 +120,11 @@ const noWeakNodeApiLinkageOption = new Option(
   "Don't pass the path of the weak-node-api library from react-native-node-api",
 );
 
+const cmakeJsOption = new Option(
+  "--cmake-js",
+  "Define CMAKE_JS_* variables used for compatibility with cmake-js",
+).default(false);
+
 let program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(tripletOption)
@@ -129,7 +137,8 @@ let program = new Command("cmake-rn")
   .addOption(cleanOption)
   .addOption(targetOption)
   .addOption(noAutoLinkOption)
-  .addOption(noWeakNodeApiLinkageOption);
+  .addOption(noWeakNodeApiLinkageOption)
+  .addOption(cmakeJsOption);
 
 for (const platform of platforms) {
   const allOption = new Option(
@@ -296,16 +305,23 @@ async function configureProject<T extends string>(
   options: BaseOpts,
 ) {
   const { triplet, buildPath, outputPath } = context;
-  const { verbose, source, weakNodeApiLinkage } = options;
+  const { verbose, source, weakNodeApiLinkage, cmakeJs } = options;
+
+  // TODO: Make the two following definitions a part of the platform definition
 
   const nodeApiDefinitions =
     weakNodeApiLinkage && isSupportedTriplet(triplet)
-      ? getWeakNodeApiVariables(triplet)
-      : // TODO: Make this a part of the platform definition
-        [];
+      ? [getWeakNodeApiVariables(triplet)]
+      : [];
+
+  const cmakeJsDefinitions =
+    cmakeJs && isSupportedTriplet(triplet)
+      ? [getCmakeJSVariables(triplet)]
+      : [];
 
   const definitions = [
     ...nodeApiDefinitions,
+    ...cmakeJsDefinitions,
     ...options.define,
     { CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath },
   ];
