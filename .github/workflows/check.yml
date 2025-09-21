@@ -79,7 +79,7 @@ jobs:
   test-ios:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
-    runs-on: macos-latest
+    runs-on: macos-latest-large
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
