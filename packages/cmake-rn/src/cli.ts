@@ -101,7 +101,7 @@ const defineOption = new Option(
       );
     }
     const { name, type, value } = match.groups;
-    return [...previous, { [type ? name : `${name}:${type}`]: value }];
+    return [...previous, { [type ? `${name}:${type}` : name]: value }];
   })
   .default([]);
 
