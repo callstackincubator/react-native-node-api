@@ -85,8 +85,8 @@ const outPathOption = new Option(
 const defineOption = new Option(
   "-D,--define <entry...>",
   "Define cache variables passed when configuring projects",
-).argParser<Record<string, string | CmakeTypedDefinition>>(
-  (input, previous = {}) => {
+)
+  .argParser<Array<Record<string, string>>>((input, previous = []) => {
     // TODO: Implement splitting of value using a regular expression (using named groups) for the format <var>[:<type>]=<value>
     // and return an object keyed by variable name with the string value as value or alternatively an array of [value, type]
     const match = input.match(
@@ -98,9 +98,9 @@ const defineOption = new Option(
       );
     }
     const { name, type, value } = match.groups;
-    return { ...previous, [name]: type ? { value, type } : value };
-  },
-);
+    return [...previous, { [type ? name : `${name}:${type}`]: value }];
+  })
+  .default([]);
 
 const targetOption = new Option(
   "--target <target...>",
@@ -302,13 +302,13 @@ async function configureProject<T extends string>(
     weakNodeApiLinkage && isSupportedTriplet(triplet)
       ? getWeakNodeApiVariables(triplet)
       : // TODO: Make this a part of the platform definition
-        {};
+        [];
 
-  const definitions = {
+  const definitions = [
     ...nodeApiDefinitions,
     ...options.define,
-    CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
-  };
+    { CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath },
+  ];
 
   await spawn(
     "cmake",
@@ -352,18 +352,13 @@ async function buildProject<T extends string>(
   );
 }
 
-type CmakeTypedDefinition = { value: string; type: string };
-
-function toDefineArguments(
-  declarations: Record<string, string | CmakeTypedDefinition>,
-) {
-  return Object.entries(declarations).flatMap(([key, definition]) => {
-    if (typeof definition === "string") {
-      return ["-D", `${key}=${definition}`];
-    } else {
-      return ["-D", `${key}:${definition.type}=${definition.value}`];
-    }
-  });
+function toDefineArguments(declarations: Array<Record<string, string>>) {
+  return declarations.flatMap((values) =>
+    Object.entries(values).flatMap(([key, definition]) => [
+      "-D",
+      `${key}=${definition}`,
+    ]),
+  );
 }
 
 export { program };
