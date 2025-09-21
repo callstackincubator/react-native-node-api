@@ -163,6 +163,7 @@ jobs:
         with:
           api-level: 29
           force-avd-creation: false
+          avd-name: node-api-avd
           emulator-options: -no-snapshot-save -no-metrics -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           arch: x86_64
