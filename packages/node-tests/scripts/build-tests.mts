@@ -13,5 +13,5 @@ for (const projectPath of projectPaths) {
       projectPath,
     )} to build for React Native`,
   );
-  spawnSync("cmake-rn", [], { cwd: projectPath, stdio: "inherit" });
+  spawnSync("cmake-rn --cmake-js", [], { cwd: projectPath, stdio: "inherit" });
 }
