@@ -110,7 +110,7 @@ jobs:
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -137,20 +137,6 @@ jobs:
           REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
           echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
         working-directory: apps/test-app
-      # - name: Setup Android Emulator cache
-      #   uses: actions/cache@v4
-      #   id: avd-cache
-      #   with:
-      #     path: |
-      #       ~/.android/avd/*
-      #       ~/.android/adb*
-      #     key: ${{ runner.os }}-avd-29
-      # See https://github.com/marketplace/actions/android-emulator-runner#running-hardware-accelerated-emulators-on-linux-runners
-      - name: Enable KVM group perms
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all architectures
         run: npm run build-weak-node-api -- --android
         working-directory: packages/host
