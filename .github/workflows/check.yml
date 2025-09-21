@@ -143,6 +143,25 @@ jobs:
       - name: Build ferric-example for all architectures
         run: npm run build -- --android
         working-directory: packages/ferric-example
+
+      - name: Setup Java Gradle cache for android test app
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - name: Setup Android Emulator cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-29
+
       - name: Run tests (Android)
         timeout-minutes: 75
         uses: reactivecircus/android-emulator-runner@v2
