@@ -8,6 +8,7 @@ import {
   oraPromise,
   assertFixable,
   wrapAction,
+  setVerbose,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -107,6 +108,10 @@ const configurationOption = new Option(
   .choices(["debug", "release"])
   .default("debug");
 
+const verboseOption = new Option("--verbose", "Print more output").default(
+  false,
+);
+
 export const buildCommand = new Command("build")
   .description("Build Rust Node-API module")
   .addOption(targetOption)
@@ -116,6 +121,7 @@ export const buildCommand = new Command("build")
   .addOption(outputPathOption)
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
+  .addOption(verboseOption)
   .action(
     wrapAction(
       async ({
@@ -126,7 +132,10 @@ export const buildCommand = new Command("build")
         output: outputPath,
         configuration,
         xcframeworkExtension,
+        verbose,
       }) => {
+        setVerbose(verbose);
+
         const targets = new Set([...targetArg]);
         if (apple) {
           for (const target of APPLE_TARGETS) {

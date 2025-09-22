@@ -11,6 +11,7 @@ import {
   oraPromise,
   assertFixable,
   wrapAction,
+  setVerbose,
 } from "@react-native-node-api/cli-utils";
 import { isSupportedTriplet } from "react-native-node-api";
 
@@ -142,6 +143,7 @@ for (const platform of platforms) {
 
 program = program.action(
   wrapAction(async ({ triplet: requestedTriplets, ...baseOptions }) => {
+    setVerbose(baseOptions.verbose);
     assertFixable(
       fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
       `No CMakeLists.txt found in source directory: ${chalk.dim(baseOptions.source)}`,
@@ -321,7 +323,6 @@ async function configureProject<T extends string>(
       ...toDefineArguments(definitions),
     ],
     {
-      verbose,
       outputMode: verbose ? "inherit" : "buffered",
       outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     },
@@ -347,7 +348,6 @@ async function buildProject<T extends string>(
       ...platform.buildArgs(context, options),
     ],
     {
-      verbose,
       outputMode: verbose ? "inherit" : "buffered",
       outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     },
