@@ -321,6 +321,7 @@ async function configureProject<T extends string>(
       ...toDefineArguments(definitions),
     ],
     {
+      verbose,
       outputMode: verbose ? "inherit" : "buffered",
       outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     },
@@ -346,6 +347,7 @@ async function buildProject<T extends string>(
       ...platform.buildArgs(context, options),
     ],
     {
+      verbose,
       outputMode: verbose ? "inherit" : "buffered",
       outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
     },
