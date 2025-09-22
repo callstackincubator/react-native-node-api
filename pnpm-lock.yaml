@@ -207,8 +207,8 @@ importers:
   packages/ferric-example:
     devDependencies:
       ferric-cli:
-        specifier: latest
-        version: 0.3.2(@babel/core@7.28.4)(@emnapi/runtime@1.5.0)(@types/node@22.18.6)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0))
+        specifier: workspace:*
+        version: link:../ferric
 
   packages/gyp-to-cmake:
     dependencies:
@@ -260,11 +260,11 @@ importers:
         version: 2.1.0
     devDependencies:
       cmake-rn:
-        specifier: latest
-        version: 0.3.2(@babel/core@7.28.4)(node-addon-api@8.5.0)(node-api-headers@1.5.0)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0))
+        specifier: workspace:*
+        version: link:../cmake-rn
       gyp-to-cmake:
-        specifier: latest
-        version: 0.2.0
+        specifier: workspace:*
+        version: link:../gyp-to-cmake
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
@@ -2642,13 +2642,6 @@ packages:
     engines: {node: '>= 14.15.0'}
     hasBin: true
 
-  cmake-rn@0.3.2:
-    resolution: {integrity: sha512-qv8MFBSnlSw3UYRU8M2PeFHDvUbA9FjzgGH1n5Urbpkomw84r9iFVd+pe1Hasv2zdydXyBiS+sJ89dkDK1ksCA==}
-    hasBin: true
-    peerDependencies:
-      node-addon-api: ^8.3.1
-      node-api-headers: ^1.5.0
-
   color-convert@1.9.3:
     resolution: {integrity: sha512-QfAUtd+vFdAtFQcC8CCyYt1fYWxSqAiK2cSD6zDB8N3cpsEBAvRxp9zOGg6G/SHHJYAT88/az/IuDGALsNVbGg==}
 
@@ -3020,10 +3013,6 @@ packages:
   fb-watchman@2.0.2:
     resolution: {integrity: sha512-p5161BqbuCaSnB8jIbzQHOlpgsPmK5rJVDfDKO91Axs5NC1uu3HRQm6wt9cd9/+GtQQIO53JdGXXoyDpTAsgYA==}
 
-  ferric-cli@0.3.2:
-    resolution: {integrity: sha512-/ZYUrvOjfbLK5IWXgCMNJHaIWGo8yD+RGQCfKGnW7Hm7bpLBISclIFh0TiTO5glgZqZbKJXSS/fsJVccRYiDLg==}
-    hasBin: true
-
   file-entry-cache@8.0.0:
     resolution: {integrity: sha512-XXTUwCvisa5oacNGRP9SfNtYBNAMi+RPwBFmblZEF7N7swHYQS6/Zfk7SRwx4D5j3CH211YNRco1DEMNVfZCnQ==}
     engines: {node: '>=16.0.0'}
@@ -3201,10 +3190,6 @@ packages:
 
   gyp-parser@1.0.4:
     resolution: {integrity: sha512-ixRWukp/mQ+XTbKMxLoFqk0dScpCrJHln6NIv/ks8mmEnXaqtFg520T2grF7WpCjYbGA797vKkpNnOJBwd6rKA==}
-
-  gyp-to-cmake@0.2.0:
-    resolution: {integrity: sha512-ShG+ZoMEtYGnjndsdxpCX4wdf8cV8joGaEsRuFvFx+9o1LtgCQ58FpQY/IALB5UIjC59kV6E7opvfssItMBq6A==}
-    hasBin: true
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
@@ -4086,13 +4071,6 @@ packages:
 
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
-
-  react-native-node-api@0.5.0:
-    resolution: {integrity: sha512-7I5Drtb1QedIAksZtbPfOjBO5D7MSjIwoGVnkl4qMKozXfaGrvV8fkuitXAqc6dpuUHZzclT66RTNuwF+Xtplg==}
-    hasBin: true
-    peerDependencies:
-      '@babel/core': ^7.26.10
-      react-native: 0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5 || 0.79.6 || 0.80.0 || 0.80.1 || 0.80.2 || 0.81.0 || 0.81.1 || 0.81.2 || 0.81.3 || 0.81.4
 
   react-native-test-app@4.4.10:
     resolution: {integrity: sha512-EglQFALaL+HjLBI6Kd6x7Dz/AAsuE2X0rBb+PI/Y7cHAOwPQhWXyCBjPGSrylaZ+TdcOGlYNWmUET7TI8gDvIQ==}
@@ -7435,20 +7413,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  cmake-rn@0.3.2(@babel/core@7.28.4)(node-addon-api@8.5.0)(node-api-headers@1.5.0)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0)):
-    dependencies:
-      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
-      bufout: 0.3.4
-      chalk: 5.6.2
-      commander: 13.1.0
-      node-addon-api: 8.5.0
-      node-api-headers: 1.5.0
-      ora: 8.2.0
-      react-native-node-api: 0.5.0(@babel/core@7.28.4)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0))
-    transitivePeerDependencies:
-      - '@babel/core'
-      - react-native
-
   color-convert@1.9.3:
     dependencies:
       color-name: 1.1.3
@@ -7825,33 +7789,6 @@ snapshots:
     dependencies:
       bser: 2.1.1
 
-  ferric-cli@0.3.2(@babel/core@7.28.4)(@emnapi/runtime@1.5.0)(@types/node@22.18.6)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0)):
-    dependencies:
-      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
-      '@napi-rs/cli': 3.0.4(@emnapi/runtime@1.5.0)(@types/node@22.18.6)
-      bufout: 0.3.4
-      chalk: 5.6.2
-      commander: 13.1.0
-      ora: 8.2.0
-      react-native-node-api: 0.5.0(@babel/core@7.28.4)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0))
-    transitivePeerDependencies:
-      - '@babel/core'
-      - '@emnapi/runtime'
-      - '@napi-rs/cross-toolchain-arm64-target-aarch64'
-      - '@napi-rs/cross-toolchain-arm64-target-armv7'
-      - '@napi-rs/cross-toolchain-arm64-target-ppc64le'
-      - '@napi-rs/cross-toolchain-arm64-target-s390x'
-      - '@napi-rs/cross-toolchain-arm64-target-x86_64'
-      - '@napi-rs/cross-toolchain-x64-target-aarch64'
-      - '@napi-rs/cross-toolchain-x64-target-armv7'
-      - '@napi-rs/cross-toolchain-x64-target-ppc64le'
-      - '@napi-rs/cross-toolchain-x64-target-s390x'
-      - '@napi-rs/cross-toolchain-x64-target-x86_64'
-      - '@types/node'
-      - emnapi
-      - react-native
-      - supports-color
-
   file-entry-cache@8.0.0:
     dependencies:
       flat-cache: 4.0.1
@@ -8046,12 +7983,6 @@ snapshots:
   graphemer@1.4.0: {}
 
   gyp-parser@1.0.4: {}
-
-  gyp-to-cmake@0.2.0:
-    dependencies:
-      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
-      commander: 13.1.0
-      gyp-parser: 1.0.4
 
   has-flag@4.0.0: {}
 
@@ -9082,18 +9013,6 @@ snapshots:
       - utf-8-validate
 
   react-is@18.3.1: {}
-
-  react-native-node-api@0.5.0(@babel/core@7.28.4)(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0)):
-    dependencies:
-      '@babel/core': 7.28.4
-      '@commander-js/extra-typings': 13.1.0(commander@13.1.0)
-      bufout: 0.3.4
-      chalk: 5.6.2
-      commander: 13.1.0
-      ora: 8.2.0
-      pkg-dir: 8.0.0
-      react-native: 0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0)
-      read-pkg: 9.0.1
 
   react-native-test-app@4.4.10(react-native@0.81.4(@babel/core@7.28.4)(@react-native-community/cli@20.0.2(typescript@5.9.2))(@react-native/metro-config@0.81.4(@babel/core@7.28.4))(@types/react@19.1.13)(react@19.1.0))(react@19.1.0):
     dependencies:

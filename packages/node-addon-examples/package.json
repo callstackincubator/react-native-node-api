@@ -19,8 +19,8 @@
     "bootstrap": "pnpm copy-and-build"
   },
   "devDependencies": {
-    "cmake-rn": "latest",
-    "gyp-to-cmake": "latest",
+    "cmake-rn": "workspace:*",
+    "gyp-to-cmake": "workspace:*",
     "read-pkg": "^9.0.1"
   },
   "dependencies": {

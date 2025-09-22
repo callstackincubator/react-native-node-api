@@ -16,6 +16,6 @@
     "bootstrap": "pnpm build"
   },
   "devDependencies": {
-    "ferric-cli": "latest"
+    "ferric-cli": "workspace:*"
   }
 }
