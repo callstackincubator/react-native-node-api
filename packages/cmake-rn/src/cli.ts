@@ -89,7 +89,7 @@ const defineOption = new Option(
   "-D,--define <entry...>",
   "Define cache variables passed when configuring projects",
 )
-  .argParser<Array<Record<string, string>>>((input, previous = []) => {
+  .argParser<Record<string, string>[]>((input, previous = []) => {
     // TODO: Implement splitting of value using a regular expression (using named groups) for the format <var>[:<type>]=<value>
     // and return an object keyed by variable name with the string value as value or alternatively an array of [value, type]
     const match = input.match(
