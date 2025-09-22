@@ -129,8 +129,8 @@ jobs:
       - run: npm ci
       - run: npm run bootstrap
         env:
-          CMAKE_RN_TRIPLETS: i686-linux-android
-          FERRIC_TARGETS: i686-linux-android
+          CMAKE_RN_TRIPLETS: x86_64-linux-android
+          FERRIC_TARGETS: x86_64-linux-android
       - name: Clone patched Hermes version
         shell: bash
         run: |
@@ -163,9 +163,8 @@ jobs:
         with:
           api-level: 29
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-metrics -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          arch: x86
+          arch: x86_64
           ndk: ${{ env.NDK_VERSION }}
           cmake: 3.22.1
           working-directory: apps/test-app
