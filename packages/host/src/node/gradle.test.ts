@@ -34,7 +34,7 @@ describe(
         );
         assert.match(
           stderr,
-          /Run the following in your terminal, to clone Hermes and instruct React Native to use it/,
+          /Run the following in your Bash- or Zsh-compatible terminal, to clone Hermes and instruct React Native to use it/,
         );
         assert.match(
           stderr,
