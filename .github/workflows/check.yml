@@ -3,6 +3,8 @@ name: Check
 env:
   # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
   NDK_VERSION: 27.1.12297006
+  # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
+  ENABLE_GRADLE_TESTS: true
 
 on:
   push:
@@ -110,7 +112,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm bootstrap
         env:
-          CMAKE_RN_TARGETS: arm64-apple-ios-sim
+          CMAKE_RN_TRIPLETS: arm64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim
       - run: pnpm pod-install
         working-directory: apps/test-app
@@ -146,8 +148,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm bootstrap
         env:
-          CMAKE_RN_TARGETS: i686-linux-android
-          FERRIC_TARGETS: i686-linux-android
+          CMAKE_RN_TRIPLETS: x86_64-linux-android
+          FERRIC_TARGETS: x86_64-linux-android
       - name: Clone patched Hermes version
         shell: bash
         run: |
@@ -180,9 +182,8 @@ jobs:
         with:
           api-level: 29
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-metrics -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          arch: x86
+          arch: x86_64
           ndk: ${{ env.NDK_VERSION }}
           cmake: 3.22.1
           working-directory: apps/test-app

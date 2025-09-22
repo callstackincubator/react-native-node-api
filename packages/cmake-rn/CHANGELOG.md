@@ -1,10 +1,28 @@
 # cmake-rn
 
+## 0.3.2
+
+### Patch Changes
+
+- ad2ec51: Removing an extraneous dependency on cmake-js
+- Updated dependencies [90a1471]
+- Updated dependencies [75aaed1]
+- Updated dependencies [90a1471]
+  - react-native-node-api@0.5.0
+
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [a0212c8]
+- Updated dependencies [a0212c8]
+  - react-native-node-api@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
 
-- 8557768: Derive default targets from the CMAKE_RN_TARGETS environment variable
+- 8557768: Derive default targets from the CMAKE_RN_TRIPLETS environment variable
 
 ### Patch Changes
 

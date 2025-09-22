@@ -1,2 +1,3 @@
 import { program } from "./cli.js";
-program.parse(process.argv);
+
+program.parseAsync(process.argv).catch(console.error);

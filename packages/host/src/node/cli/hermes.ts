@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { Command } from "@commander-js/extra-typings";
-import { spawn, SpawnFailure } from "bufout";
-import { oraPromise } from "ora";
+import {
+  chalk,
+  Command,
+  oraPromise,
+  spawn,
+  UsageError,
+  wrapAction,
+} from "@react-native-node-api/cli-utils";
 import { packageDirectorySync } from "pkg-dir";
 
 import { prettyPath } from "../path-utils";
@@ -21,8 +26,8 @@ export const command = new Command("vendor-hermes")
     "Don't check timestamps of input files to skip unnecessary rebuilds",
     false,
   )
-  .action(async (from, { force, silent }) => {
-    try {
+  .action(
+    wrapAction(async (from, { force, silent }) => {
       const appPackageRoot = packageDirectorySync({ cwd: from });
       assert(appPackageRoot, "Failed to find package root");
       const reactNativePath = path.dirname(
@@ -88,17 +93,12 @@ export const command = new Command("vendor-hermes")
             },
           );
         } catch (error) {
-          if (error instanceof SpawnFailure) {
-            error.flushOutput("both");
-            console.error(
-              `\n🛑 React Native uses the ${hermesVersion} tag and cloning our fork failed.`,
-              `Please see the Node-API package's peer dependency on "react-native" for supported versions.`,
-            );
-            process.exitCode = 1;
-            return;
-          } else {
-            throw error;
-          }
+          throw new UsageError("Failed to clone custom Hermes", {
+            cause: error,
+            fix: {
+              instructions: `Check the network connection and ensure this ${chalk.bold("react-native")} version is supported by ${chalk.bold("react-native-node-api")}.`,
+            },
+          });
         }
       }
       const hermesJsiPath = path.join(hermesPath, "API/jsi/jsi");
@@ -121,11 +121,5 @@ export const command = new Command("vendor-hermes")
         },
       );
       console.log(hermesPath);
-    } catch (error) {
-      process.exitCode = 1;
-      if (error instanceof SpawnFailure) {
-        error.flushOutput("both");
-      }
-      throw error;
-    }
-  });
+    }),
+  );

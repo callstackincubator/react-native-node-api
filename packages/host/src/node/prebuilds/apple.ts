@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import cp from "node:child_process";
 
-import { spawn } from "bufout";
+import { spawn } from "@react-native-node-api/cli-utils";
 
 import { AppleTriplet } from "./triplets.js";
 import { determineLibraryBasename } from "../path-utils.js";

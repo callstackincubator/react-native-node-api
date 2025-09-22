@@ -1,5 +1,26 @@
 # react-native-node-api
 
+## 0.5.0
+
+### Minor Changes
+
+- 75aaed1: Add explicit support for React Native 0.81.2, 0.81.3 and 0.81.4
+- 90a1471: Assert that REACT_NATIVE_OVERRIDE_HERMES_DIR is set when Android / Gradle projects depend on the host package
+
+### Patch Changes
+
+- 90a1471: Fix auto-linking from Gradle builds on Windows
+
+## 0.4.0
+
+### Minor Changes
+
+- a0212c8: Add explicit support for React Native 0.81.1 (0.79.6, 0.80.0, 0.80.1, 0.80.2 & 0.81.0)
+
+### Patch Changes
+
+- a0212c8: Fix host library to not explicitly link with weak-node-api and instead rely on dlopen
+
 ## 0.3.3
 
 ### Patch Changes

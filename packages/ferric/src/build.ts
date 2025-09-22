@@ -1,10 +1,14 @@
 import path from "node:path";
 import fs from "node:fs";
 
-import { Command, Option } from "@commander-js/extra-typings";
-import chalk from "chalk";
-import { SpawnFailure } from "bufout";
-import { oraPromise } from "ora";
+import {
+  chalk,
+  Command,
+  Option,
+  oraPromise,
+  assertFixable,
+  wrapAction,
+} from "@react-native-node-api/cli-utils";
 
 import {
   determineAndroidLibsFilename,
@@ -18,7 +22,6 @@ import {
   prettyPath,
 } from "react-native-node-api";
 
-import { UsageError, assertFixable } from "./errors.js";
 import { ensureCargo, build } from "./cargo.js";
 import {
   ALL_TARGETS,
@@ -114,16 +117,16 @@ export const buildCommand = new Command("build")
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
   .action(
-    async ({
-      target: targetArg,
-      apple,
-      android,
-      ndkVersion,
-      output: outputPath,
-      configuration,
-      xcframeworkExtension,
-    }) => {
-      try {
+    wrapAction(
+      async ({
+        target: targetArg,
+        apple,
+        android,
+        ndkVersion,
+        output: outputPath,
+        configuration,
+        xcframeworkExtension,
+      }) => {
         const targets = new Set([...targetArg]);
         if (apple) {
           for (const target of APPLE_TARGETS) {
@@ -303,29 +306,8 @@ export const buildCommand = new Command("build")
               `Failed to generate entrypoint: ${error.message}`,
           },
         );
-      } catch (error) {
-        process.exitCode = 1;
-        if (error instanceof SpawnFailure) {
-          error.flushOutput("both");
-        }
-        if (error instanceof UsageError || error instanceof SpawnFailure) {
-          console.error(chalk.red("ERROR"), error.message);
-          if (error.cause instanceof Error) {
-            console.error(chalk.red("CAUSE"), error.cause.message);
-          }
-          if (error instanceof UsageError && error.fix) {
-            console.error(
-              chalk.green("FIX"),
-              error.fix.command
-                ? chalk.dim("Run: ") + error.fix.command
-                : error.fix.instructions,
-            );
-          }
-        } else {
-          throw error;
-        }
-      }
-    },
+      },
+    ),
   );
 
 async function combineLibraries(

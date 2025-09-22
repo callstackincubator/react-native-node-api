@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Command } from "@commander-js/extra-typings";
+
+import { Command, wrapAction } from "@react-native-node-api/cli-utils";
 
 import { readBindingFile } from "./gyp.js";
 import {
@@ -66,18 +67,20 @@ export const program = new Command("gyp-to-cmake")
     "Path to the binding.gyp file or directory to traverse recursively",
     process.cwd(),
   )
-  .action((targetPath: string, { pathTransforms }) => {
-    const options: TransformOptions = {
-      unsupportedBehaviour: "throw",
-      disallowUnknownProperties: false,
-      transformWinPathsToPosix: pathTransforms,
-    };
-    const stat = fs.statSync(targetPath);
-    if (stat.isFile()) {
-      transformBindingGypFile(targetPath, options);
-    } else if (stat.isDirectory()) {
-      transformBindingGypsRecursively(targetPath, options);
-    } else {
-      throw new Error(`Expected either a file or a directory: ${targetPath}`);
-    }
-  });
+  .action(
+    wrapAction((targetPath: string, { pathTransforms }) => {
+      const options: TransformOptions = {
+        unsupportedBehaviour: "throw",
+        disallowUnknownProperties: false,
+        transformWinPathsToPosix: pathTransforms,
+      };
+      const stat = fs.statSync(targetPath);
+      if (stat.isFile()) {
+        transformBindingGypFile(targetPath, options);
+      } else if (stat.isDirectory()) {
+        transformBindingGypsRecursively(targetPath, options);
+      } else {
+        throw new Error(`Expected either a file or a directory: ${targetPath}`);
+      }
+    }),
+  );

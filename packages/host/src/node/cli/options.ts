@@ -1,4 +1,4 @@
-import { Option } from "@commander-js/extra-typings";
+import { Option } from "@react-native-node-api/cli-utils";
 
 import { assertPathSuffix, PATH_SUFFIX_CHOICES } from "../path-utils";
 

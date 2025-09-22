@@ -2,16 +2,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { Option } from "@commander-js/extra-typings";
+import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
 import {
   createAndroidLibsDirectory,
   determineAndroidLibsFilename,
-  AndroidTriplet as Target,
+  AndroidTriplet as Triplet,
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
-import { oraPromise } from "ora";
-import chalk from "chalk";
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
@@ -24,7 +22,7 @@ export const ANDROID_ARCHITECTURES = {
   "aarch64-linux-android": "arm64-v8a",
   "i686-linux-android": "x86",
   "x86_64-linux-android": "x86_64",
-} satisfies Record<Target, AndroidArchitecture>;
+} satisfies Record<Triplet, AndroidArchitecture>;
 
 const ndkVersionOption = new Option(
   "--ndk-version <version>",
@@ -38,16 +36,16 @@ const androidSdkVersionOption = new Option(
 
 type AndroidOpts = { ndkVersion: string; androidSdkVersion: string };
 
-export const platform: Platform<Target[], AndroidOpts> = {
+export const platform: Platform<Triplet[], AndroidOpts> = {
   id: "android",
   name: "Android",
-  targets: [
+  triplets: [
     "aarch64-linux-android",
     "armv7a-linux-androideabi",
     "i686-linux-android",
     "x86_64-linux-android",
   ],
-  defaultTargets() {
+  defaultTriplets() {
     if (process.arch === "arm64") {
       return ["aarch64-linux-android"];
     } else if (process.arch === "x64") {
@@ -61,7 +59,7 @@ export const platform: Platform<Target[], AndroidOpts> = {
       .addOption(ndkVersionOption)
       .addOption(androidSdkVersionOption);
   },
-  configureArgs({ target }, { ndkVersion, androidSdkVersion }) {
+  configureArgs({ triplet }, { ndkVersion, androidSdkVersion }) {
     const { ANDROID_HOME } = process.env;
     assert(
       typeof ANDROID_HOME === "string",
@@ -82,7 +80,7 @@ export const platform: Platform<Target[], AndroidOpts> = {
       ndkPath,
       "build/cmake/android.toolchain.cmake",
     );
-    const architecture = ANDROID_ARCHITECTURES[target];
+    const architecture = ANDROID_ARCHITECTURES[triplet];
 
     return [
       "-G",
@@ -123,11 +121,11 @@ export const platform: Platform<Target[], AndroidOpts> = {
     const { ANDROID_HOME } = process.env;
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
-  async postBuild({ outputPath, targets }, { autoLink }) {
+  async postBuild({ outputPath, triplets }, { autoLink }) {
     // TODO: Include `configuration` in the output path
     const libraryPathByTriplet = Object.fromEntries(
       await Promise.all(
-        targets.map(async ({ target, outputPath }) => {
+        triplets.map(async ({ triplet, outputPath }) => {
           assert(
             fs.existsSync(outputPath),
             `Expected a directory at ${outputPath}`,
@@ -144,10 +142,10 @@ export const platform: Platform<Target[], AndroidOpts> = {
             )
             .map((dirent) => path.join(dirent.parentPath, dirent.name));
           assert.equal(result.length, 1, "Expected exactly one library file");
-          return [target, result[0]] as const;
+          return [triplet, result[0]] as const;
         }),
       ),
-    ) as Record<Target, string>;
+    ) as Record<Triplet, string>;
     const androidLibsFilename = determineAndroidLibsFilename(
       Object.values(libraryPathByTriplet),
     );

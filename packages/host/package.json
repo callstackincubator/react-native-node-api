@@ -1,6 +1,6 @@
 {
   "name": "react-native-node-api",
-  "version": "0.3.3",
+  "version": "0.5.0",
   "description": "Node-API for React Native",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
@@ -47,8 +47,17 @@
     "build-weak-node-api": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api --out ./weak-node-api",
     "build-weak-node-api:all-triplets": "cmake-rn --android --apple --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api --out ./weak-node-api",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
+<<<<<<< HEAD
     "bootstrap": "pnpm copy-node-api-headers && pnpm generate-weak-node-api-injector && pnpm generate-weak-node-api && pnpm build-weak-node-api",
     "prerelease": "pnpm copy-node-api-headers && pnpm generate-weak-node-api-injector && pnpm generate-weak-node-api && pnpm build-weak-node-api:all-triplets"
+||||||| 0d97e50
+    "bootstrap": "npm run copy-node-api-headers && npm run generate-weak-node-api-injector && npm run generate-weak-node-api && npm run build-weak-node-api",
+    "prerelease": "npm run copy-node-api-headers && npm run generate-weak-node-api-injector && npm run generate-weak-node-api && npm run build-weak-node-api:all-triplets"
+=======
+    "test:gradle": "ENABLE_GRADLE_TESTS=true node --run test",
+    "bootstrap": "node --run copy-node-api-headers && node --run generate-weak-node-api-injector && node --run generate-weak-node-api && node --run build-weak-node-api",
+    "prerelease": "node --run copy-node-api-headers && node --run generate-weak-node-api-injector && node --run generate-weak-node-api && node --run build-weak-node-api:all-triplets"
+>>>>>>> upstream/main
   },
   "keywords": [
     "react-native",
@@ -77,11 +86,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@commander-js/extra-typings": "^13.1.0",
-    "bufout": "^0.3.2",
-    "chalk": "^5.4.1",
-    "commander": "^13.1.0",
-    "ora": "^8.2.0",
+    "@react-native-node-api/cli-utils": "0.1.0",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1"
   },
@@ -90,12 +95,11 @@
     "@babel/types": "^7.27.0",
     "@types/babel__core": "^7.20.5",
     "fswin": "^3.24.829",
-    "metro-config": "0.81.1",
     "node-api-headers": "^1.5.0",
     "zod": "^3.24.3"
   },
   "peerDependencies": {
     "@babel/core": "^7.26.10",
-    "react-native": "0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5"
+    "react-native": "0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5 || 0.79.6 || 0.80.0 || 0.80.1 || 0.80.2 || 0.81.0 || 0.81.1 || 0.81.2 || 0.81.3 || 0.81.4"
   }
 }

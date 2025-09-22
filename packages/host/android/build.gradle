@@ -1,5 +1,18 @@
 import java.nio.file.Paths
 import groovy.json.JsonSlurper
+import org.gradle.internal.os.OperatingSystem
+
+if (!System.getenv("REACT_NATIVE_OVERRIDE_HERMES_DIR")) {
+    throw new GradleException([
+        "React Native Node-API needs a custom version of Hermes with Node-API enabled.",
+        "Run the following in your Bash- or Zsh-compatible terminal, to clone Hermes and instruct React Native to use it:",
+        "",
+        "export REACT_NATIVE_OVERRIDE_HERMES_DIR=\$(npx react-native-node-api vendor-hermes --silent --force)",
+        "",
+        "And follow this guide to build React Native from source:",
+        "https://reactnative.dev/contributing/how-to-build-from-source#update-your-project-to-build-from-source"
+    ].join('\n'))
+}
 
 buildscript {
   ext.getExtOrDefault = {name ->
@@ -48,6 +61,8 @@ android {
     sourceSets {
       main {
         manifest.srcFile "src/main/AndroidManifestNew.xml"
+        // Include the weak-node-api to enable a dynamic load
+        jniLibs.srcDirs += ["../weak-node-api/weak-node-api.android.node"]
       }
     }
   }
@@ -132,12 +147,14 @@ dependencies {
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 }
 
+def commandLinePrefix = OperatingSystem.current().isWindows() ? ["cmd", "/c", "node"] : []
+def cliPath = file("../bin/react-native-node-api.mjs")
+
 // Custom task to fetch jniLibs paths via CLI
 task linkNodeApiModules {
   doLast {
     exec {
-      // TODO: Support --strip-path-suffix
-      commandLine 'npx', 'react-native-node-api', 'link', '--android', rootProject.rootDir.absolutePath
+      commandLine commandLinePrefix + [cliPath, 'link', '--android', rootProject.rootDir.absolutePath]
       standardOutput = System.out
       errorOutput = System.err
       // Enable color output
