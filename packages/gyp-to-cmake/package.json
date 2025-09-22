@@ -22,7 +22,7 @@
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
   "dependencies": {
-    "@react-native-node-api/cli-utils": "0.1.0",
+    "@react-native-node-api/cli-utils": "workspace:*",
     "gyp-parser": "^1.0.4"
   }
 }
