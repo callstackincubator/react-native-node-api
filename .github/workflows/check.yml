@@ -163,7 +163,6 @@ jobs:
         with:
           api-level: 29
           force-avd-creation: false
-          avd-name: node-api-avd
           disable-animations: true
           arch: x86_64
           ndk: ${{ env.NDK_VERSION }}
