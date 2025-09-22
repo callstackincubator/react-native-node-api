@@ -164,11 +164,8 @@ jobs:
           api-level: 29
           force-avd-creation: false
           avd-name: node-api-avd
-          emulator-options: -no-snapshot-save -no-metrics -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           arch: x86_64
-          disk-size: 6000M
-          heap-size: 600M
           ndk: ${{ env.NDK_VERSION }}
           cmake: 3.22.1
           working-directory: apps/test-app
