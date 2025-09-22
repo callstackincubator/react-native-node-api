@@ -72,7 +72,7 @@ export function bindingGypToCmakeLists({
     `project(${projectName})`,
     "",
     // Declaring a project-wide NAPI_VERSION as a fallback for targets that don't explicitly set it
-    // This is only needed when using cmake-js, as this is injected by cmake-rn
+    // This is only needed when using cmake-js, as it is injected by cmake-rn
     ...(defineNapiVersion
       ? [`add_compile_definitions(NAPI_VERSION=${napiVersion})`]
       : []),
