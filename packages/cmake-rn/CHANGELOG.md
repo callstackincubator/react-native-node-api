@@ -1,5 +1,24 @@
 # cmake-rn
 
+## 0.4.0
+
+### Minor Changes
+
+- ff34c45: Breaking: `CMAKE_JS_*` defines are no longer injected by default (use --cmake-js to opt-in)
+- a336f07: Breaking: Renamed --target to --triplet to free up --target for passing CMake targets
+- 2ecf894: Add passing of definitions (-D) to cmake when configuring
+- 633dc34: Pass --target to CMake
+- ff34c45: Expose includable WEAK_NODE_API_CONFIG to CMake projects
+
+### Patch Changes
+
+- 2a30d8d: Refactored CLIs to use a shared utility package
+- f82239c: Pretty print spawn errors instead of simply rethrowing to commander.
+- 9861bad: Assert the existence of CMakeList.txt before passing control to CMake
+- Updated dependencies [2a30d8d]
+- Updated dependencies [c72970f]
+  - react-native-node-api@0.5.1
+
 ## 0.3.2
 
 ### Patch Changes
