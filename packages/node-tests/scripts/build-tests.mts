@@ -1,5 +1,5 @@
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { execSync } from "node:child_process";
 
 import { findCMakeProjects } from "./utils.mjs";
 
@@ -13,5 +13,8 @@ for (const projectPath of projectPaths) {
       projectPath,
     )} to build for React Native`,
   );
-  spawnSync("cmake-rn", [], { cwd: projectPath, stdio: "inherit" });
+  execSync("cmake-rn --cmake-js", {
+    cwd: projectPath,
+    stdio: "inherit",
+  });
 }

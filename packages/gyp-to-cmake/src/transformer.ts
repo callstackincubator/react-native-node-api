@@ -12,6 +12,9 @@ export type GypToCmakeListsOptions = {
   executeCmdExpansions?: boolean;
   unsupportedBehaviour?: "skip" | "warn" | "throw";
   transformWinPathsToPosix?: boolean;
+  compileFeatures?: string[];
+  defineNapiVersion?: boolean;
+  weakNodeApi?: boolean;
 };
 
 function isCmdExpansion(value: string) {
@@ -34,6 +37,9 @@ export function bindingGypToCmakeLists({
   executeCmdExpansions = true,
   unsupportedBehaviour = "skip",
   transformWinPathsToPosix = true,
+  defineNapiVersion = true,
+  weakNodeApi = false,
+  compileFeatures = [],
 }: GypToCmakeListsOptions): string {
   function mapExpansion(value: string): string[] {
     if (!isCmdExpansion(value)) {
@@ -60,65 +66,97 @@ export function bindingGypToCmakeLists({
   }
 
   const lines: string[] = [
-    "cmake_minimum_required(VERSION 3.15)",
+    "cmake_minimum_required(VERSION 3.15...3.31)",
     //"cmake_policy(SET CMP0091 NEW)",
     //"cmake_policy(SET CMP0042 NEW)",
     `project(${projectName})`,
     "",
     // Declaring a project-wide NAPI_VERSION as a fallback for targets that don't explicitly set it
-    `add_compile_definitions(NAPI_VERSION=${napiVersion})`,
+    // This is only needed when using cmake-js, as it is injected by cmake-rn
+    ...(defineNapiVersion
+      ? [`add_compile_definitions(NAPI_VERSION=${napiVersion})`]
+      : []),
   ];
 
+  if (weakNodeApi) {
+    lines.push(`include(\${WEAK_NODE_API_CONFIG})`, "");
+  }
+
   for (const target of gyp.targets) {
-    const { target_name: targetName } = target;
+    const { target_name: targetName, defines = [] } = target;
 
     // TODO: Handle "conditions"
     // TODO: Handle "cflags"
     // TODO: Handle "ldflags"
 
-    const escapedJoinedSources = target.sources
+    const escapedSources = target.sources
       .flatMap(mapExpansion)
       .map(transformPath)
-      .map(escapeSpaces)
-      .join(" ");
+      .map(escapeSpaces);
 
-    const escapedJoinedIncludes = (target.include_dirs || [])
+    const escapedIncludes = (target.include_dirs || [])
       .flatMap(mapExpansion)
       .map(transformPath)
-      .map(escapeSpaces)
-      .join(" ");
+      .map(escapeSpaces);
 
-    const escapedJoinedDefines = (target.defines || [])
+    const escapedDefines = defines
       .flatMap(mapExpansion)
       .map(transformPath)
-      .map(escapeSpaces)
-      .join(" ");
+      .map(escapeSpaces);
+
+    const libraries = [];
+    if (weakNodeApi) {
+      libraries.push("weak-node-api");
+    } else {
+      libraries.push("${CMAKE_JS_LIB}");
+      escapedSources.push("${CMAKE_JS_SRC}");
+      escapedIncludes.push("${CMAKE_JS_INC}");
+    }
 
     lines.push(
-      "",
-      `add_library(${targetName} SHARED ${escapedJoinedSources} \${CMAKE_JS_SRC})`,
+      `add_library(${targetName} SHARED ${escapedSources.join(" ")})`,
       `set_target_properties(${targetName} PROPERTIES PREFIX "" SUFFIX ".node")`,
-      `target_include_directories(${targetName} PRIVATE ${escapedJoinedIncludes} \${CMAKE_JS_INC})`,
-      `target_link_libraries(${targetName} PRIVATE \${CMAKE_JS_LIB})`,
-      `target_compile_features(${targetName} PRIVATE cxx_std_17)`,
-      ...(escapedJoinedDefines
-        ? [
-            `target_compile_definitions(${targetName} PRIVATE ${escapedJoinedDefines})`,
-          ]
-        : []),
-      // or
-      // `set_target_properties(${targetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
     );
+
+    if (libraries.length > 0) {
+      lines.push(
+        `target_link_libraries(${targetName} PRIVATE ${libraries.join(" ")})`,
+      );
+    }
+
+    if (escapedIncludes.length > 0) {
+      lines.push(
+        `target_include_directories(${targetName} PRIVATE ${escapedIncludes.join(
+          " ",
+        )})`,
+      );
+    }
+
+    if (escapedDefines.length > 0) {
+      lines.push(
+        `target_compile_definitions(${targetName} PRIVATE ${escapedDefines.join(" ")})`,
+      );
+    }
+
+    if (compileFeatures.length > 0) {
+      lines.push(
+        `target_compile_features(${targetName} PRIVATE ${compileFeatures.join(" ")})`,
+      );
+    }
+
+    // `set_target_properties(${targetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
   }
 
-  // Adding this post-amble from the template, although not used by react-native-node-api
-  lines.push(
-    "",
-    "if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)",
-    "  # Generate node.lib",
-    "  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})",
-    "endif()",
-  );
+  if (!weakNodeApi) {
+    // This is required by cmake-js to generate the import library for node.lib on Windows
+    lines.push(
+      "",
+      "if(MSVC AND CMAKE_JS_NODELIB_DEF AND CMAKE_JS_NODELIB_TARGET)",
+      "  # Generate node.lib",
+      "  execute_process(COMMAND ${CMAKE_AR} /def:${CMAKE_JS_NODELIB_DEF} /out:${CMAKE_JS_NODELIB_TARGET} ${CMAKE_STATIC_LINKER_FLAGS})",
+      "endif()",
+    );
+  }
 
   return lines.join("\n");
 }

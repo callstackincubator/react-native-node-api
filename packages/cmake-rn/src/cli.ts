@@ -14,7 +14,10 @@ import {
 } from "@react-native-node-api/cli-utils";
 import { isSupportedTriplet } from "react-native-node-api";
 
-import { getWeakNodeApiVariables } from "./weak-node-api.js";
+import {
+  getCmakeJSVariables,
+  getWeakNodeApiVariables,
+} from "./weak-node-api.js";
 import {
   platforms,
   allTriplets as allTriplets,
@@ -85,8 +88,8 @@ const outPathOption = new Option(
 const defineOption = new Option(
   "-D,--define <entry...>",
   "Define cache variables passed when configuring projects",
-).argParser<Record<string, string | CmakeTypedDefinition>>(
-  (input, previous = {}) => {
+)
+  .argParser<Record<string, string>[]>((input, previous = []) => {
     // TODO: Implement splitting of value using a regular expression (using named groups) for the format <var>[:<type>]=<value>
     // and return an object keyed by variable name with the string value as value or alternatively an array of [value, type]
     const match = input.match(
@@ -98,9 +101,10 @@ const defineOption = new Option(
       );
     }
     const { name, type, value } = match.groups;
-    return { ...previous, [name]: type ? { value, type } : value };
-  },
-);
+    previous.push({ [type ? `${name}:${type}` : name]: value });
+    return previous;
+  })
+  .default([]);
 
 const targetOption = new Option(
   "--target <target...>",
@@ -117,6 +121,11 @@ const noWeakNodeApiLinkageOption = new Option(
   "Don't pass the path of the weak-node-api library from react-native-node-api",
 );
 
+const cmakeJsOption = new Option(
+  "--cmake-js",
+  "Define CMAKE_JS_* variables used for compatibility with cmake-js",
+).default(false);
+
 let program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(tripletOption)
@@ -129,7 +138,8 @@ let program = new Command("cmake-rn")
   .addOption(cleanOption)
   .addOption(targetOption)
   .addOption(noAutoLinkOption)
-  .addOption(noWeakNodeApiLinkageOption);
+  .addOption(noWeakNodeApiLinkageOption)
+  .addOption(cmakeJsOption);
 
 for (const platform of platforms) {
   const allOption = new Option(
@@ -296,19 +306,26 @@ async function configureProject<T extends string>(
   options: BaseOpts,
 ) {
   const { triplet, buildPath, outputPath } = context;
-  const { verbose, source, weakNodeApiLinkage } = options;
+  const { verbose, source, weakNodeApiLinkage, cmakeJs } = options;
+
+  // TODO: Make the two following definitions a part of the platform definition
 
   const nodeApiDefinitions =
     weakNodeApiLinkage && isSupportedTriplet(triplet)
-      ? getWeakNodeApiVariables(triplet)
-      : // TODO: Make this a part of the platform definition
-        {};
+      ? [getWeakNodeApiVariables(triplet)]
+      : [];
 
-  const definitions = {
+  const cmakeJsDefinitions =
+    cmakeJs && isSupportedTriplet(triplet)
+      ? [getCmakeJSVariables(triplet)]
+      : [];
+
+  const definitions = [
     ...nodeApiDefinitions,
+    ...cmakeJsDefinitions,
     ...options.define,
-    CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
-  };
+    { CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath },
+  ];
 
   await spawn(
     "cmake",
@@ -352,18 +369,13 @@ async function buildProject<T extends string>(
   );
 }
 
-type CmakeTypedDefinition = { value: string; type: string };
-
-function toDefineArguments(
-  declarations: Record<string, string | CmakeTypedDefinition>,
-) {
-  return Object.entries(declarations).flatMap(([key, definition]) => {
-    if (typeof definition === "string") {
-      return ["-D", `${key}=${definition}`];
-    } else {
-      return ["-D", `${key}:${definition.type}=${definition.value}`];
-    }
-  });
+function toDefineArguments(declarations: Array<Record<string, string>>) {
+  return declarations.flatMap((values) =>
+    Object.entries(values).flatMap(([key, definition]) => [
+      "-D",
+      `${key}=${definition}`,
+    ]),
+  );
 }
 
 export { program };

@@ -41,7 +41,7 @@ export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
   }
 }
 
-export function getWeakNodeApiVariables(triplet: SupportedTriplet) {
+function getNodeApiIncludePaths() {
   const includePaths = [getNodeApiHeadersPath(), getNodeAddonHeadersPath()];
   for (const includePath of includePaths) {
     assert(
@@ -49,8 +49,28 @@ export function getWeakNodeApiVariables(triplet: SupportedTriplet) {
       `Include path with a ';' is not supported: ${includePath}`,
     );
   }
+  return includePaths;
+}
+
+export function getWeakNodeApiVariables(
+  triplet: SupportedTriplet,
+): Record<string, string> {
   return {
-    CMAKE_JS_INC: includePaths.join(";"),
+    // Expose an includable CMake config file declaring the weak-node-api target
+    WEAK_NODE_API_CONFIG: path.join(weakNodeApiPath, "weak-node-api.cmake"),
+    WEAK_NODE_API_INC: getNodeApiIncludePaths().join(";"),
+    WEAK_NODE_API_LIB: getWeakNodeApiPath(triplet),
+  };
+}
+
+/**
+ * For compatibility with cmake-js
+ */
+export function getCmakeJSVariables(
+  triplet: SupportedTriplet,
+): Record<string, string> {
+  return {
+    CMAKE_JS_INC: getNodeApiIncludePaths().join(";"),
     CMAKE_JS_LIB: getWeakNodeApiPath(triplet),
   };
 }
