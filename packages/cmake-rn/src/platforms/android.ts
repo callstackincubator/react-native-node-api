@@ -141,7 +141,10 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       );
       const [sharedLibrary] = sharedLibraries;
       const { artifacts } = sharedLibrary;
-      assert(artifacts && artifacts.length, "Expected exactly one artifact");
+      assert(
+        artifacts && artifacts.length === 1,
+        "Expected exactly one artifact",
+      );
       const [artifact] = artifacts;
       // Add prebuild entry, creating a new entry if needed
       if (!(sharedLibrary.name in prebuilds)) {
