@@ -11,6 +11,7 @@ import {
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
+import * as cmakeFileApi from "cmake-file-api";
 
 type XcodeSDKName =
   | "iphoneos"
@@ -136,31 +137,29 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     { configuration, autoLink, xcframeworkExtension },
   ) {
     const libraryPaths = await Promise.all(
-      triplets.map(async ({ outputPath }) => {
-        const configSpecificPath = path.join(outputPath, configuration);
+      triplets.map(async ({ buildPath }) => {
         assert(
-          fs.existsSync(configSpecificPath),
-          `Expected a directory at ${configSpecificPath}`,
+          fs.existsSync(buildPath),
+          `Expected a directory at ${buildPath}`,
         );
-        // Expect binary file(s), either .node or .dylib
-        const files = await fs.promises.readdir(configSpecificPath);
-        const result = files.map(async (file) => {
-          const filePath = path.join(configSpecificPath, file);
-          if (filePath.endsWith(".dylib")) {
-            return filePath;
-          } else if (file.endsWith(".node")) {
-            // Rename the file to .dylib for xcodebuild to accept it
-            const newFilePath = filePath.replace(/\.node$/, ".dylib");
-            await fs.promises.rename(filePath, newFilePath);
-            return newFilePath;
-          } else {
-            throw new Error(
-              `Expected a .node or .dylib file, but found ${file}`,
-            );
-          }
-        });
-        assert.equal(result.length, 1, "Expected exactly one library file");
-        return await result[0];
+        const targets = await cmakeFileApi.readCurrentTargetsDeep(
+          buildPath,
+          configuration,
+          "2.0",
+        );
+        const sharedLibraries = targets.filter(
+          (target) => target.type === "SHARED_LIBRARY",
+        );
+        assert.equal(
+          sharedLibraries.length,
+          1,
+          "Expected exactly one shared library",
+        );
+        const [sharedLibrary] = sharedLibraries;
+        const { artifacts } = sharedLibrary;
+        assert(artifacts && artifacts.length, "Expected exactly one artifact");
+        const [artifact] = artifacts;
+        return path.join(buildPath, artifact.path);
       }),
     );
     const frameworkPaths = libraryPaths.map(createAppleFramework);
