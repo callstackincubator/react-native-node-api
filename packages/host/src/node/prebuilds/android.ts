@@ -32,7 +32,7 @@ export function determineAndroidLibsFilename(libraryPaths: string[]) {
 
 type AndroidLibsDirectoryOptions = {
   outputPath: string;
-  libraryPathByTriplet: Record<AndroidTriplet, string>;
+  libraryPathByTriplet: Partial<Record<AndroidTriplet, string>>;
   autoLink: boolean;
 };
 
