@@ -7,7 +7,6 @@ import {
   AppleTriplet as Triplet,
   createAppleFramework,
   createXCframework,
-  determineXCFrameworkFilename,
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
@@ -136,54 +135,60 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     { outputPath, triplets },
     { configuration, autoLink, xcframeworkExtension },
   ) {
-    const libraryPaths = await Promise.all(
-      triplets.map(async ({ buildPath }) => {
-        assert(
-          fs.existsSync(buildPath),
-          `Expected a directory at ${buildPath}`,
-        );
-        const targets = await cmakeFileApi.readCurrentTargetsDeep(
-          buildPath,
-          configuration,
-          "2.0",
-        );
-        const sharedLibraries = targets.filter(
-          (target) => target.type === "SHARED_LIBRARY",
-        );
-        assert.equal(
-          sharedLibraries.length,
-          1,
-          "Expected exactly one shared library",
-        );
-        const [sharedLibrary] = sharedLibraries;
-        const { artifacts } = sharedLibrary;
-        assert(artifacts && artifacts.length, "Expected exactly one artifact");
-        const [artifact] = artifacts;
-        return path.join(buildPath, artifact.path);
-      }),
-    );
-    const frameworkPaths = libraryPaths.map(createAppleFramework);
-    const xcframeworkFilename = determineXCFrameworkFilename(
-      frameworkPaths,
-      xcframeworkExtension ? ".xcframework" : ".apple.node",
-    );
+    const prebuilds: Record<string, string[]> = {};
+    for (const { buildPath } of triplets) {
+      assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
+      const targets = await cmakeFileApi.readCurrentTargetsDeep(
+        buildPath,
+        configuration,
+        "2.0",
+      );
+      const sharedLibraries = targets.filter(
+        (target) => target.type === "SHARED_LIBRARY",
+      );
+      assert.equal(
+        sharedLibraries.length,
+        1,
+        "Expected exactly one shared library",
+      );
+      const [sharedLibrary] = sharedLibraries;
+      const { artifacts } = sharedLibrary;
+      assert(artifacts && artifacts.length, "Expected exactly one artifact");
+      const [artifact] = artifacts;
+      // Add prebuild entry, creating a new entry if needed
+      if (!(sharedLibrary.name in prebuilds)) {
+        prebuilds[sharedLibrary.name] = [];
+      }
+      prebuilds[sharedLibrary.name].push(path.join(buildPath, artifact.path));
+    }
 
-    // Create the xcframework
-    const xcframeworkOutputPath = path.resolve(outputPath, xcframeworkFilename);
+    const extension = xcframeworkExtension ? ".xcframework" : ".apple.node";
 
-    await oraPromise(
-      createXCframework({
-        outputPath: xcframeworkOutputPath,
-        frameworkPaths,
-        autoLink,
-      }),
-      {
-        text: "Assembling XCFramework",
-        successText: `XCFramework assembled into ${chalk.dim(
-          path.relative(process.cwd(), xcframeworkOutputPath),
-        )}`,
-        failText: ({ message }) => `Failed to assemble XCFramework: ${message}`,
-      },
-    );
+    for (const [libraryName, libraryPaths] of Object.entries(prebuilds)) {
+      const frameworkPaths = await Promise.all(
+        libraryPaths.map(createAppleFramework),
+      );
+      // Create the xcframework
+      const xcframeworkOutputPath = path.resolve(
+        outputPath,
+        `${libraryName}${extension}`,
+      );
+
+      await oraPromise(
+        createXCframework({
+          outputPath: xcframeworkOutputPath,
+          frameworkPaths,
+          autoLink,
+        }),
+        {
+          text: `Assembling XCFramework (${libraryName})`,
+          successText: `XCFramework (${libraryName}) assembled into ${chalk.dim(
+            path.relative(process.cwd(), xcframeworkOutputPath),
+          )}`,
+          failText: ({ message }) =>
+            `Failed to assemble XCFramework (${libraryName}): ${message}`,
+        },
+      );
+    }
   },
 };
