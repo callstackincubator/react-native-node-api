@@ -8,6 +8,7 @@ import {
   determineAndroidLibsFilename,
   AndroidTriplet as Triplet,
 } from "react-native-node-api";
+import * as cmakeFileApi from "cmake-file-api";
 
 import type { Platform } from "./types.js";
 
@@ -121,28 +122,35 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     const { ANDROID_HOME } = process.env;
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
-  async postBuild({ outputPath, triplets }, { autoLink }) {
-    // TODO: Include `configuration` in the output path
+  async postBuild({ outputPath, triplets }, { autoLink, configuration }) {
     const libraryPathByTriplet = Object.fromEntries(
       await Promise.all(
-        triplets.map(async ({ triplet, outputPath }) => {
+        triplets.map(async ({ triplet, buildPath }) => {
           assert(
-            fs.existsSync(outputPath),
-            `Expected a directory at ${outputPath}`,
+            fs.existsSync(buildPath),
+            `Expected a directory at ${buildPath}`,
           );
-          // Expect binary file(s), either .node or .so
-          const dirents = await fs.promises.readdir(outputPath, {
-            withFileTypes: true,
-          });
-          const result = dirents
-            .filter(
-              (dirent) =>
-                dirent.isFile() &&
-                (dirent.name.endsWith(".so") || dirent.name.endsWith(".node")),
-            )
-            .map((dirent) => path.join(dirent.parentPath, dirent.name));
-          assert.equal(result.length, 1, "Expected exactly one library file");
-          return [triplet, result[0]] as const;
+          const targets = await cmakeFileApi.readCurrentTargetsDeep(
+            buildPath,
+            configuration,
+            "2.0",
+          );
+          const sharedLibraries = targets.filter(
+            (target) => target.type === "SHARED_LIBRARY",
+          );
+          assert.equal(
+            sharedLibraries.length,
+            1,
+            "Expected exactly one shared library",
+          );
+          const [sharedLibrary] = sharedLibraries;
+          const { artifacts } = sharedLibrary;
+          assert(
+            artifacts && artifacts.length,
+            "Expected exactly one artifact",
+          );
+          const [artifact] = artifacts;
+          return [triplet, path.join(buildPath, artifact.path)] as const;
         }),
       ),
     ) as Record<Triplet, string>;

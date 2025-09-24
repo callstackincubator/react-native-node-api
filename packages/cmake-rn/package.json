@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@react-native-node-api/cli-utils": "0.1.0",
+    "cmake-file-api": "0.1.0",
     "react-native-node-api": "0.5.1"
   },
   "peerDependencies": {
