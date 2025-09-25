@@ -4,15 +4,16 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "apps/test-app",
     "packages/cli-utils",
-    "packages/gyp-to-cmake",
+    "packages/cmake-file-api",
     "packages/cmake-rn",
     "packages/ferric",
+    "packages/gyp-to-cmake",
     "packages/host",
     "packages/node-addon-examples",
     "packages/node-tests",
-    "packages/ferric-example"
+    "packages/ferric-example",
+    "apps/test-app"
   ],
   "homepage": "https://github.com/callstackincubator/react-native-node-api#readme",
   "scripts": {
