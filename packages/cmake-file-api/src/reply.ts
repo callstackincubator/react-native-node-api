@@ -163,3 +163,16 @@ export async function readCmakeFiles(
   const content = await fs.promises.readFile(cmakeFilesPath, "utf-8");
   return schema.parse(JSON.parse(content));
 }
+
+export async function readToolchains(
+  toolchainsPath: string,
+  schema: z.ZodSchema = schemas.ToolchainsV1_0,
+) {
+  assert(
+    path.basename(toolchainsPath).startsWith("toolchains-") &&
+      path.extname(toolchainsPath) === ".json",
+    "Expected a path to a toolchains-*.json file",
+  );
+  const content = await fs.promises.readFile(toolchainsPath, "utf-8");
+  return schema.parse(JSON.parse(content));
+}

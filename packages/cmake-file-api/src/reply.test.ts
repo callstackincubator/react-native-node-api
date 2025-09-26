@@ -11,6 +11,7 @@ import {
   readTarget,
   readCache,
   readCmakeFiles,
+  readToolchains,
 } from "./reply.js";
 import {
   TargetV2_0,
@@ -880,5 +881,98 @@ describe("readCmakeFiles", () => {
     );
 
     assert.deepStrictEqual(result, cmakeFilesV1_1);
+  });
+});
+
+describe("readToolchains", () => {
+  it("reads a well-formed toolchains file", async function (context) {
+    const mockToolchains = {
+      kind: "toolchains",
+      version: { major: 1, minor: 0 },
+      toolchains: [
+        {
+          language: "C",
+          compiler: {
+            path: "/usr/bin/cc",
+            id: "GNU",
+            version: "9.3.0",
+            implicit: {
+              includeDirectories: [
+                "/usr/lib/gcc/x86_64-linux-gnu/9/include",
+                "/usr/local/include",
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/include",
+              ],
+              linkDirectories: [
+                "/usr/lib/gcc/x86_64-linux-gnu/9",
+                "/usr/lib/x86_64-linux-gnu",
+                "/usr/lib",
+                "/lib/x86_64-linux-gnu",
+                "/lib",
+              ],
+              linkFrameworkDirectories: [],
+              linkLibraries: ["gcc", "gcc_s", "c", "gcc", "gcc_s"],
+            },
+          },
+          sourceFileExtensions: ["c", "m"],
+        },
+        {
+          language: "CXX",
+          compiler: {
+            path: "/usr/bin/c++",
+            id: "GNU",
+            version: "9.3.0",
+            implicit: {
+              includeDirectories: [
+                "/usr/include/c++/9",
+                "/usr/include/x86_64-linux-gnu/c++/9",
+                "/usr/include/c++/9/backward",
+                "/usr/lib/gcc/x86_64-linux-gnu/9/include",
+                "/usr/local/include",
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/include",
+              ],
+              linkDirectories: [
+                "/usr/lib/gcc/x86_64-linux-gnu/9",
+                "/usr/lib/x86_64-linux-gnu",
+                "/usr/lib",
+                "/lib/x86_64-linux-gnu",
+                "/lib",
+              ],
+              linkFrameworkDirectories: [],
+              linkLibraries: [
+                "stdc++",
+                "m",
+                "gcc_s",
+                "gcc",
+                "c",
+                "gcc_s",
+                "gcc",
+              ],
+            },
+          },
+          sourceFileExtensions: [
+            "C",
+            "M",
+            "c++",
+            "cc",
+            "cpp",
+            "cxx",
+            "mm",
+            "CPP",
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["toolchains-v1.json", mockToolchains],
+    ]);
+    const result = await readToolchains(
+      path.join(tmpPath, "toolchains-v1.json"),
+    );
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockToolchains);
   });
 });
