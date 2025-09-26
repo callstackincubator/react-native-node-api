@@ -150,3 +150,16 @@ export async function readCache(
   const content = await fs.promises.readFile(cachePath, "utf-8");
   return schema.parse(JSON.parse(content));
 }
+
+export async function readCmakeFiles(
+  cmakeFilesPath: string,
+  schema: z.ZodSchema = schemas.CmakeFilesV1_1,
+) {
+  assert(
+    path.basename(cmakeFilesPath).startsWith("cmakeFiles-") &&
+      path.extname(cmakeFilesPath) === ".json",
+    "Expected a path to a cmakeFiles-*.json file",
+  );
+  const content = await fs.promises.readFile(cmakeFilesPath, "utf-8");
+  return schema.parse(JSON.parse(content));
+}

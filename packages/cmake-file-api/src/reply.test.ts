@@ -10,6 +10,7 @@ import {
   readCodeModel,
   readTarget,
   readCache,
+  readCmakeFiles,
 } from "./reply.js";
 import {
   TargetV2_0,
@@ -19,6 +20,8 @@ import {
   TargetV2_6,
   TargetV2_7,
   TargetV2_8,
+  CmakeFilesV1_0,
+  CmakeFilesV1_1,
 } from "./schemas.js";
 
 function createMockReplyDirectory(
@@ -770,5 +773,112 @@ describe("readCache", () => {
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockCache);
+  });
+});
+
+describe("readCmakeFiles", () => {
+  it("reads a well-formed cmakeFiles file", async function (context) {
+    const mockCmakeFiles = {
+      kind: "cmakeFiles",
+      version: { major: 1, minor: 1 },
+      paths: {
+        build: "/path/to/top-level-build-dir",
+        source: "/path/to/top-level-source-dir",
+      },
+      inputs: [
+        {
+          path: "CMakeLists.txt",
+        },
+        {
+          isGenerated: true,
+          path: "/path/to/top-level-build-dir/.../CMakeSystem.cmake",
+        },
+        {
+          isExternal: true,
+          path: "/path/to/external/third-party/module.cmake",
+        },
+        {
+          isCMake: true,
+          isExternal: true,
+          path: "/path/to/cmake/Modules/CMakeGenericSystem.cmake",
+        },
+      ],
+      globsDependent: [
+        {
+          expression: "src/*.cxx",
+          recurse: true,
+          paths: ["src/foo.cxx", "src/bar.cxx"],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cmakeFiles-v1.json", mockCmakeFiles],
+    ]);
+    const result = await readCmakeFiles(
+      path.join(tmpPath, "cmakeFiles-v1.json"),
+    );
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockCmakeFiles);
+  });
+
+  // Base objects for reusable test data
+  const baseCmakeFiles = {
+    kind: "cmakeFiles" as const,
+    paths: {
+      build: "/path/to/top-level-build-dir",
+      source: "/path/to/top-level-source-dir",
+    },
+    inputs: [
+      {
+        path: "CMakeLists.txt",
+      },
+      {
+        isExternal: true,
+        path: "/path/to/external/third-party/module.cmake",
+      },
+    ],
+  };
+
+  it("validates CmakeFilesV1_0 schema (base version)", async function (context) {
+    const cmakeFilesV1_0 = {
+      ...baseCmakeFiles,
+      version: { major: 1, minor: 0 },
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cmakeFiles-v1_0.json", cmakeFilesV1_0],
+    ]);
+    const result = await readCmakeFiles(
+      path.join(tmpPath, "cmakeFiles-v1_0.json"),
+      CmakeFilesV1_0,
+    );
+
+    assert.deepStrictEqual(result, cmakeFilesV1_0);
+  });
+
+  it("validates CmakeFilesV1_1 schema (added globsDependent)", async function (context) {
+    const cmakeFilesV1_1 = {
+      ...baseCmakeFiles,
+      version: { major: 1, minor: 1 },
+      globsDependent: [
+        {
+          expression: "src/*.cxx",
+          recurse: true,
+          paths: ["src/foo.cxx", "src/bar.cxx"],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cmakeFiles-v1_1.json", cmakeFilesV1_1],
+    ]);
+    const result = await readCmakeFiles(
+      path.join(tmpPath, "cmakeFiles-v1_1.json"),
+      CmakeFilesV1_1,
+    );
+
+    assert.deepStrictEqual(result, cmakeFilesV1_1);
   });
 });
