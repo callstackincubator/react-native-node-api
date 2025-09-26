@@ -8,7 +8,17 @@ import {
   findCurrentReplyIndexPath,
   readIndex,
   readCodeModel,
+  readTarget,
 } from "./reply.js";
+import {
+  TargetV2_0,
+  TargetV2_1,
+  TargetV2_2,
+  TargetV2_5,
+  TargetV2_6,
+  TargetV2_7,
+  TargetV2_8,
+} from "./schemas.js";
 
 function createMockReplyDirectory(
   context: TestContext,
@@ -232,5 +242,491 @@ describe("readCodeModel", () => {
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockCodemodel);
+  });
+});
+
+describe("readTarget", () => {
+  it("reads a well-formed target file", async function (context) {
+    const mockTarget = {
+      name: "MyExecutable",
+      id: "MyExecutable::@6890a9b7b1a1a2e4d6b9",
+      type: "EXECUTABLE",
+      backtrace: 1,
+      folder: {
+        name: "Executables",
+      },
+      paths: {
+        source: ".",
+        build: ".",
+      },
+      nameOnDisk: "MyExecutable",
+      artifacts: [
+        {
+          path: "MyExecutable",
+        },
+      ],
+      isGeneratorProvided: false,
+      install: {
+        prefix: {
+          path: "/usr/local",
+        },
+        destinations: [
+          {
+            path: "bin",
+            backtrace: 2,
+          },
+        ],
+      },
+      launchers: [
+        {
+          command: "/usr/bin/gdb",
+          arguments: ["--args"],
+          type: "test",
+        },
+      ],
+      link: {
+        language: "CXX",
+        commandFragments: [
+          {
+            fragment: "-O3",
+            role: "flags",
+            backtrace: 3,
+          },
+        ],
+        lto: false,
+        sysroot: {
+          path: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
+        },
+      },
+      dependencies: [
+        {
+          id: "MyLibrary::@6890a9b7b1a1a2e4d6b9",
+          backtrace: 4,
+        },
+      ],
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC",
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          path: "main.cpp",
+          compileGroupIndex: 0,
+          sourceGroupIndex: 0,
+          isGenerated: false,
+          fileSetIndex: 0,
+          backtrace: 5,
+        },
+      ],
+      sourceGroups: [
+        {
+          name: "Source Files",
+          sourceIndexes: [0],
+        },
+      ],
+      compileGroups: [
+        {
+          sourceIndexes: [0],
+          language: "CXX",
+          languageStandard: {
+            backtraces: [6],
+            standard: "17",
+          },
+          compileCommandFragments: [
+            {
+              fragment: "-std=c++17",
+              backtrace: 7,
+            },
+          ],
+          includes: [
+            {
+              path: "/usr/include",
+              isSystem: true,
+              backtrace: 8,
+            },
+          ],
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 9,
+            },
+          ],
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 10,
+            },
+          ],
+          defines: [
+            {
+              define: "NDEBUG",
+              backtrace: 11,
+            },
+          ],
+          sysroot: {
+            path: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
+          },
+        },
+      ],
+      backtraceGraph: {
+        nodes: [
+          {
+            file: 0,
+            line: 1,
+            command: 0,
+            parent: null,
+          },
+        ],
+        commands: ["add_executable"],
+        files: ["CMakeLists.txt"],
+      },
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-MyExecutable.json", mockTarget],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-MyExecutable.json"),
+    );
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockTarget);
+  });
+
+  // Base objects for reusable test data
+  const baseTarget = {
+    name: "MyTarget",
+    id: "MyTarget::@6890a9b7b1a1a2e4d6b9",
+    type: "EXECUTABLE" as const,
+    paths: {
+      source: ".",
+      build: ".",
+    },
+  };
+
+  const baseCompileGroup = {
+    sourceIndexes: [0],
+    language: "CXX",
+    includes: [
+      {
+        path: "/usr/include",
+        isSystem: true,
+        backtrace: 1,
+      },
+    ],
+    defines: [
+      {
+        define: "NDEBUG",
+        backtrace: 2,
+      },
+    ],
+  };
+
+  const baseSource = {
+    path: "main.cpp",
+    compileGroupIndex: 0,
+    isGenerated: false,
+    backtrace: 1,
+  };
+
+  it("validates TargetV2_0 schema (base version)", async function (context) {
+    const targetV2_0 = {
+      ...baseTarget,
+      sources: [baseSource],
+      compileGroups: [baseCompileGroup],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_0.json", targetV2_0],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_0.json"),
+      TargetV2_0,
+    );
+
+    assert.deepStrictEqual(result, targetV2_0);
+  });
+
+  it("validates TargetV2_1 schema (added precompileHeaders)", async function (context) {
+    const targetV2_1 = {
+      ...baseTarget,
+      sources: [baseSource],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_1.json", targetV2_1],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_1.json"),
+      TargetV2_1,
+    );
+
+    assert.deepStrictEqual(result, targetV2_1);
+  });
+
+  it("validates TargetV2_2 schema (added languageStandard)", async function (context) {
+    const targetV2_2 = {
+      ...baseTarget,
+      sources: [baseSource],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_2.json", targetV2_2],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_2.json"),
+      TargetV2_2,
+    );
+
+    assert.deepStrictEqual(result, targetV2_2);
+  });
+
+  it("validates TargetV2_5 schema (added fileSets and fileSetIndex)", async function (context) {
+    const targetV2_5 = {
+      ...baseTarget,
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_5.json", targetV2_5],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_5.json"),
+      TargetV2_5,
+    );
+
+    assert.deepStrictEqual(result, targetV2_5);
+  });
+
+  it("validates TargetV2_6 schema (added frameworks)", async function (context) {
+    const targetV2_6 = {
+      ...baseTarget,
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_6.json", targetV2_6],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_6.json"),
+      TargetV2_6,
+    );
+
+    assert.deepStrictEqual(result, targetV2_6);
+  });
+
+  it("validates TargetV2_7 schema (added launchers)", async function (context) {
+    const targetV2_7 = {
+      ...baseTarget,
+      launchers: [
+        {
+          command: "/usr/bin/gdb",
+          arguments: ["--args"],
+          type: "test" as const,
+        },
+      ],
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_7.json", targetV2_7],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_7.json"),
+      TargetV2_7,
+    );
+
+    assert.deepStrictEqual(result, targetV2_7);
+  });
+
+  it("validates TargetV2_8 schema (added debugger)", async function (context) {
+    const targetV2_8 = {
+      ...baseTarget,
+      debugger: {
+        workingDirectory: "/path/to/debug",
+      },
+      launchers: [
+        {
+          command: "/usr/bin/gdb",
+          arguments: ["--args"],
+          type: "test" as const,
+        },
+      ],
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_8.json", targetV2_8],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_8.json"),
+      TargetV2_8,
+    );
+
+    assert.deepStrictEqual(result, targetV2_8);
   });
 });

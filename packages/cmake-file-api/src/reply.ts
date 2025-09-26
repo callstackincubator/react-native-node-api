@@ -4,7 +4,7 @@ import path from "node:path";
 
 import * as z from "zod";
 
-import * as schemas from "./schemas/index.js";
+import * as schemas from "./schemas.js";
 
 /**
  * As per https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html#v1-reply-error-index
@@ -108,18 +108,17 @@ export async function readCurrentTargets(
   return relevantConfig.targets;
 }
 
-const Target = z.object({
-  // TODO: Implement the target schema
-});
-
-export async function readTarget(targetPath: string) {
+export async function readTarget(
+  targetPath: string,
+  schema: z.ZodSchema = schemas.TargetV2_8,
+) {
   assert(
     path.basename(targetPath).startsWith("target-") &&
       path.extname(targetPath) === ".json",
     "Expected a path to a target-*.json file",
   );
   const content = await fs.promises.readFile(targetPath, "utf-8");
-  return Target.parse(JSON.parse(content));
+  return schema.parse(JSON.parse(content));
 }
 
 export async function readCurrentTargetsDeep(
