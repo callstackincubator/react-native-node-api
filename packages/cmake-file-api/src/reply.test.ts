@@ -9,6 +9,7 @@ import {
   readIndex,
   readCodeModel,
   readTarget,
+  readCache,
 } from "./reply.js";
 import {
   TargetV2_0,
@@ -728,5 +729,46 @@ describe("readTarget", () => {
     );
 
     assert.deepStrictEqual(result, targetV2_8);
+  });
+});
+
+describe("readCache", () => {
+  it("reads a well-formed cache file", async function (context) {
+    const mockCache = {
+      kind: "cache",
+      version: { major: 2, minor: 0 },
+      entries: [
+        {
+          name: "BUILD_SHARED_LIBS",
+          value: "ON",
+          type: "BOOL",
+          properties: [
+            {
+              name: "HELPSTRING",
+              value: "Build shared libraries",
+            },
+          ],
+        },
+        {
+          name: "CMAKE_GENERATOR",
+          value: "Unix Makefiles",
+          type: "INTERNAL",
+          properties: [
+            {
+              name: "HELPSTRING",
+              value: "Name of generator.",
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cache-v2.json", mockCache],
+    ]);
+    const result = await readCache(path.join(tmpPath, "cache-v2.json"));
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockCache);
   });
 });

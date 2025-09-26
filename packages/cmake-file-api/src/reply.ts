@@ -137,3 +137,16 @@ export async function readCurrentTargetsDeep(
     }),
   );
 }
+
+export async function readCache(
+  cachePath: string,
+  schema: z.ZodSchema = schemas.CacheV2_0,
+) {
+  assert(
+    path.basename(cachePath).startsWith("cache-") &&
+      path.extname(cachePath) === ".json",
+    "Expected a path to a cache-*.json file",
+  );
+  const content = await fs.promises.readFile(cachePath, "utf-8");
+  return schema.parse(JSON.parse(content));
+}
