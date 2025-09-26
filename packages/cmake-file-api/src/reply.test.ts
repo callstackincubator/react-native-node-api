@@ -4,7 +4,11 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it, type TestContext } from "node:test";
 
-import { findCurrentReplyIndexPath, readIndex } from "./reply.js";
+import {
+  findCurrentReplyIndexPath,
+  readIndex,
+  readCodeModel,
+} from "./reply.js";
 
 function createMockReplyDirectory(
   context: TestContext,
@@ -170,5 +174,63 @@ describe("readIndex", () => {
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockIndexWithPlatform);
+  });
+});
+
+describe("readCodeModel", () => {
+  it("reads a well-formed codemodel file", async function (context) {
+    const mockCodemodel = {
+      kind: "codemodel",
+      version: { major: 2, minor: 3 },
+      paths: {
+        source: "/path/to/source",
+        build: "/path/to/build",
+      },
+      configurations: [
+        {
+          name: "Debug",
+          directories: [
+            {
+              source: ".",
+              build: ".",
+              childIndexes: [],
+              projectIndex: 0,
+              targetIndexes: [0],
+              hasInstallRule: true,
+              minimumCMakeVersion: {
+                string: "3.14",
+              },
+              jsonFile: "directory-debug.json",
+            },
+          ],
+          projects: [
+            {
+              name: "MyProject",
+              directoryIndexes: [0],
+              targetIndexes: [0],
+            },
+          ],
+          targets: [
+            {
+              name: "MyExecutable",
+              id: "MyExecutable::@6890a9b7b1a1a2e4d6b9",
+              directoryIndex: 0,
+              projectIndex: 0,
+              jsonFile: "target-MyExecutable.json",
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["codemodel-v2-12345.json", mockCodemodel],
+    ]);
+    const result = await readCodeModel(
+      path.join(tmpPath, "codemodel-v2-12345.json"),
+    );
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockCodemodel);
   });
 });
