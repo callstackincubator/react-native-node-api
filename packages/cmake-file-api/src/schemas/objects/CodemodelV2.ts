@@ -70,3 +70,8 @@ export const CodemodelV2_3 = CodemodelV2_0.extend({
 });
 
 export const CodemodelV2 = z.union([CodemodelV2_0, CodemodelV2_3]);
+
+export const codemodelFilesSchemaPerVersion = {
+  "2.0": CodemodelV2_0,
+  "2.3": CodemodelV2_3,
+} as const satisfies Record<string, z.ZodType>;

@@ -31,3 +31,7 @@ export const ToolchainsV1_0 = z.object({
 });
 
 export const ToolchainsV1 = z.union([ToolchainsV1_0]);
+
+export const toolchainsSchemaPerVersion = {
+  "1.0": ToolchainsV1_0,
+} as const satisfies Record<string, z.ZodType>;

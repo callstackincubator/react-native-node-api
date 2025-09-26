@@ -17,17 +17,6 @@ import {
   isReplyErrorIndexPath,
   readReplyErrorIndex,
 } from "./reply.js";
-import {
-  TargetV2_0,
-  TargetV2_1,
-  TargetV2_2,
-  TargetV2_5,
-  TargetV2_6,
-  TargetV2_7,
-  TargetV2_8,
-  CmakeFilesV1_0,
-  CmakeFilesV1_1,
-} from "./schemas.js";
 
 function createTempDir(context: TestContext, prefix = "test-") {
   const tmpPath = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -261,158 +250,6 @@ describe("readCodeModel", () => {
 });
 
 describe("readTarget", () => {
-  it("reads a well-formed target file", async function (context) {
-    const mockTarget = {
-      name: "MyExecutable",
-      id: "MyExecutable::@6890a9b7b1a1a2e4d6b9",
-      type: "EXECUTABLE",
-      backtrace: 1,
-      folder: {
-        name: "Executables",
-      },
-      paths: {
-        source: ".",
-        build: ".",
-      },
-      nameOnDisk: "MyExecutable",
-      artifacts: [
-        {
-          path: "MyExecutable",
-        },
-      ],
-      isGeneratorProvided: false,
-      install: {
-        prefix: {
-          path: "/usr/local",
-        },
-        destinations: [
-          {
-            path: "bin",
-            backtrace: 2,
-          },
-        ],
-      },
-      launchers: [
-        {
-          command: "/usr/bin/gdb",
-          arguments: ["--args"],
-          type: "test",
-        },
-      ],
-      link: {
-        language: "CXX",
-        commandFragments: [
-          {
-            fragment: "-O3",
-            role: "flags",
-            backtrace: 3,
-          },
-        ],
-        lto: false,
-        sysroot: {
-          path: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
-        },
-      },
-      dependencies: [
-        {
-          id: "MyLibrary::@6890a9b7b1a1a2e4d6b9",
-          backtrace: 4,
-        },
-      ],
-      fileSets: [
-        {
-          name: "HEADERS",
-          type: "HEADERS",
-          visibility: "PUBLIC",
-          baseDirectories: ["."],
-        },
-      ],
-      sources: [
-        {
-          path: "main.cpp",
-          compileGroupIndex: 0,
-          sourceGroupIndex: 0,
-          isGenerated: false,
-          fileSetIndex: 0,
-          backtrace: 5,
-        },
-      ],
-      sourceGroups: [
-        {
-          name: "Source Files",
-          sourceIndexes: [0],
-        },
-      ],
-      compileGroups: [
-        {
-          sourceIndexes: [0],
-          language: "CXX",
-          languageStandard: {
-            backtraces: [6],
-            standard: "17",
-          },
-          compileCommandFragments: [
-            {
-              fragment: "-std=c++17",
-              backtrace: 7,
-            },
-          ],
-          includes: [
-            {
-              path: "/usr/include",
-              isSystem: true,
-              backtrace: 8,
-            },
-          ],
-          frameworks: [
-            {
-              path: "/System/Library/Frameworks/Foundation.framework",
-              isSystem: true,
-              backtrace: 9,
-            },
-          ],
-          precompileHeaders: [
-            {
-              header: "pch.h",
-              backtrace: 10,
-            },
-          ],
-          defines: [
-            {
-              define: "NDEBUG",
-              backtrace: 11,
-            },
-          ],
-          sysroot: {
-            path: "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
-          },
-        },
-      ],
-      backtraceGraph: {
-        nodes: [
-          {
-            file: 0,
-            line: 1,
-            command: 0,
-            parent: null,
-          },
-        ],
-        commands: ["add_executable"],
-        files: ["CMakeLists.txt"],
-      },
-    };
-
-    const tmpPath = createMockReplyDirectory(context, [
-      ["target-MyExecutable.json", mockTarget],
-    ]);
-    const result = await readTarget(
-      path.join(tmpPath, "target-MyExecutable.json"),
-    );
-
-    // Verify the entire structure matches our mock data
-    assert.deepStrictEqual(result, mockTarget);
-  });
-
   // Base objects for reusable test data
   const baseTarget = {
     name: "MyTarget",
@@ -461,7 +298,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_0.json"),
-      TargetV2_0,
+      "2.0",
     );
 
     assert.deepStrictEqual(result, targetV2_0);
@@ -489,7 +326,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_1.json"),
-      TargetV2_1,
+      "2.1",
     );
 
     assert.deepStrictEqual(result, targetV2_1);
@@ -521,7 +358,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_2.json"),
-      TargetV2_2,
+      "2.2",
     );
 
     assert.deepStrictEqual(result, targetV2_2);
@@ -566,7 +403,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_5.json"),
-      TargetV2_5,
+      "2.5",
     );
 
     assert.deepStrictEqual(result, targetV2_5);
@@ -618,7 +455,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_6.json"),
-      TargetV2_6,
+      "2.6",
     );
 
     assert.deepStrictEqual(result, targetV2_6);
@@ -677,7 +514,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_7.json"),
-      TargetV2_7,
+      "2.7",
     );
 
     assert.deepStrictEqual(result, targetV2_7);
@@ -739,7 +576,7 @@ describe("readTarget", () => {
     ]);
     const result = await readTarget(
       path.join(tmpPath, "target-v2_8.json"),
-      TargetV2_8,
+      "2.8",
     );
 
     assert.deepStrictEqual(result, targetV2_8);
@@ -780,7 +617,7 @@ describe("readCache", () => {
     const tmpPath = createMockReplyDirectory(context, [
       ["cache-v2.json", mockCache],
     ]);
-    const result = await readCache(path.join(tmpPath, "cache-v2.json"));
+    const result = await readCache(path.join(tmpPath, "cache-v2.json"), "2.0");
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockCache);
@@ -788,52 +625,6 @@ describe("readCache", () => {
 });
 
 describe("readCmakeFiles", () => {
-  it("reads a well-formed cmakeFiles file", async function (context) {
-    const mockCmakeFiles = {
-      kind: "cmakeFiles",
-      version: { major: 1, minor: 1 },
-      paths: {
-        build: "/path/to/top-level-build-dir",
-        source: "/path/to/top-level-source-dir",
-      },
-      inputs: [
-        {
-          path: "CMakeLists.txt",
-        },
-        {
-          isGenerated: true,
-          path: "/path/to/top-level-build-dir/.../CMakeSystem.cmake",
-        },
-        {
-          isExternal: true,
-          path: "/path/to/external/third-party/module.cmake",
-        },
-        {
-          isCMake: true,
-          isExternal: true,
-          path: "/path/to/cmake/Modules/CMakeGenericSystem.cmake",
-        },
-      ],
-      globsDependent: [
-        {
-          expression: "src/*.cxx",
-          recurse: true,
-          paths: ["src/foo.cxx", "src/bar.cxx"],
-        },
-      ],
-    };
-
-    const tmpPath = createMockReplyDirectory(context, [
-      ["cmakeFiles-v1.json", mockCmakeFiles],
-    ]);
-    const result = await readCmakeFiles(
-      path.join(tmpPath, "cmakeFiles-v1.json"),
-    );
-
-    // Verify the entire structure matches our mock data
-    assert.deepStrictEqual(result, mockCmakeFiles);
-  });
-
   // Base objects for reusable test data
   const baseCmakeFiles = {
     kind: "cmakeFiles" as const,
@@ -863,7 +654,7 @@ describe("readCmakeFiles", () => {
     ]);
     const result = await readCmakeFiles(
       path.join(tmpPath, "cmakeFiles-v1_0.json"),
-      CmakeFilesV1_0,
+      "1.0",
     );
 
     assert.deepStrictEqual(result, cmakeFilesV1_0);
@@ -887,7 +678,7 @@ describe("readCmakeFiles", () => {
     ]);
     const result = await readCmakeFiles(
       path.join(tmpPath, "cmakeFiles-v1_1.json"),
-      CmakeFilesV1_1,
+      "1.1",
     );
 
     assert.deepStrictEqual(result, cmakeFilesV1_1);
@@ -980,6 +771,7 @@ describe("readToolchains", () => {
     ]);
     const result = await readToolchains(
       path.join(tmpPath, "toolchains-v1.json"),
+      "1.0",
     );
 
     // Verify the entire structure matches our mock data
@@ -1007,6 +799,7 @@ describe("readConfigureLog", () => {
     ]);
     const result = await readConfigureLog(
       path.join(tmpPath, "configureLog-v1.json"),
+      "1.0",
     );
     assert.deepStrictEqual(result, mockConfigureLog);
   });

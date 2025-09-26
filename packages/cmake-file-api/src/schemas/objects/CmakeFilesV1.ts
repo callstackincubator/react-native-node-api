@@ -38,3 +38,8 @@ export const CmakeFilesV1_1 = CmakeFilesV1_0.extend({
 });
 
 export const CmakeFilesV1 = z.union([CmakeFilesV1_0, CmakeFilesV1_1]);
+
+export const cmakeFilesSchemaPerVersion = {
+  "1.0": CmakeFilesV1_0,
+  "1.1": CmakeFilesV1_1,
+} as const satisfies Record<string, z.ZodType>;

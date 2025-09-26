@@ -150,21 +150,22 @@ export async function readCurrentTargets(
 
 export async function readTarget(
   targetPath: string,
-  schema: z.ZodSchema = schemas.TargetV2_8,
-) {
+  version: keyof typeof schemas.targetSchemaPerVersion,
+): Promise<z.infer<(typeof schemas.targetSchemaPerVersion)[typeof version]>> {
   assert(
     path.basename(targetPath).startsWith("target-") &&
       path.extname(targetPath) === ".json",
     "Expected a path to a target-*.json file",
   );
   const content = await fs.promises.readFile(targetPath, "utf-8");
-  return schema.parse(JSON.parse(content));
+  return schemas.targetSchemaPerVersion[version].parse(JSON.parse(content));
 }
 
 export async function readCurrentTargetsDeep(
   buildPath: string,
   configuration: string,
-) {
+  version: keyof typeof schemas.targetSchemaPerVersion,
+): Promise<z.infer<(typeof schemas.targetSchemaPerVersion)[typeof version]>[]> {
   const targets = await readCurrentTargets(buildPath, configuration);
   return Promise.all(
     targets.map((target) => {
@@ -173,59 +174,67 @@ export async function readCurrentTargetsDeep(
         `.cmake/api/v1/reply`,
         target.jsonFile,
       );
-      return readTarget(targetPath);
+      return readTarget(targetPath, version);
     }),
   );
 }
 
 export async function readCache(
   cachePath: string,
-  schema: z.ZodSchema = schemas.CacheV2_0,
-) {
+  version: keyof typeof schemas.cacheSchemaPerVersion,
+): Promise<z.infer<(typeof schemas.cacheSchemaPerVersion)[typeof version]>> {
   assert(
     path.basename(cachePath).startsWith("cache-") &&
       path.extname(cachePath) === ".json",
     "Expected a path to a cache-*.json file",
   );
   const content = await fs.promises.readFile(cachePath, "utf-8");
-  return schema.parse(JSON.parse(content));
+  return schemas.cacheSchemaPerVersion[version].parse(JSON.parse(content));
 }
 
 export async function readCmakeFiles(
   cmakeFilesPath: string,
-  schema: z.ZodSchema = schemas.CmakeFilesV1_1,
-) {
+  version: keyof typeof schemas.cmakeFilesSchemaPerVersion,
+): Promise<
+  z.infer<(typeof schemas.cmakeFilesSchemaPerVersion)[typeof version]>
+> {
   assert(
     path.basename(cmakeFilesPath).startsWith("cmakeFiles-") &&
       path.extname(cmakeFilesPath) === ".json",
     "Expected a path to a cmakeFiles-*.json file",
   );
   const content = await fs.promises.readFile(cmakeFilesPath, "utf-8");
-  return schema.parse(JSON.parse(content));
+  return schemas.cmakeFilesSchemaPerVersion[version].parse(JSON.parse(content));
 }
 
 export async function readToolchains(
   toolchainsPath: string,
-  schema: z.ZodSchema = schemas.ToolchainsV1_0,
-) {
+  version: keyof typeof schemas.toolchainsSchemaPerVersion,
+): Promise<
+  z.infer<(typeof schemas.toolchainsSchemaPerVersion)[typeof version]>
+> {
   assert(
     path.basename(toolchainsPath).startsWith("toolchains-") &&
       path.extname(toolchainsPath) === ".json",
     "Expected a path to a toolchains-*.json file",
   );
   const content = await fs.promises.readFile(toolchainsPath, "utf-8");
-  return schema.parse(JSON.parse(content));
+  return schemas.toolchainsSchemaPerVersion[version].parse(JSON.parse(content));
 }
 
 export async function readConfigureLog(
   configureLogPath: string,
-  schema: z.ZodSchema = schemas.ConfigureLogV1_0,
-) {
+  version: keyof typeof schemas.configureLogSchemaPerVersion,
+): Promise<
+  z.infer<(typeof schemas.configureLogSchemaPerVersion)[typeof version]>
+> {
   assert(
     path.basename(configureLogPath).startsWith("configureLog-") &&
       path.extname(configureLogPath) === ".json",
     "Expected a path to a configureLog-*.json file",
   );
   const content = await fs.promises.readFile(configureLogPath, "utf-8");
-  return schema.parse(JSON.parse(content));
+  return schemas.configureLogSchemaPerVersion[version].parse(
+    JSON.parse(content),
+  );
 }

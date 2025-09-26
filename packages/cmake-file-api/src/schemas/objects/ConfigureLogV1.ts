@@ -11,3 +11,7 @@ export const ConfigureLogV1_0 = z.object({
 });
 
 export const ConfigureLogV1 = z.union([ConfigureLogV1_0]);
+
+export const configureLogSchemaPerVersion = {
+  "1.0": ConfigureLogV1_0,
+} as const satisfies Record<string, z.ZodType>;

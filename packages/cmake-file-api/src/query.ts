@@ -91,8 +91,3 @@ export async function createClientStatefulQuery(
   await fs.promises.mkdir(path.dirname(queryPath), { recursive: true });
   await fs.promises.writeFile(queryPath, JSON.stringify(query, null, 2));
 }
-
-/**
- * @deprecated Use createSharedStatelessQuery instead
- */
-export const createQuery = createSharedStatelessQuery;

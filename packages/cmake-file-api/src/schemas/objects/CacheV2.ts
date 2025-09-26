@@ -22,3 +22,7 @@ export const CacheV2_0 = z.object({
 });
 
 export const CacheV2 = z.union([CacheV2_0]);
+
+export const cacheSchemaPerVersion = {
+  "2.0": CacheV2_0,
+} as const satisfies Record<string, z.ZodType>;

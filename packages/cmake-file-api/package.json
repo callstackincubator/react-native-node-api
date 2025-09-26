@@ -16,7 +16,7 @@
     "!*.test.d.ts.map"
   ],
   "exports": {
-    ".": "./"
+    ".": "./dist/index.js"
   },
   "repository": {
     "type": "git",

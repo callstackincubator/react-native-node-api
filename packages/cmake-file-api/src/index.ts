@@ -2,7 +2,6 @@ export {
   createSharedStatelessQuery,
   createClientStatelessQuery,
   createClientStatefulQuery,
-  createQuery, // deprecated alias
   type VersionSpec,
   type QueryRequest,
   type StatefulQuery,

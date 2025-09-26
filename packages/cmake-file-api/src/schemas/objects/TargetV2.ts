@@ -114,7 +114,7 @@ const BacktraceNode = z.object({
   file: index,
   line: z.number().int().positive().optional(),
   command: index.optional(),
-  parent: index.nullable(),
+  parent: index.optional(),
 });
 
 const BacktraceGraph = z.object({
@@ -241,3 +241,13 @@ export {
   TargetV2_7,
   TargetV2_8,
 };
+
+export const targetSchemaPerVersion = {
+  "2.0": TargetV2_0,
+  "2.1": TargetV2_1,
+  "2.2": TargetV2_2,
+  "2.5": TargetV2_5,
+  "2.6": TargetV2_6,
+  "2.7": TargetV2_7,
+  "2.8": TargetV2_8,
+} as const satisfies Record<string, z.ZodType>;
