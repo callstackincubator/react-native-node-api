@@ -65,9 +65,110 @@ describe("findCurrentReplyIndexPath", () => {
 });
 
 describe("readIndex", () => {
-  it("reads a well-formed index file", async function (context) {
-    const tmpPath = createMockReplyDirectory(context, [["index-a.json", {}]]);
+  it("reads a well-formed index file with complete structure", async function (context) {
+    const mockIndex = {
+      cmake: {
+        version: {
+          major: 3,
+          minor: 26,
+          patch: 0,
+          suffix: "",
+          string: "3.26.0",
+          isDirty: false,
+        },
+        paths: {
+          cmake: "/usr/bin/cmake",
+          ctest: "/usr/bin/ctest",
+          cpack: "/usr/bin/cpack",
+          root: "/usr/share/cmake",
+        },
+        generator: {
+          multiConfig: false,
+          name: "Unix Makefiles",
+          // Note: platform is optional according to docs - omitted here like in the example
+        },
+      },
+      objects: [
+        {
+          kind: "codemodel",
+          version: { major: 2, minor: 0 },
+          jsonFile: "codemodel-v2-12345.json",
+        },
+        {
+          kind: "cache",
+          version: { major: 2, minor: 0 },
+          jsonFile: "cache-v2-67890.json",
+        },
+      ],
+      reply: {
+        "codemodel-v2": {
+          kind: "codemodel",
+          version: { major: 2, minor: 0 },
+          jsonFile: "codemodel-v2-12345.json",
+        },
+        "cache-v2": {
+          kind: "cache",
+          version: { major: 2, minor: 0 },
+          jsonFile: "cache-v2-67890.json",
+        },
+        "unknown-kind-v1": {
+          error: "unknown query file",
+        },
+        "client-test-client": {
+          "codemodel-v2": {
+            kind: "codemodel",
+            version: { major: 2, minor: 0 },
+            jsonFile: "codemodel-v2-12345.json",
+          },
+          "unknown-v1": {
+            error: "unknown query file",
+          },
+        },
+      },
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["index-a.json", mockIndex],
+    ]);
     const result = await readIndex(path.join(tmpPath, "index-a.json"));
-    // TODO: Fix this test
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockIndex);
+  });
+
+  it("reads index file with generator platform", async function (context) {
+    const mockIndexWithPlatform = {
+      cmake: {
+        version: {
+          major: 3,
+          minor: 26,
+          patch: 0,
+          suffix: "",
+          string: "3.26.0",
+          isDirty: false,
+        },
+        paths: {
+          cmake: "/usr/bin/cmake",
+          ctest: "/usr/bin/ctest",
+          cpack: "/usr/bin/cpack",
+          root: "/usr/share/cmake",
+        },
+        generator: {
+          multiConfig: true,
+          name: "Visual Studio 16 2019",
+          platform: "x64", // Present when generator supports CMAKE_GENERATOR_PLATFORM
+        },
+      },
+      objects: [],
+      reply: {},
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["index-b.json", mockIndexWithPlatform],
+    ]);
+    const result = await readIndex(path.join(tmpPath, "index-b.json"));
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockIndexWithPlatform);
   });
 });

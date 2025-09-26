@@ -4,6 +4,8 @@ import path from "node:path";
 
 import * as z from "zod";
 
+import * as schemas from "./schemas/index.js";
+
 /**
  * As per https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html#v1-reply-error-index
  */
@@ -45,10 +47,6 @@ export async function findCurrentReplyIndexPath(replyPath: string) {
   return path.join(replyPath, currentIndexFileName);
 }
 
-const IndexReply = z.object({
-  // TODO: Implement the schema
-});
-
 export async function readIndex(indexPath: string) {
   assert(
     (path.basename(indexPath).startsWith("index-") ||
@@ -57,12 +55,8 @@ export async function readIndex(indexPath: string) {
     "Expected a path to a index-*.json file or error-*.json file",
   );
   const content = await fs.promises.readFile(indexPath, "utf-8");
-  return IndexReply.parse(JSON.parse(content));
+  return schemas.IndexReplyV1.parse(JSON.parse(content));
 }
-
-const CodeModelV2 = z.object({
-  // TODO: Implement the schema
-});
 
 export async function readCodeModel(codeModelPath: string) {
   assert(
@@ -71,28 +65,30 @@ export async function readCodeModel(codeModelPath: string) {
     "Expected a path to a codemodel-*.json file",
   );
   const content = await fs.promises.readFile(codeModelPath, "utf-8");
-  return CodeModelV2.parse(JSON.parse(content));
+  return schemas.CodemodelV2.parse(JSON.parse(content));
 }
 
 export async function readCurrentCodeModel(buildPath: string) {
   const replyPath = path.join(buildPath, `.cmake/api/v1/reply`);
   const replyIndexPath = await findCurrentReplyIndexPath(replyPath);
   const index = await readIndex(replyIndexPath);
-  const { "codemodel-v2": codemodelFile } = index.reply;
+  const { reply } = index;
+  const { "codemodel-v2": codemodelFile } = reply;
   assert(
     codemodelFile,
     "Expected a codemodel-v2 reply file - was a query created?",
   );
-  if ("error" in codemodelFile) {
+  if ("error" in codemodelFile && typeof codemodelFile.error === "string") {
     throw new Error(
       `Error reading codemodel-v2 reply file: ${codemodelFile.error}`,
     );
   }
-  const codemodelPath = path.join(
-    buildPath,
-    `.cmake/api/v1/reply`,
-    codemodelFile.jsonFile,
-  );
+
+  // Use ReplyFileReference schema to validate and parse the codemodel file
+  const { kind, jsonFile } = schemas.ReplyFileReferenceV1.parse(codemodelFile);
+  assert(kind === "codemodel", "Expected a codemodel file reference");
+
+  const codemodelPath = path.join(buildPath, `.cmake/api/v1/reply`, jsonFile);
   return readCodeModel(codemodelPath);
 }
 
