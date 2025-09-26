@@ -7,6 +7,8 @@
   "files": ["prettier.config.js", "eslint.config.js"],
   "references": [
     { "path": "./packages/cli-utils/tsconfig.json" },
+    { "path": "./packages/cmake-file-api/tsconfig.json" },
+    { "path": "./packages/cmake-file-api/tsconfig.tests.json" },
     { "path": "./packages/host/tsconfig.json" },
     { "path": "./packages/gyp-to-cmake/tsconfig.json" },
     { "path": "./packages/cmake-rn/tsconfig.json" },

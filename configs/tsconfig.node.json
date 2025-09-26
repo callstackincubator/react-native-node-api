@@ -7,6 +7,6 @@
     "rootDir": "${configDir}/src",
     "types": ["node"]
   },
-  "include": ["${configDir}/src/*.ts"],
-  "exclude": ["${configDir}/**.test.ts"]
+  "include": ["${configDir}/src/"],
+  "exclude": ["${configDir}/**/*.test.ts"]
 }

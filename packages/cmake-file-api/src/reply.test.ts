@@ -1,0 +1,1075 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { describe, it, type TestContext } from "node:test";
+
+import {
+  findCurrentReplyIndexPath,
+  readReplyIndex,
+  readCodemodel,
+  readCurrentSharedCodemodel,
+  readTarget,
+  readCache,
+  readCmakeFiles,
+  readToolchains,
+  readConfigureLog,
+  isReplyErrorIndexPath,
+  readReplyErrorIndex,
+} from "./reply.js";
+
+function createTempDir(context: TestContext, prefix = "test-") {
+  const tmpPath = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+
+  context.after(() => {
+    fs.rmSync(tmpPath, { recursive: true, force: true });
+  });
+
+  return tmpPath;
+}
+
+function createMockReplyDirectory(
+  context: TestContext,
+  replyFiles: [string, Record<string, unknown>][],
+) {
+  const tmpPath = createTempDir(context);
+
+  for (const [fileName, content] of replyFiles) {
+    const filePath = path.join(tmpPath, fileName);
+    fs.writeFileSync(filePath, JSON.stringify(content), {
+      encoding: "utf-8",
+    });
+  }
+
+  return tmpPath;
+}
+
+describe("findCurrentReplyIndexPath", () => {
+  it("returns the correct path when only index files are present", async function (context) {
+    const tmpPath = createMockReplyDirectory(context, [
+      ["index-a.json", {}],
+      ["index-b.json", {}],
+    ]);
+    const result = await findCurrentReplyIndexPath(tmpPath);
+    assert.strictEqual(result, path.join(tmpPath, "index-b.json"));
+  });
+
+  it("returns the correct path when only error files are present", async function (context) {
+    const tmpPath = createMockReplyDirectory(context, [
+      ["error-a.json", {}],
+      ["error-b.json", {}],
+    ]);
+    const result = await findCurrentReplyIndexPath(tmpPath);
+    assert.strictEqual(result, path.join(tmpPath, "error-b.json"));
+  });
+
+  it("returns the correct path when both index and error files are present", async function (context) {
+    const tmpPath = createMockReplyDirectory(context, [
+      ["index-a.json", {}],
+      ["error-b.json", {}],
+    ]);
+    const result = await findCurrentReplyIndexPath(tmpPath);
+    assert.strictEqual(result, path.join(tmpPath, "error-b.json"));
+  });
+
+  it("returns the correct path when both index and error files are present (reversed)", async function (context) {
+    const tmpPath = createMockReplyDirectory(context, [
+      ["error-a.json", {}],
+      ["index-b.json", {}],
+    ]);
+    const result = await findCurrentReplyIndexPath(tmpPath);
+    assert.strictEqual(result, path.join(tmpPath, "index-b.json"));
+  });
+});
+
+describe("readIndex", () => {
+  it("reads a well-formed index file with complete structure", async function (context) {
+    const mockIndex = {
+      cmake: {
+        version: {
+          major: 3,
+          minor: 26,
+          patch: 0,
+          suffix: "",
+          string: "3.26.0",
+          isDirty: false,
+        },
+        paths: {
+          cmake: "/usr/bin/cmake",
+          ctest: "/usr/bin/ctest",
+          cpack: "/usr/bin/cpack",
+          root: "/usr/share/cmake",
+        },
+        generator: {
+          multiConfig: false,
+          name: "Unix Makefiles",
+          // Note: platform is optional according to docs - omitted here like in the example
+        },
+      },
+      objects: [
+        {
+          kind: "codemodel",
+          version: { major: 2, minor: 0 },
+          jsonFile: "codemodel-v2-12345.json",
+        },
+        {
+          kind: "cache",
+          version: { major: 2, minor: 0 },
+          jsonFile: "cache-v2-67890.json",
+        },
+      ],
+      reply: {
+        "codemodel-v2": {
+          kind: "codemodel",
+          version: { major: 2, minor: 0 },
+          jsonFile: "codemodel-v2-12345.json",
+        },
+        "cache-v2": {
+          kind: "cache",
+          version: { major: 2, minor: 0 },
+          jsonFile: "cache-v2-67890.json",
+        },
+        "unknown-kind-v1": {
+          error: "unknown query file",
+        },
+        "client-test-client": {
+          "codemodel-v2": {
+            kind: "codemodel",
+            version: { major: 2, minor: 0 },
+            jsonFile: "codemodel-v2-12345.json",
+          },
+          "unknown-v1": {
+            error: "unknown query file",
+          },
+        },
+      },
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["index-a.json", mockIndex],
+    ]);
+    const result = await readReplyIndex(path.join(tmpPath, "index-a.json"));
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockIndex);
+  });
+
+  it("reads index file with generator platform", async function (context) {
+    const mockIndexWithPlatform = {
+      cmake: {
+        version: {
+          major: 3,
+          minor: 26,
+          patch: 0,
+          suffix: "",
+          string: "3.26.0",
+          isDirty: false,
+        },
+        paths: {
+          cmake: "/usr/bin/cmake",
+          ctest: "/usr/bin/ctest",
+          cpack: "/usr/bin/cpack",
+          root: "/usr/share/cmake",
+        },
+        generator: {
+          multiConfig: true,
+          name: "Visual Studio 16 2019",
+          platform: "x64", // Present when generator supports CMAKE_GENERATOR_PLATFORM
+        },
+      },
+      objects: [],
+      reply: {},
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["index-b.json", mockIndexWithPlatform],
+    ]);
+    const result = await readReplyIndex(path.join(tmpPath, "index-b.json"));
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockIndexWithPlatform);
+  });
+});
+
+describe("readCodeModel", () => {
+  it("reads a well-formed codemodel file", async function (context) {
+    const mockCodemodel = {
+      kind: "codemodel",
+      version: { major: 2, minor: 3 },
+      paths: {
+        source: "/path/to/source",
+        build: "/path/to/build",
+      },
+      configurations: [
+        {
+          name: "Debug",
+          directories: [
+            {
+              source: ".",
+              build: ".",
+              childIndexes: [],
+              projectIndex: 0,
+              targetIndexes: [0],
+              hasInstallRule: true,
+              minimumCMakeVersion: {
+                string: "3.14",
+              },
+              jsonFile: "directory-debug.json",
+            },
+          ],
+          projects: [
+            {
+              name: "MyProject",
+              directoryIndexes: [0],
+              targetIndexes: [0],
+            },
+          ],
+          targets: [
+            {
+              name: "MyExecutable",
+              id: "MyExecutable::@6890a9b7b1a1a2e4d6b9",
+              directoryIndex: 0,
+              projectIndex: 0,
+              jsonFile: "target-MyExecutable.json",
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["codemodel-v2-12345.json", mockCodemodel],
+    ]);
+    const result = await readCodemodel(
+      path.join(tmpPath, "codemodel-v2-12345.json"),
+    );
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockCodemodel);
+  });
+});
+
+describe("readTarget", () => {
+  // Base objects for reusable test data
+  const baseTarget = {
+    name: "MyTarget",
+    id: "MyTarget::@6890a9b7b1a1a2e4d6b9",
+    type: "EXECUTABLE" as const,
+    paths: {
+      source: ".",
+      build: ".",
+    },
+  };
+
+  const baseCompileGroup = {
+    sourceIndexes: [0],
+    language: "CXX",
+    includes: [
+      {
+        path: "/usr/include",
+        isSystem: true,
+        backtrace: 1,
+      },
+    ],
+    defines: [
+      {
+        define: "NDEBUG",
+        backtrace: 2,
+      },
+    ],
+  };
+
+  const baseSource = {
+    path: "main.cpp",
+    compileGroupIndex: 0,
+    isGenerated: false,
+    backtrace: 1,
+  };
+
+  it("validates TargetV2_0 schema (base version)", async function (context) {
+    const targetV2_0 = {
+      ...baseTarget,
+      sources: [baseSource],
+      compileGroups: [baseCompileGroup],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_0.json", targetV2_0],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_0.json"),
+      "2.0",
+    );
+
+    assert.deepStrictEqual(result, targetV2_0);
+  });
+
+  it("validates TargetV2_1 schema (added precompileHeaders)", async function (context) {
+    const targetV2_1 = {
+      ...baseTarget,
+      sources: [baseSource],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_1.json", targetV2_1],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_1.json"),
+      "2.1",
+    );
+
+    assert.deepStrictEqual(result, targetV2_1);
+  });
+
+  it("validates TargetV2_2 schema (added languageStandard)", async function (context) {
+    const targetV2_2 = {
+      ...baseTarget,
+      sources: [baseSource],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_2.json", targetV2_2],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_2.json"),
+      "2.2",
+    );
+
+    assert.deepStrictEqual(result, targetV2_2);
+  });
+
+  it("validates TargetV2_5 schema (added fileSets and fileSetIndex)", async function (context) {
+    const targetV2_5 = {
+      ...baseTarget,
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_5.json", targetV2_5],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_5.json"),
+      "2.5",
+    );
+
+    assert.deepStrictEqual(result, targetV2_5);
+  });
+
+  it("validates TargetV2_6 schema (added frameworks)", async function (context) {
+    const targetV2_6 = {
+      ...baseTarget,
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_6.json", targetV2_6],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_6.json"),
+      "2.6",
+    );
+
+    assert.deepStrictEqual(result, targetV2_6);
+  });
+
+  it("validates TargetV2_7 schema (added launchers)", async function (context) {
+    const targetV2_7 = {
+      ...baseTarget,
+      launchers: [
+        {
+          command: "/usr/bin/gdb",
+          arguments: ["--args"],
+          type: "test" as const,
+        },
+      ],
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_7.json", targetV2_7],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_7.json"),
+      "2.7",
+    );
+
+    assert.deepStrictEqual(result, targetV2_7);
+  });
+
+  it("validates TargetV2_8 schema (added debugger)", async function (context) {
+    const targetV2_8 = {
+      ...baseTarget,
+      debugger: {
+        workingDirectory: "/path/to/debug",
+      },
+      launchers: [
+        {
+          command: "/usr/bin/gdb",
+          arguments: ["--args"],
+          type: "test" as const,
+        },
+      ],
+      fileSets: [
+        {
+          name: "HEADERS",
+          type: "HEADERS",
+          visibility: "PUBLIC" as const,
+          baseDirectories: ["."],
+        },
+      ],
+      sources: [
+        {
+          ...baseSource,
+          fileSetIndex: 0,
+        },
+      ],
+      compileGroups: [
+        {
+          ...baseCompileGroup,
+          precompileHeaders: [
+            {
+              header: "pch.h",
+              backtrace: 3,
+            },
+          ],
+          languageStandard: {
+            backtraces: [4],
+            standard: "17",
+          },
+          frameworks: [
+            {
+              path: "/System/Library/Frameworks/Foundation.framework",
+              isSystem: true,
+              backtrace: 5,
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["target-v2_8.json", targetV2_8],
+    ]);
+    const result = await readTarget(
+      path.join(tmpPath, "target-v2_8.json"),
+      "2.8",
+    );
+
+    assert.deepStrictEqual(result, targetV2_8);
+  });
+});
+
+describe("readCache", () => {
+  it("reads a well-formed cache file", async function (context) {
+    const mockCache = {
+      kind: "cache",
+      version: { major: 2, minor: 0 },
+      entries: [
+        {
+          name: "BUILD_SHARED_LIBS",
+          value: "ON",
+          type: "BOOL",
+          properties: [
+            {
+              name: "HELPSTRING",
+              value: "Build shared libraries",
+            },
+          ],
+        },
+        {
+          name: "CMAKE_GENERATOR",
+          value: "Unix Makefiles",
+          type: "INTERNAL",
+          properties: [
+            {
+              name: "HELPSTRING",
+              value: "Name of generator.",
+            },
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cache-v2.json", mockCache],
+    ]);
+    const result = await readCache(path.join(tmpPath, "cache-v2.json"), "2.0");
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockCache);
+  });
+});
+
+describe("readCmakeFiles", () => {
+  // Base objects for reusable test data
+  const baseCmakeFiles = {
+    kind: "cmakeFiles" as const,
+    paths: {
+      build: "/path/to/top-level-build-dir",
+      source: "/path/to/top-level-source-dir",
+    },
+    inputs: [
+      {
+        path: "CMakeLists.txt",
+      },
+      {
+        isExternal: true,
+        path: "/path/to/external/third-party/module.cmake",
+      },
+    ],
+  };
+
+  it("validates CmakeFilesV1_0 schema (base version)", async function (context) {
+    const cmakeFilesV1_0 = {
+      ...baseCmakeFiles,
+      version: { major: 1, minor: 0 },
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cmakeFiles-v1_0.json", cmakeFilesV1_0],
+    ]);
+    const result = await readCmakeFiles(
+      path.join(tmpPath, "cmakeFiles-v1_0.json"),
+      "1.0",
+    );
+
+    assert.deepStrictEqual(result, cmakeFilesV1_0);
+  });
+
+  it("validates CmakeFilesV1_1 schema (added globsDependent)", async function (context) {
+    const cmakeFilesV1_1 = {
+      ...baseCmakeFiles,
+      version: { major: 1, minor: 1 },
+      globsDependent: [
+        {
+          expression: "src/*.cxx",
+          recurse: true,
+          paths: ["src/foo.cxx", "src/bar.cxx"],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["cmakeFiles-v1_1.json", cmakeFilesV1_1],
+    ]);
+    const result = await readCmakeFiles(
+      path.join(tmpPath, "cmakeFiles-v1_1.json"),
+      "1.1",
+    );
+
+    assert.deepStrictEqual(result, cmakeFilesV1_1);
+  });
+});
+
+describe("readToolchains", () => {
+  it("reads a well-formed toolchains file", async function (context) {
+    const mockToolchains = {
+      kind: "toolchains",
+      version: { major: 1, minor: 0 },
+      toolchains: [
+        {
+          language: "C",
+          compiler: {
+            path: "/usr/bin/cc",
+            id: "GNU",
+            version: "9.3.0",
+            implicit: {
+              includeDirectories: [
+                "/usr/lib/gcc/x86_64-linux-gnu/9/include",
+                "/usr/local/include",
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/include",
+              ],
+              linkDirectories: [
+                "/usr/lib/gcc/x86_64-linux-gnu/9",
+                "/usr/lib/x86_64-linux-gnu",
+                "/usr/lib",
+                "/lib/x86_64-linux-gnu",
+                "/lib",
+              ],
+              linkFrameworkDirectories: [],
+              linkLibraries: ["gcc", "gcc_s", "c", "gcc", "gcc_s"],
+            },
+          },
+          sourceFileExtensions: ["c", "m"],
+        },
+        {
+          language: "CXX",
+          compiler: {
+            path: "/usr/bin/c++",
+            id: "GNU",
+            version: "9.3.0",
+            implicit: {
+              includeDirectories: [
+                "/usr/include/c++/9",
+                "/usr/include/x86_64-linux-gnu/c++/9",
+                "/usr/include/c++/9/backward",
+                "/usr/lib/gcc/x86_64-linux-gnu/9/include",
+                "/usr/local/include",
+                "/usr/include/x86_64-linux-gnu",
+                "/usr/include",
+              ],
+              linkDirectories: [
+                "/usr/lib/gcc/x86_64-linux-gnu/9",
+                "/usr/lib/x86_64-linux-gnu",
+                "/usr/lib",
+                "/lib/x86_64-linux-gnu",
+                "/lib",
+              ],
+              linkFrameworkDirectories: [],
+              linkLibraries: [
+                "stdc++",
+                "m",
+                "gcc_s",
+                "gcc",
+                "c",
+                "gcc_s",
+                "gcc",
+              ],
+            },
+          },
+          sourceFileExtensions: [
+            "C",
+            "M",
+            "c++",
+            "cc",
+            "cpp",
+            "cxx",
+            "mm",
+            "CPP",
+          ],
+        },
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["toolchains-v1.json", mockToolchains],
+    ]);
+    const result = await readToolchains(
+      path.join(tmpPath, "toolchains-v1.json"),
+      "1.0",
+    );
+
+    // Verify the entire structure matches our mock data
+    assert.deepStrictEqual(result, mockToolchains);
+  });
+});
+
+describe("readConfigureLog", () => {
+  it("reads a well-formed configureLog file", async function (context) {
+    const mockConfigureLog = {
+      kind: "configureLog",
+      version: { major: 1, minor: 0 },
+      path: "/path/to/build/dir/CMakeFiles/CMakeConfigureLog.yaml",
+      eventKindNames: [
+        "message",
+        "try_compile-v1",
+        "try_run-v1",
+        "detect-c_compiler-v1",
+        "detect-cxx_compiler-v1",
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["configureLog-v1.json", mockConfigureLog],
+    ]);
+    const result = await readConfigureLog(
+      path.join(tmpPath, "configureLog-v1.json"),
+      "1.0",
+    );
+    assert.deepStrictEqual(result, mockConfigureLog);
+  });
+});
+
+describe("Reply Error Index Support", () => {
+  describe("isReplyErrorIndexPath", () => {
+    it("identifies reply error index files correctly", function () {
+      assert.strictEqual(
+        isReplyErrorIndexPath("/path/to/error-12345.json"),
+        true,
+      );
+      assert.strictEqual(
+        isReplyErrorIndexPath("/path/to/index-12345.json"),
+        false,
+      );
+      assert.strictEqual(isReplyErrorIndexPath("error-abc.json"), true);
+      assert.strictEqual(isReplyErrorIndexPath("index-abc.json"), false);
+    });
+  });
+
+  describe("readReplyErrorIndex", () => {
+    it("reads a well-formed reply error index file", async function (context) {
+      const mockReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: {
+            multiConfig: false,
+            name: "Unix Makefiles",
+          },
+        },
+        objects: [
+          {
+            kind: "configureLog",
+            version: { major: 1, minor: 0 },
+            jsonFile: "configureLog-v1-12345.json",
+          },
+        ],
+        reply: {
+          "configureLog-v1": {
+            kind: "configureLog",
+            version: { major: 1, minor: 0 },
+            jsonFile: "configureLog-v1-12345.json",
+          },
+          "codemodel-v2": {
+            error: "CMake failed to generate build system",
+          },
+          "cache-v2": {
+            error: "CMake failed to generate build system",
+          },
+        },
+      };
+
+      const tmpPath = createMockReplyDirectory(context, [
+        ["error-12345.json", mockReplyErrorIndex],
+      ]);
+      const result = await readReplyErrorIndex(
+        path.join(tmpPath, "error-12345.json"),
+      );
+
+      assert.deepStrictEqual(result, mockReplyErrorIndex);
+    });
+
+    it("rejects non-reply error index files", async function (context) {
+      const tmpPath = createMockReplyDirectory(context, [
+        ["index-12345.json", {}],
+      ]);
+
+      await assert.rejects(
+        () => readReplyErrorIndex(path.join(tmpPath, "index-12345.json")),
+        /Expected a path to an error-\*\.json file/,
+      );
+    });
+
+    it("rejects reply error index with unsupported object kind in objects array", async function (context) {
+      const invalidReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: {
+            multiConfig: false,
+            name: "Unix Makefiles",
+          },
+        },
+        objects: [
+          {
+            kind: "codemodel", // Invalid: only configureLog is supported
+            version: { major: 2, minor: 0 },
+            jsonFile: "codemodel-v2-12345.json",
+          },
+        ],
+        reply: {},
+      };
+
+      const tmpPath = createMockReplyDirectory(context, [
+        ["error-12345.json", invalidReplyErrorIndex],
+      ]);
+
+      await assert.rejects(
+        () => readReplyErrorIndex(path.join(tmpPath, "error-12345.json")),
+        (error: Error) => {
+          return error.message.includes(
+            'Invalid input: expected \\"configureLog\\"',
+          );
+        },
+      );
+    });
+
+    it("rejects reply error index with unsupported object kind in client stateful query responses", async function (context) {
+      const invalidReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: {
+            multiConfig: false,
+            name: "Unix Makefiles",
+          },
+        },
+        objects: [],
+        reply: {
+          "client-test": {
+            "query.json": {
+              client: {},
+              requests: [
+                {
+                  kind: "codemodel",
+                  version: { major: 2, minor: 0 },
+                },
+              ],
+              responses: [
+                {
+                  kind: "codemodel", // Invalid: only configureLog is supported in error index
+                  version: { major: 2, minor: 0 },
+                  jsonFile: "codemodel-v2-12345.json",
+                },
+              ],
+            },
+          },
+        },
+      };
+
+      const tmpPath = createMockReplyDirectory(context, [
+        ["error-12345.json", invalidReplyErrorIndex],
+      ]);
+
+      await assert.rejects(
+        () => readReplyErrorIndex(path.join(tmpPath, "error-12345.json")),
+        (error: Error) => {
+          return error.message.includes(
+            'Invalid input: expected \\"configureLog\\"',
+          );
+        },
+      );
+    });
+  });
+
+  describe("readCurrentCodemodel with error index handling", () => {
+    it("throws descriptive error when current index is a reply error index", async function (context) {
+      const mockReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: { multiConfig: false, name: "Unix Makefiles" },
+        },
+        objects: [],
+        reply: {
+          "codemodel-v2": { error: "Build system generation failed" },
+        },
+      };
+
+      const buildPath = createTempDir(context, "build-test-");
+      const replyPath = path.join(buildPath, ".cmake/api/v1/reply");
+      await fs.promises.mkdir(replyPath, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(replyPath, "error-12345.json"),
+        JSON.stringify(mockReplyErrorIndex),
+      );
+
+      await assert.rejects(
+        () => readCurrentSharedCodemodel(buildPath),
+        /CMake failed to generate build system\. Error in codemodel: Build system generation failed/,
+      );
+    });
+
+    it("throws generic error when reply error index has no codemodel entry", async function (context) {
+      const mockReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: { multiConfig: false, name: "Unix Makefiles" },
+        },
+        objects: [],
+        reply: {},
+      };
+
+      const buildPath = createTempDir(context, "build-test-");
+      const replyPath = path.join(buildPath, ".cmake/api/v1/reply");
+      await fs.promises.mkdir(replyPath, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(replyPath, "error-12345.json"),
+        JSON.stringify(mockReplyErrorIndex),
+      );
+
+      await assert.rejects(
+        () => readCurrentSharedCodemodel(buildPath),
+        /CMake failed to generate build system\. No codemodel available in error index\./,
+      );
+    });
+  });
+});
