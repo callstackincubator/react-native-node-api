@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Test cmake-file-api",
+      "command": "node",
+      "args": ["--run", "test"],
+      "options": {
+        "cwd": "${workspaceFolder}/packages/cmake-file-api"
+      },
+      "group": "test"
+    }
+  ]
+}
