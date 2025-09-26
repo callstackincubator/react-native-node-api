@@ -12,6 +12,7 @@ import {
   readCache,
   readCmakeFiles,
   readToolchains,
+  readConfigureLog,
 } from "./reply.js";
 import {
   TargetV2_0,
@@ -974,5 +975,30 @@ describe("readToolchains", () => {
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockToolchains);
+  });
+});
+
+describe("readConfigureLog", () => {
+  it("reads a well-formed configureLog file", async function (context) {
+    const mockConfigureLog = {
+      kind: "configureLog",
+      version: { major: 1, minor: 0 },
+      path: "/path/to/build/dir/CMakeFiles/CMakeConfigureLog.yaml",
+      eventKindNames: [
+        "message",
+        "try_compile-v1",
+        "try_run-v1",
+        "detect-c_compiler-v1",
+        "detect-cxx_compiler-v1",
+      ],
+    };
+
+    const tmpPath = createMockReplyDirectory(context, [
+      ["configureLog-v1.json", mockConfigureLog],
+    ]);
+    const result = await readConfigureLog(
+      path.join(tmpPath, "configureLog-v1.json"),
+    );
+    assert.deepStrictEqual(result, mockConfigureLog);
   });
 });

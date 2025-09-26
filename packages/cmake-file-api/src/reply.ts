@@ -176,3 +176,16 @@ export async function readToolchains(
   const content = await fs.promises.readFile(toolchainsPath, "utf-8");
   return schema.parse(JSON.parse(content));
 }
+
+export async function readConfigureLog(
+  configureLogPath: string,
+  schema: z.ZodSchema = schemas.ConfigureLogV1_0,
+) {
+  assert(
+    path.basename(configureLogPath).startsWith("configureLog-") &&
+      path.extname(configureLogPath) === ".json",
+    "Expected a path to a configureLog-*.json file",
+  );
+  const content = await fs.promises.readFile(configureLogPath, "utf-8");
+  return schema.parse(JSON.parse(content));
+}
