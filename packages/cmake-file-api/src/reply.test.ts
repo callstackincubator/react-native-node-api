@@ -6,13 +6,16 @@ import { describe, it, type TestContext } from "node:test";
 
 import {
   findCurrentReplyIndexPath,
-  readIndex,
-  readCodeModel,
+  readReplyIndex,
+  readCodemodel,
+  readCurrentSharedCodemodel,
   readTarget,
   readCache,
   readCmakeFiles,
   readToolchains,
   readConfigureLog,
+  isReplyErrorIndexPath,
+  readReplyErrorIndex,
 } from "./reply.js";
 import {
   TargetV2_0,
@@ -26,11 +29,21 @@ import {
   CmakeFilesV1_1,
 } from "./schemas.js";
 
+function createTempDir(context: TestContext, prefix = "test-") {
+  const tmpPath = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+
+  context.after(() => {
+    fs.rmSync(tmpPath, { recursive: true, force: true });
+  });
+
+  return tmpPath;
+}
+
 function createMockReplyDirectory(
   context: TestContext,
   replyFiles: [string, Record<string, unknown>][],
 ) {
-  const tmpPath = fs.mkdtempSync(path.join(os.tmpdir(), "test-"));
+  const tmpPath = createTempDir(context);
 
   for (const [fileName, content] of replyFiles) {
     const filePath = path.join(tmpPath, fileName);
@@ -38,10 +51,6 @@ function createMockReplyDirectory(
       encoding: "utf-8",
     });
   }
-
-  context.after(() => {
-    fs.rmSync(tmpPath, { recursive: true, force: true });
-  });
 
   return tmpPath;
 }
@@ -150,7 +159,7 @@ describe("readIndex", () => {
     const tmpPath = createMockReplyDirectory(context, [
       ["index-a.json", mockIndex],
     ]);
-    const result = await readIndex(path.join(tmpPath, "index-a.json"));
+    const result = await readReplyIndex(path.join(tmpPath, "index-a.json"));
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockIndex);
@@ -186,7 +195,7 @@ describe("readIndex", () => {
     const tmpPath = createMockReplyDirectory(context, [
       ["index-b.json", mockIndexWithPlatform],
     ]);
-    const result = await readIndex(path.join(tmpPath, "index-b.json"));
+    const result = await readReplyIndex(path.join(tmpPath, "index-b.json"));
 
     // Verify the entire structure matches our mock data
     assert.deepStrictEqual(result, mockIndexWithPlatform);
@@ -242,7 +251,7 @@ describe("readCodeModel", () => {
     const tmpPath = createMockReplyDirectory(context, [
       ["codemodel-v2-12345.json", mockCodemodel],
     ]);
-    const result = await readCodeModel(
+    const result = await readCodemodel(
       path.join(tmpPath, "codemodel-v2-12345.json"),
     );
 
@@ -1000,5 +1009,274 @@ describe("readConfigureLog", () => {
       path.join(tmpPath, "configureLog-v1.json"),
     );
     assert.deepStrictEqual(result, mockConfigureLog);
+  });
+});
+
+describe("Reply Error Index Support", () => {
+  describe("isReplyErrorIndexPath", () => {
+    it("identifies reply error index files correctly", function () {
+      assert.strictEqual(
+        isReplyErrorIndexPath("/path/to/error-12345.json"),
+        true,
+      );
+      assert.strictEqual(
+        isReplyErrorIndexPath("/path/to/index-12345.json"),
+        false,
+      );
+      assert.strictEqual(isReplyErrorIndexPath("error-abc.json"), true);
+      assert.strictEqual(isReplyErrorIndexPath("index-abc.json"), false);
+    });
+  });
+
+  describe("readReplyErrorIndex", () => {
+    it("reads a well-formed reply error index file", async function (context) {
+      const mockReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: {
+            multiConfig: false,
+            name: "Unix Makefiles",
+          },
+        },
+        objects: [
+          {
+            kind: "configureLog",
+            version: { major: 1, minor: 0 },
+            jsonFile: "configureLog-v1-12345.json",
+          },
+        ],
+        reply: {
+          "configureLog-v1": {
+            kind: "configureLog",
+            version: { major: 1, minor: 0 },
+            jsonFile: "configureLog-v1-12345.json",
+          },
+          "codemodel-v2": {
+            error: "CMake failed to generate build system",
+          },
+          "cache-v2": {
+            error: "CMake failed to generate build system",
+          },
+        },
+      };
+
+      const tmpPath = createMockReplyDirectory(context, [
+        ["error-12345.json", mockReplyErrorIndex],
+      ]);
+      const result = await readReplyErrorIndex(
+        path.join(tmpPath, "error-12345.json"),
+      );
+
+      assert.deepStrictEqual(result, mockReplyErrorIndex);
+    });
+
+    it("rejects non-reply error index files", async function (context) {
+      const tmpPath = createMockReplyDirectory(context, [
+        ["index-12345.json", {}],
+      ]);
+
+      await assert.rejects(
+        () => readReplyErrorIndex(path.join(tmpPath, "index-12345.json")),
+        /Expected a path to an error-\*\.json file/,
+      );
+    });
+
+    it("rejects reply error index with unsupported object kind in objects array", async function (context) {
+      const invalidReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: {
+            multiConfig: false,
+            name: "Unix Makefiles",
+          },
+        },
+        objects: [
+          {
+            kind: "codemodel", // Invalid: only configureLog is supported
+            version: { major: 2, minor: 0 },
+            jsonFile: "codemodel-v2-12345.json",
+          },
+        ],
+        reply: {},
+      };
+
+      const tmpPath = createMockReplyDirectory(context, [
+        ["error-12345.json", invalidReplyErrorIndex],
+      ]);
+
+      await assert.rejects(
+        () => readReplyErrorIndex(path.join(tmpPath, "error-12345.json")),
+        (error: Error) => {
+          return error.message.includes(
+            'Invalid input: expected \\"configureLog\\"',
+          );
+        },
+      );
+    });
+
+    it("rejects reply error index with unsupported object kind in client stateful query responses", async function (context) {
+      const invalidReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: {
+            multiConfig: false,
+            name: "Unix Makefiles",
+          },
+        },
+        objects: [],
+        reply: {
+          "client-test": {
+            "query.json": {
+              client: {},
+              requests: [
+                {
+                  kind: "codemodel",
+                  version: { major: 2, minor: 0 },
+                },
+              ],
+              responses: [
+                {
+                  kind: "codemodel", // Invalid: only configureLog is supported in error index
+                  version: { major: 2, minor: 0 },
+                  jsonFile: "codemodel-v2-12345.json",
+                },
+              ],
+            },
+          },
+        },
+      };
+
+      const tmpPath = createMockReplyDirectory(context, [
+        ["error-12345.json", invalidReplyErrorIndex],
+      ]);
+
+      await assert.rejects(
+        () => readReplyErrorIndex(path.join(tmpPath, "error-12345.json")),
+        (error: Error) => {
+          return error.message.includes(
+            'Invalid input: expected \\"configureLog\\"',
+          );
+        },
+      );
+    });
+  });
+
+  describe("readCurrentCodemodel with error index handling", () => {
+    it("throws descriptive error when current index is a reply error index", async function (context) {
+      const mockReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: { multiConfig: false, name: "Unix Makefiles" },
+        },
+        objects: [],
+        reply: {
+          "codemodel-v2": { error: "Build system generation failed" },
+        },
+      };
+
+      const buildPath = createTempDir(context, "build-test-");
+      const replyPath = path.join(buildPath, ".cmake/api/v1/reply");
+      await fs.promises.mkdir(replyPath, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(replyPath, "error-12345.json"),
+        JSON.stringify(mockReplyErrorIndex),
+      );
+
+      await assert.rejects(
+        () => readCurrentSharedCodemodel(buildPath),
+        /CMake failed to generate build system\. Error in codemodel: Build system generation failed/,
+      );
+    });
+
+    it("throws generic error when reply error index has no codemodel entry", async function (context) {
+      const mockReplyErrorIndex = {
+        cmake: {
+          version: {
+            major: 3,
+            minor: 26,
+            patch: 0,
+            suffix: "",
+            string: "3.26.0",
+            isDirty: false,
+          },
+          paths: {
+            cmake: "/usr/bin/cmake",
+            ctest: "/usr/bin/ctest",
+            cpack: "/usr/bin/cpack",
+            root: "/usr/share/cmake",
+          },
+          generator: { multiConfig: false, name: "Unix Makefiles" },
+        },
+        objects: [],
+        reply: {},
+      };
+
+      const buildPath = createTempDir(context, "build-test-");
+      const replyPath = path.join(buildPath, ".cmake/api/v1/reply");
+      await fs.promises.mkdir(replyPath, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(replyPath, "error-12345.json"),
+        JSON.stringify(mockReplyErrorIndex),
+      );
+
+      await assert.rejects(
+        () => readCurrentSharedCodemodel(buildPath),
+        /CMake failed to generate build system\. No codemodel available in error index\./,
+      );
+    });
   });
 });

@@ -19,7 +19,7 @@ const ReplyErrorObject = z.object({
   error: z.string(),
 });
 
-const ClientStatefulQueryResponse = z.object({
+const ClientStatefulQueryReply = z.object({
   client: z.unknown().optional(),
   requests: z
     .array(
@@ -77,16 +77,43 @@ export const IndexReplyV1 = z.object({
     z.string(),
     z
       .union([
-        // For <kind>-v<major> entries and <unknown> entries
         ReplyFileReferenceV1,
         ReplyErrorObject,
-        // For client-<client> entries - nested object structure
         z.record(
           z.string(),
           z.union([
             ReplyFileReferenceV1,
             ReplyErrorObject,
-            ClientStatefulQueryResponse, // For query.json
+            ClientStatefulQueryReply,
+          ]),
+        ),
+      ])
+      .optional(),
+  ),
+});
+
+const ReplyErrorIndexFileReference = ReplyFileReferenceV1.extend({
+  kind: z.enum(["configureLog"]),
+});
+
+const ClientStatefulQueryReplyForErrorIndex = ClientStatefulQueryReply.extend({
+  responses: z.array(ReplyErrorIndexFileReference).optional(),
+});
+
+export const ReplyErrorIndex = IndexReplyV1.extend({
+  objects: z.array(ReplyErrorIndexFileReference),
+  reply: z.record(
+    z.string(),
+    z
+      .union([
+        ReplyErrorIndexFileReference,
+        ReplyErrorObject,
+        z.record(
+          z.string(),
+          z.union([
+            ReplyErrorIndexFileReference,
+            ReplyErrorObject,
+            ClientStatefulQueryReplyForErrorIndex,
           ]),
         ),
       ])

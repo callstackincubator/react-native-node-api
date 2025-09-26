@@ -47,31 +47,71 @@ export async function findCurrentReplyIndexPath(replyPath: string) {
   return path.join(replyPath, currentIndexFileName);
 }
 
-export async function readIndex(indexPath: string) {
+export async function readReplyIndex(filePath: string) {
   assert(
-    (path.basename(indexPath).startsWith("index-") ||
-      path.basename(indexPath).startsWith("error-")) &&
-      path.extname(indexPath) === ".json",
-    "Expected a path to a index-*.json file or error-*.json file",
+    path.basename(filePath).startsWith("index-") &&
+      path.extname(filePath) === ".json",
+    "Expected a path to a index-*.json file",
   );
-  const content = await fs.promises.readFile(indexPath, "utf-8");
+  const content = await fs.promises.readFile(filePath, "utf-8");
   return schemas.IndexReplyV1.parse(JSON.parse(content));
 }
 
-export async function readCodeModel(codeModelPath: string) {
+export function isReplyErrorIndexPath(filePath: string): boolean {
+  return (
+    path.basename(filePath).startsWith("error-") &&
+    path.extname(filePath) === ".json"
+  );
+}
+
+export async function readReplyErrorIndex(filePath: string) {
   assert(
-    path.basename(codeModelPath).startsWith("codemodel-") &&
-      path.extname(codeModelPath) === ".json",
+    isReplyErrorIndexPath(filePath),
+    "Expected a path to an error-*.json file",
+  );
+  const content = await fs.promises.readFile(filePath, "utf-8");
+  return schemas.ReplyErrorIndex.parse(JSON.parse(content));
+}
+
+export async function readCodemodel(filePath: string) {
+  assert(
+    path.basename(filePath).startsWith("codemodel-") &&
+      path.extname(filePath) === ".json",
     "Expected a path to a codemodel-*.json file",
   );
-  const content = await fs.promises.readFile(codeModelPath, "utf-8");
+  const content = await fs.promises.readFile(filePath, "utf-8");
   return schemas.CodemodelV2.parse(JSON.parse(content));
 }
 
-export async function readCurrentCodeModel(buildPath: string) {
+/**
+ * Call {@link createSharedStatelessQuery} to create a shared codemodel query before reading the current shared codemodel.
+ */
+export async function readCurrentSharedCodemodel(buildPath: string) {
   const replyPath = path.join(buildPath, `.cmake/api/v1/reply`);
   const replyIndexPath = await findCurrentReplyIndexPath(replyPath);
-  const index = await readIndex(replyIndexPath);
+
+  // Check if this is an error index - they don't contain codemodel data
+  if (isReplyErrorIndexPath(replyIndexPath)) {
+    const errorIndex = await readReplyErrorIndex(replyIndexPath);
+    const { reply } = errorIndex;
+    const codemodelFile = reply["codemodel-v2"];
+
+    if (
+      codemodelFile &&
+      "error" in codemodelFile &&
+      typeof codemodelFile.error === "string"
+    ) {
+      throw new Error(
+        `CMake failed to generate build system. Error in codemodel: ${codemodelFile.error}`,
+      );
+    }
+
+    throw new Error(
+      "CMake failed to generate build system. No codemodel available in error index.",
+    );
+  }
+
+  const index = await readReplyIndex(replyIndexPath);
   const { reply } = index;
   const { "codemodel-v2": codemodelFile } = reply;
   assert(
@@ -89,14 +129,14 @@ export async function readCurrentCodeModel(buildPath: string) {
   assert(kind === "codemodel", "Expected a codemodel file reference");
 
   const codemodelPath = path.join(buildPath, `.cmake/api/v1/reply`, jsonFile);
-  return readCodeModel(codemodelPath);
+  return readCodemodel(codemodelPath);
 }
 
 export async function readCurrentTargets(
   buildPath: string,
   configuration: string,
 ) {
-  const { configurations } = await readCurrentCodeModel(buildPath);
+  const { configurations } = await readCurrentSharedCodemodel(buildPath);
   const relevantConfig =
     configurations.length === 1
       ? configurations[0]
