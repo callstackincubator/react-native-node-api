@@ -45,7 +45,7 @@ type XCframeworkOptions = {
   autoLink: boolean;
 };
 
-export function createAppleFramework(libraryPath: string) {
+export async function createAppleFramework(libraryPath: string) {
   assert(fs.existsSync(libraryPath), `Library not found: ${libraryPath}`);
   // Write a info.plist file to the framework
   const libraryName = path.basename(libraryPath, path.extname(libraryPath));
@@ -54,11 +54,11 @@ export function createAppleFramework(libraryPath: string) {
     `${libraryName}.framework`,
   );
   // Create the framework from scratch
-  fs.rmSync(frameworkPath, { recursive: true, force: true });
-  fs.mkdirSync(frameworkPath);
-  fs.mkdirSync(path.join(frameworkPath, "Headers"));
+  await fs.promises.rm(frameworkPath, { recursive: true, force: true });
+  await fs.promises.mkdir(frameworkPath);
+  await fs.promises.mkdir(path.join(frameworkPath, "Headers"));
   // Create an empty Info.plist file
-  fs.writeFileSync(
+  await fs.promises.writeFile(
     path.join(frameworkPath, "Info.plist"),
     createPlistContent({
       CFBundleDevelopmentRegion: "en",
@@ -75,8 +75,9 @@ export function createAppleFramework(libraryPath: string) {
   );
   const newLibraryPath = path.join(frameworkPath, libraryName);
   // TODO: Consider copying the library instead of renaming it
-  fs.renameSync(libraryPath, newLibraryPath);
+  await fs.promises.rename(libraryPath, newLibraryPath);
   // Update the name of the library
+  // TODO: Make this call async
   cp.spawnSync("install_name_tool", [
     "-id",
     `@rpath/${libraryName}.framework/${libraryName}`,

@@ -13,6 +13,7 @@ import {
   wrapAction,
 } from "@react-native-node-api/cli-utils";
 import { isSupportedTriplet } from "react-native-node-api";
+import * as cmakeFileApi from "cmake-file-api";
 
 import {
   getCmakeJSVariables,
@@ -326,6 +327,8 @@ async function configureProject<T extends string>(
     ...options.define,
     { CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath },
   ];
+
+  await cmakeFileApi.createSharedStatelessQuery(buildPath, "codemodel", "2");
 
   await spawn(
     "cmake",

@@ -238,7 +238,9 @@ export const buildCommand = new Command("build")
 
         if (appleLibraries.length > 0) {
           const libraryPaths = await combineLibraries(appleLibraries);
-          const frameworkPaths = libraryPaths.map(createAppleFramework);
+          const frameworkPaths = await Promise.all(
+            libraryPaths.map(createAppleFramework),
+          );
           const xcframeworkFilename = determineXCFrameworkFilename(
             frameworkPaths,
             xcframeworkExtension ? ".xcframework" : ".apple.node",
