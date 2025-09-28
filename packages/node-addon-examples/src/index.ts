@@ -15,9 +15,7 @@ function assertLogs(cb: () => void, expectedMessages: string[]) {
     cb();
     if (expectedMessages.length > 0) {
       errors.push(
-        new Error(
-          `Missing expected message(s): ${expectedMessages.join(", ")}`,
-        ),
+        new Error(`Missing expected message(s): ${expectedMessages.join(", ")}`)
       );
     }
   } finally {
@@ -85,5 +83,6 @@ export const suites: Record<
       require("../tests/buffers/addon.js");
     },
     async: () => require("../tests/async/addon.js") as () => Promise<void>,
+    make_callback: () => require("../tests/make_callback/addon.js"),
   },
 };
