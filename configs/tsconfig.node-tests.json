@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.node.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false
+  },
+  "include": ["${configDir}/src/**/*.test.ts"],
+  "exclude": []
+  /*
+  "references": [
+    {
+      "path": "./tsconfig.json"
+    }
+  ]
+  */
+}

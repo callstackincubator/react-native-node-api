@@ -1,0 +1,33 @@
+{
+  "name": "cmake-file-api",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "TypeScript wrapper around the CMake File API",
+  "homepage": "https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html",
+  "scripts": {
+    "build": "tsc --build",
+    "lint": "eslint 'src/**/*.ts'",
+    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
+  },
+  "files": [
+    "docs/",
+    "dist/",
+    "!*.test.d.ts",
+    "!*.test.d.ts.map"
+  ],
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/callstackincubator/react-native-node-api",
+    "directory": "packages/cmake-file-api"
+  },
+  "author": {
+    "name": "Kræn Hansen",
+    "url": "https://github.com/kraenhansen"
+  },
+  "dependencies": {
+    "zod": "^4.1.11"
+  }
+}
