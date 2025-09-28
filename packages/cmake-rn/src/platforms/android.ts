@@ -122,7 +122,10 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
   async postBuild({ outputPath, triplets }, { autoLink, configuration }) {
-    const prebuilds: Record<string, Partial<Record<Triplet, string>>> = {};
+    const prebuilds: Record<
+      string,
+      { triplet: Triplet; libraryPath: string }[]
+    > = {};
 
     for (const { triplet, buildPath } of triplets) {
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
@@ -148,17 +151,15 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       const [artifact] = artifacts;
       // Add prebuild entry, creating a new entry if needed
       if (!(sharedLibrary.name in prebuilds)) {
-        prebuilds[sharedLibrary.name] = {};
+        prebuilds[sharedLibrary.name] = [];
       }
-      prebuilds[sharedLibrary.name][triplet] = path.join(
-        buildPath,
-        artifact.path,
-      );
+      prebuilds[sharedLibrary.name].push({
+        triplet,
+        libraryPath: path.join(buildPath, artifact.path),
+      });
     }
 
-    for (const [libraryName, libraryPathByTriplet] of Object.entries(
-      prebuilds,
-    )) {
+    for (const [libraryName, libraries] of Object.entries(prebuilds)) {
       const prebuildOutputPath = path.resolve(
         outputPath,
         `${libraryName}.android.node`,
@@ -166,7 +167,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       await oraPromise(
         createAndroidLibsDirectory({
           outputPath: prebuildOutputPath,
-          libraryPathByTriplet,
+          libraries,
           autoLink,
         }),
         {

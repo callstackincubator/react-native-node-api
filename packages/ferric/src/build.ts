@@ -204,15 +204,13 @@ export const buildCommand = new Command("build")
         );
 
         if (androidLibraries.length > 0) {
-          const libraryPathByTriplet = Object.fromEntries(
-            androidLibraries.map(([target, outputPath]) => [
-              ANDROID_TRIPLET_PER_TARGET[target],
-              outputPath,
-            ]),
-          ) as Record<AndroidTriplet, string>;
+          const libraries = androidLibraries.map(([target, outputPath]) => ({
+            triplet: ANDROID_TRIPLET_PER_TARGET[target],
+            libraryPath: outputPath,
+          }));
 
           const androidLibsFilename = determineAndroidLibsFilename(
-            Object.values(libraryPathByTriplet),
+            libraries.map(({ libraryPath }) => libraryPath),
           );
           const androidLibsOutputPath = path.resolve(
             outputPath,
@@ -222,7 +220,7 @@ export const buildCommand = new Command("build")
           await oraPromise(
             createAndroidLibsDirectory({
               outputPath: androidLibsOutputPath,
-              libraryPathByTriplet,
+              libraries,
               autoLink: true,
             }),
             {
