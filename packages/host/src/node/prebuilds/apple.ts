@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import cp from "node:child_process";
 
 import { spawn } from "@react-native-node-api/cli-utils";
 
@@ -77,12 +76,13 @@ export async function createAppleFramework(libraryPath: string) {
   // TODO: Consider copying the library instead of renaming it
   await fs.promises.rename(libraryPath, newLibraryPath);
   // Update the name of the library
-  // TODO: Make this call async
-  cp.spawnSync("install_name_tool", [
-    "-id",
-    `@rpath/${libraryName}.framework/${libraryName}`,
-    newLibraryPath,
-  ]);
+  await spawn(
+    "install_name_tool",
+    ["-id", `@rpath/${libraryName}.framework/${libraryName}`, newLibraryPath],
+    {
+      outputMode: "buffered",
+    },
+  );
   return frameworkPath;
 }
 
