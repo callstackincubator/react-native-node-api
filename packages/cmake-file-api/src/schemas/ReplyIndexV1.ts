@@ -19,34 +19,28 @@ const ReplyErrorObject = z.object({
   error: z.string(),
 });
 
+const VersionNumber = z.number();
+
+const VersionObject = z.object({
+  major: z.number(),
+  minor: z.number().optional(),
+});
+
+const VersionSpec = z.union([
+  VersionNumber,
+  VersionObject,
+  z.array(z.union([VersionNumber, VersionObject])),
+]);
+
+const QueryRequest = z.object({
+  kind: z.string(),
+  version: VersionSpec.optional(),
+  client: z.unknown().optional(),
+});
+
 const ClientStatefulQueryReply = z.object({
   client: z.unknown().optional(),
-  requests: z
-    .array(
-      z.object({
-        kind: z.string(),
-        version: z
-          .union([
-            z.number(),
-            z.object({
-              major: z.number(),
-              minor: z.number().optional(),
-            }),
-            z.array(
-              z.union([
-                z.number(),
-                z.object({
-                  major: z.number(),
-                  minor: z.number().optional(),
-                }),
-              ]),
-            ),
-          ])
-          .optional(),
-        client: z.unknown().optional(),
-      }),
-    )
-    .optional(),
+  requests: z.array(QueryRequest).optional(),
   responses: z.array(ReplyFileReferenceV1).optional(),
 });
 
