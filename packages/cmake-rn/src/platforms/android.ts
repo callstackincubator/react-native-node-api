@@ -5,9 +5,9 @@ import path from "node:path";
 import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
 import {
   createAndroidLibsDirectory,
-  determineAndroidLibsFilename,
   AndroidTriplet as Triplet,
 } from "react-native-node-api";
+import * as cmakeFileApi from "cmake-file-api";
 
 import type { Platform } from "./types.js";
 
@@ -121,50 +121,64 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     const { ANDROID_HOME } = process.env;
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
-  async postBuild({ outputPath, triplets }, { autoLink }) {
-    // TODO: Include `configuration` in the output path
-    const libraryPathByTriplet = Object.fromEntries(
-      await Promise.all(
-        triplets.map(async ({ triplet, outputPath }) => {
-          assert(
-            fs.existsSync(outputPath),
-            `Expected a directory at ${outputPath}`,
-          );
-          // Expect binary file(s), either .node or .so
-          const dirents = await fs.promises.readdir(outputPath, {
-            withFileTypes: true,
-          });
-          const result = dirents
-            .filter(
-              (dirent) =>
-                dirent.isFile() &&
-                (dirent.name.endsWith(".so") || dirent.name.endsWith(".node")),
-            )
-            .map((dirent) => path.join(dirent.parentPath, dirent.name));
-          assert.equal(result.length, 1, "Expected exactly one library file");
-          return [triplet, result[0]] as const;
-        }),
-      ),
-    ) as Record<Triplet, string>;
-    const androidLibsFilename = determineAndroidLibsFilename(
-      Object.values(libraryPathByTriplet),
-    );
-    const androidLibsOutputPath = path.resolve(outputPath, androidLibsFilename);
+  async postBuild({ outputPath, triplets }, { autoLink, configuration }) {
+    const prebuilds: Record<
+      string,
+      { triplet: Triplet; libraryPath: string }[]
+    > = {};
 
-    await oraPromise(
-      createAndroidLibsDirectory({
-        outputPath: androidLibsOutputPath,
-        libraryPathByTriplet,
-        autoLink,
-      }),
-      {
-        text: "Assembling Android libs directory",
-        successText: `Android libs directory assembled into ${chalk.dim(
-          path.relative(process.cwd(), androidLibsOutputPath),
-        )}`,
-        failText: ({ message }) =>
-          `Failed to assemble Android libs directory: ${message}`,
-      },
-    );
+    for (const { triplet, buildPath } of triplets) {
+      assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
+      const targets = await cmakeFileApi.readCurrentTargetsDeep(
+        buildPath,
+        configuration,
+        "2.0",
+      );
+      const sharedLibraries = targets.filter(
+        (target) => target.type === "SHARED_LIBRARY",
+      );
+      assert.equal(
+        sharedLibraries.length,
+        1,
+        "Expected exactly one shared library",
+      );
+      const [sharedLibrary] = sharedLibraries;
+      const { artifacts } = sharedLibrary;
+      assert(
+        artifacts && artifacts.length === 1,
+        "Expected exactly one artifact",
+      );
+      const [artifact] = artifacts;
+      // Add prebuild entry, creating a new entry if needed
+      if (!(sharedLibrary.name in prebuilds)) {
+        prebuilds[sharedLibrary.name] = [];
+      }
+      prebuilds[sharedLibrary.name].push({
+        triplet,
+        libraryPath: path.join(buildPath, artifact.path),
+      });
+    }
+
+    for (const [libraryName, libraries] of Object.entries(prebuilds)) {
+      const prebuildOutputPath = path.resolve(
+        outputPath,
+        `${libraryName}.android.node`,
+      );
+      await oraPromise(
+        createAndroidLibsDirectory({
+          outputPath: prebuildOutputPath,
+          libraries,
+          autoLink,
+        }),
+        {
+          text: `Assembling Android libs directory (${libraryName})`,
+          successText: `Android libs directory (${libraryName}) assembled into ${chalk.dim(
+            path.relative(process.cwd(), prebuildOutputPath),
+          )}`,
+          failText: ({ message }) =>
+            `Failed to assemble Android libs directory (${libraryName}): ${message}`,
+        },
+      );
+    }
   },
 };

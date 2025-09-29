@@ -32,24 +32,24 @@ export function determineAndroidLibsFilename(libraryPaths: string[]) {
 
 type AndroidLibsDirectoryOptions = {
   outputPath: string;
-  libraryPathByTriplet: Record<AndroidTriplet, string>;
+  libraries: { triplet: AndroidTriplet; libraryPath: string }[];
   autoLink: boolean;
 };
 
 export async function createAndroidLibsDirectory({
   outputPath,
-  libraryPathByTriplet,
+  libraries,
   autoLink,
 }: AndroidLibsDirectoryOptions) {
   // Delete and recreate any existing output directory
   await fs.promises.rm(outputPath, { recursive: true, force: true });
   await fs.promises.mkdir(outputPath, { recursive: true });
-  for (const [triplet, libraryPath] of Object.entries(libraryPathByTriplet)) {
+  for (const { triplet, libraryPath } of libraries) {
     assert(
       fs.existsSync(libraryPath),
       `Library not found: ${libraryPath} for triplet ${triplet}`,
     );
-    const arch = ANDROID_ARCHITECTURES[triplet as AndroidTriplet];
+    const arch = ANDROID_ARCHITECTURES[triplet];
     const archOutputPath = path.join(outputPath, arch);
     await fs.promises.mkdir(archOutputPath, { recursive: true });
     // Strip the ".node" extension from the library name
