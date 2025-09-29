@@ -1,5 +1,11 @@
 # cmake-rn
 
+## 0.4.1
+
+### Patch Changes
+
+- a23af5a: Use CMake file API to read shared library target paths
+
 ## 0.4.0
 
 ### Minor Changes
