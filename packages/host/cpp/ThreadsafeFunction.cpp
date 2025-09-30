@@ -1,6 +1,7 @@
 #include "ThreadsafeFunction.hpp"
 #include <unordered_map>
 #include "Logger.hpp"
+#include "RuntimeNodeApi.hpp"
 
 // Global registry to map unique IDs to ThreadSafeFunction instances.
 // We use IDs instead of raw pointers to avoid any use-after-free issues.
