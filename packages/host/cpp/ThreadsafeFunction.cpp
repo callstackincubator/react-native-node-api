@@ -139,9 +139,12 @@ napi_status ThreadSafeFunction::call(
     log_debug("Error: No CallInvoker available for ThreadSafeFunction");
     return napi_generic_failure;
   }
-  // Hop to JS thread; we drain one item per hop to keep latency predictable
-  // and avoid long monopolization of the JS queue.
-  invoker->invokeAsync([self = shared_from_this()] { self->processQueue(); });
+  // Invoke from the current thread. Libraries like NativeScript can wrap a
+  // JS function in an Objective-C block to be dispatched onto another thread
+  // (e.g. the main thread, with the intention of accessing the UI), and so we
+  // should run the JS function on the same thread the Objective-C block was
+  // dispatched to.
+  invoker->invokeSync([self = shared_from_this()] { self->processQueue(); });
   return napi_ok;
 }
 
