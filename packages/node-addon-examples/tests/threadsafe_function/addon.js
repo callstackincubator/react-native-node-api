@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable no-undef */
 const assert = require("assert");
 const binding = require("bindings")("addon.node");
@@ -10,7 +9,6 @@ const expectedArray = (function (arrayLength) {
   return result;
 })(binding.ARRAY_LENGTH);
 
-let cnt = 0;
 function testWithJSMarshaller({
   threadStarter,
   quitAfter,
