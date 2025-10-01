@@ -127,10 +127,33 @@ napi_status ThreadSafeFunction::call(
       if (isBlocking == napi_tsfn_nonblocking) {
         return napi_queue_full;
       }
-      queueCv_.wait(lock, [&] {
-        return queue_.size() < maxQueueSize_ || isClosingOrAborted();
-      });
-      if (isClosingOrAborted()) return napi_closing;
+
+      // In blocking mode with full queue: process queue immediately to avoid
+      // deadlock when called from JS thread. Release lock during processing.
+      lock.unlock();
+      const auto invoker = callInvoker_.lock();
+      if (invoker) {
+        invoker->invokeSync(
+            [self = shared_from_this()] { self->processQueue(); });
+      }
+      lock.lock();
+
+      // After processing, wait if queue is still full
+      if (maxQueueSize_ && queue_.size() >= maxQueueSize_) {
+        queueCv_.wait(lock, [&] {
+          return queue_.size() < maxQueueSize_ || isClosingOrAborted();
+        });
+        // Re-check conditions after waiting
+        if (isClosingOrAborted()) return napi_closing;
+        // Double-check queue size in case of spurious wakeup or race condition
+        if (maxQueueSize_ && queue_.size() >= maxQueueSize_) {
+          return napi_queue_full;
+        }
+      }
+    }
+    // Final check before pushing - ensure we're not closing and have space
+    if (isClosingOrAborted()) {
+      return napi_closing;
     }
     queue_.push(data);
   }
