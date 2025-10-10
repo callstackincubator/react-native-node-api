@@ -1,5 +1,3 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable no-undef */
 const assert = require("assert");
 const binding = require("bindings")("addon.node");
 const makeCallback = binding.makeCallback;
@@ -26,7 +24,7 @@ module.exports = () => {
       assert.strictEqual(this, process);
       return 42;
     }),
-    42
+    42,
   );
 
   assert.strictEqual(
@@ -39,13 +37,13 @@ module.exports = () => {
         assert.strictEqual(x, 1337);
         return 42;
       },
-      1337
+      1337,
     ),
-    42
+    42,
   );
 
   assert.strictEqual(
     makeCallback(resource, process, myMultiArgFunc, 1, 2, 3),
-    42
+    42,
   );
 };

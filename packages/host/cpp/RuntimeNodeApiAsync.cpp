@@ -197,16 +197,12 @@ napi_status napi_async_destroy(napi_env env, napi_async_context async_context) {
 }
 
 napi_status napi_make_callback(napi_env env,
-    napi_async_context async_context,
+    napi_async_context,
     napi_value recv,
     napi_value func,
     size_t argc,
     const napi_value* argv,
     napi_value* result) {
-  const auto status = napi_call_function(env, recv, func, argc, argv, result);
-  if (status == napi_pending_exception && async_context) {
-    contexts_.release(async_context);
-  }
-  return status;
+  return napi_call_function(env, recv, func, argc, argv, result);
 }
 }  // namespace callstack::nodeapihost
