@@ -190,13 +190,22 @@ napi_status ThreadSafeFunction::release(
 
   const auto remaining = threadCount_.fetch_sub(1, std::memory_order_acq_rel);
 
-  // When the last thread is gone (or we're closing), notify and finalize.
-  if (remaining <= 1 || closing_.load(std::memory_order_acquire)) {
-    std::lock_guard lock{queueMutex_};
-    const bool emptyQueue = queue_.empty();
-    if (maxQueueSize_) {
-      queueCv_.notify_all();
+  // When exactly the last thread is gone (or we're aborting), notify and
+  // finalize. Use == 1 instead of <= 1 to avoid race where multiple threads
+  // trigger finalization.
+  const bool shouldTriggerFinalize =
+      (remaining == 1) || closing_.load(std::memory_order_acquire);
+
+  if (shouldTriggerFinalize) {
+    bool emptyQueue = false;
+    {
+      std::lock_guard lock{queueMutex_};
+      emptyQueue = queue_.empty();
+      if (maxQueueSize_) {
+        queueCv_.notify_all();
+      }
     }
+    // Call finalize() outside the lock to avoid deadlock if JS thread re-enters
     if (aborted_.load(std::memory_order_acquire) || emptyQueue) {
       finalize();
     }
@@ -263,6 +272,8 @@ void ThreadSafeFunction::processQueue() {
       if (wasAtMaxCapacity && maxQueueSize_) {
         queueCv_.notify_one();
       }
+    } else {
+      empty = true;
     }
   }
 
@@ -300,6 +311,6 @@ bool ThreadSafeFunction::isClosingOrAborted() const noexcept {
 
 bool ThreadSafeFunction::shouldFinalize() const noexcept {
   return threadCount_.load(std::memory_order_acquire) == 0 &&
-         !closing_.load(std::memory_order_acquire);
+         closing_.load(std::memory_order_acquire);
 }
 }  // namespace callstack::nodeapihost
