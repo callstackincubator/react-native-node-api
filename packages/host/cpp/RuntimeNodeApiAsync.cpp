@@ -1,6 +1,7 @@
 #include "RuntimeNodeApiAsync.hpp"
 #include <ReactCommon/CallInvoker.h>
 #include "Logger.hpp"
+#include "ThreadsafeFunction.hpp"
 
 struct AsyncJob {
   using IdType = uint64_t;
@@ -186,5 +187,87 @@ napi_status napi_cancel_async_work(
 
   job->state = AsyncJob::State::Cancelled;
   return napi_ok;
+}
+
+napi_status napi_create_threadsafe_function(napi_env env,
+    napi_value func,
+    napi_value async_resource,
+    napi_value async_resource_name,
+    size_t max_queue_size,
+    size_t initial_thread_count,
+    void* thread_finalize_data,
+    napi_finalize thread_finalize_cb,
+    void* context,
+    napi_threadsafe_function_call_js call_js_cb,
+    napi_threadsafe_function* result) {
+  const auto function = ThreadSafeFunction::create(getCallInvoker(env),
+      env,
+      func,
+      async_resource,
+      async_resource_name,
+      max_queue_size,
+      initial_thread_count,
+      thread_finalize_data,
+      thread_finalize_cb,
+      context,
+      call_js_cb);
+	*result = function->getHandle();
+  return napi_ok;
+}
+
+napi_status napi_get_threadsafe_function_context(
+    napi_threadsafe_function func, void** result) {
+  const auto function = ThreadSafeFunction::get(func);
+  if (!function) {
+    return napi_invalid_arg;
+  }
+  return function->getContext(result);
+}
+
+napi_status napi_call_threadsafe_function(napi_threadsafe_function func,
+    void* data,
+    napi_threadsafe_function_call_mode is_blocking) {
+  const auto function = ThreadSafeFunction::get(func);
+  if (!function) {
+    return napi_invalid_arg;
+  }
+  return function->call(data, is_blocking);
+}
+
+napi_status napi_acquire_threadsafe_function(napi_threadsafe_function func) {
+  const auto function = ThreadSafeFunction::get(func);
+  if (!function) {
+    return napi_invalid_arg;
+  }
+  return function->acquire();
+}
+
+napi_status napi_release_threadsafe_function(
+    napi_threadsafe_function func, napi_threadsafe_function_release_mode mode) {
+  const auto function = ThreadSafeFunction::get(func);
+  if (!function) {
+    return napi_invalid_arg;
+  }
+  return function->release(mode);
+}
+
+napi_status napi_unref_threadsafe_function(
+    node_api_basic_env env, napi_threadsafe_function func) {
+  const auto function = ThreadSafeFunction::get(func);
+  if (!function) {
+    return napi_invalid_arg;
+  }
+  // RN has no libuv loop to unref; we only update internal state for parity.
+  return function->unref();
+}
+
+napi_status napi_ref_threadsafe_function(
+    node_api_basic_env env, napi_threadsafe_function func) {
+  const auto function = ThreadSafeFunction::get(func);
+  if (!function) {
+    return napi_invalid_arg;
+  }
+  // RN has no libuv loop to ref; we only update internal state for parity.
+  return function->ref();
 }
 }  // namespace callstack::nodeapihost
