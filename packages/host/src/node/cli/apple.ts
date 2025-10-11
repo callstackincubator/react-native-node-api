@@ -42,9 +42,9 @@ export async function updateInfoPlist({
         "Versions/Current/Resources/Info.plist",
       );
       infoPlistContents = await fs.promises.readFile(infoPlistPath, "utf-8");
+    } else {
+      throw error;
     }
-
-    throw error;
   }
 
   // TODO: Use a proper plist parser
