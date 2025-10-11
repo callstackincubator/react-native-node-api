@@ -13,7 +13,7 @@ import {
 } from "./link-modules.js";
 
 type UpdateInfoPlistOptions = {
-  filePath: string;
+  frameworkPath: string;
   oldLibraryName: string;
   newLibraryName: string;
 };
@@ -22,17 +22,37 @@ type UpdateInfoPlistOptions = {
  * Update the Info.plist file of an xcframework to use the new library name.
  */
 export async function updateInfoPlist({
-  filePath,
+  frameworkPath,
   oldLibraryName,
   newLibraryName,
 }: UpdateInfoPlistOptions) {
-  const infoPlistContents = await fs.promises.readFile(filePath, "utf-8");
+  // First, assume it is an "unversioned" framework that keeps its Info.plist in
+  // the root. This is the convention for iOS, tvOS, and friends.
+  let infoPlistPath = path.join(frameworkPath, "Info.plist");
+
+  let infoPlistContents: string;
+  try {
+    infoPlistContents = await fs.promises.readFile(infoPlistPath, "utf-8");
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      // Next, assume it is a "versioned" framework that keeps its Info.plist
+      // under a subdirectory. This is the convention for macOS.
+      infoPlistPath = path.join(
+        frameworkPath,
+        "Versions/Current/Resources/Info.plist",
+      );
+      infoPlistContents = await fs.promises.readFile(infoPlistPath, "utf-8");
+    }
+
+    throw error;
+  }
+
   // TODO: Use a proper plist parser
   const updatedContents = infoPlistContents.replaceAll(
     oldLibraryName,
     newLibraryName,
   );
-  await fs.promises.writeFile(filePath, updatedContents, "utf-8");
+  await fs.promises.writeFile(infoPlistPath, updatedContents, "utf-8");
 }
 
 export async function linkXcframework({
@@ -126,7 +146,7 @@ export async function linkXcframework({
         );
         // Update the Info.plist file for the framework
         await updateInfoPlist({
-          filePath: path.join(newFrameworkPath, "Info.plist"),
+          frameworkPath: newFrameworkPath,
           oldLibraryName,
           newLibraryName,
         });
