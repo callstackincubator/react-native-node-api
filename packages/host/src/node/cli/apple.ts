@@ -12,6 +12,27 @@ import {
   LinkModuleResult,
 } from "./link-modules.js";
 
+/**
+ * Resolves the Info.plist file within a framework and reads its contents.
+ */
+export async function readInfoPlist(frameworkPath: string) {
+  // First, assume it is an "unversioned" framework that keeps its Info.plist in
+  // the root. This is the convention for iOS, tvOS, and friends.
+  let infoPlistPath = path.join(frameworkPath, "Info.plist");
+
+  if (!fs.existsSync(infoPlistPath)) {
+    // Next, assume it is a "versioned" framework that keeps its Info.plist
+    // under a subdirectory. This is the convention for macOS.
+    infoPlistPath = path.join(
+      frameworkPath,
+      "Versions/Current/Resources/Info.plist",
+    );
+  }
+
+  const contents = await fs.promises.readFile(infoPlistPath, "utf-8");
+  return { infoPlistPath, contents };
+}
+
 type UpdateInfoPlistOptions = {
   frameworkPath: string;
   oldLibraryName: string;
@@ -26,32 +47,10 @@ export async function updateInfoPlist({
   oldLibraryName,
   newLibraryName,
 }: UpdateInfoPlistOptions) {
-  // First, assume it is an "unversioned" framework that keeps its Info.plist in
-  // the root. This is the convention for iOS, tvOS, and friends.
-  let infoPlistPath = path.join(frameworkPath, "Info.plist");
-
-  let infoPlistContents: string;
-  try {
-    infoPlistContents = await fs.promises.readFile(infoPlistPath, "utf-8");
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      // Next, assume it is a "versioned" framework that keeps its Info.plist
-      // under a subdirectory. This is the convention for macOS.
-      infoPlistPath = path.join(
-        frameworkPath,
-        "Versions/Current/Resources/Info.plist",
-      );
-      infoPlistContents = await fs.promises.readFile(infoPlistPath, "utf-8");
-    } else {
-      throw error;
-    }
-  }
+  const { infoPlistPath, contents } = await readInfoPlist(frameworkPath);
 
   // TODO: Use a proper plist parser
-  const updatedContents = infoPlistContents.replaceAll(
-    oldLibraryName,
-    newLibraryName,
-  );
+  const updatedContents = contents.replaceAll(oldLibraryName, newLibraryName);
   await fs.promises.writeFile(infoPlistPath, updatedContents, "utf-8");
 }
 
