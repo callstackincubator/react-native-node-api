@@ -12,8 +12,67 @@ import {
   LinkModuleResult,
 } from "./link-modules.js";
 
+function determineInfoPlistPath(frameworkPath: string) {
+  const checkedPaths = new Array<string>();
+
+  // First, assume it is an "unversioned" framework that keeps its Info.plist in
+  // the root. This is the convention for iOS, tvOS, and friends.
+  let infoPlistPath = path.join(frameworkPath, "Info.plist");
+
+  if (fs.existsSync(infoPlistPath)) {
+    return infoPlistPath;
+  }
+  checkedPaths.push(infoPlistPath);
+
+  // Next, assume it is a "versioned" framework that keeps its Info.plist
+  // under a subdirectory. This is the convention for macOS.
+  infoPlistPath = path.join(
+    frameworkPath,
+    "Versions/Current/Resources/Info.plist",
+  );
+
+  if (fs.existsSync(infoPlistPath)) {
+    return infoPlistPath;
+  }
+  checkedPaths.push(infoPlistPath);
+
+  throw new Error(
+    [
+      `Unable to locate an Info.plist file within framework. Checked the following paths:`,
+      ...checkedPaths.map((checkedPath) => `- ${checkedPath}`),
+    ].join("\n"),
+  );
+}
+
+/**
+ * Resolves the Info.plist file within a framework and reads its contents.
+ */
+export async function readInfoPlist(frameworkPath: string) {
+  let infoPlistPath: string;
+  try {
+    infoPlistPath = determineInfoPlistPath(frameworkPath);
+  } catch (cause) {
+    throw new Error(
+      `Unable to read Info.plist for framework at path "${frameworkPath}", as an Info.plist file couldn't be found.`,
+      { cause },
+    );
+  }
+
+  let contents: string;
+  try {
+    contents = await fs.promises.readFile(infoPlistPath, "utf-8");
+  } catch (cause) {
+    throw new Error(
+      `Unable to read Info.plist for framework at path "${frameworkPath}", due to a file system error.`,
+      { cause },
+    );
+  }
+
+  return { infoPlistPath, contents };
+}
+
 type UpdateInfoPlistOptions = {
-  filePath: string;
+  frameworkPath: string;
   oldLibraryName: string;
   newLibraryName: string;
 };
@@ -22,17 +81,15 @@ type UpdateInfoPlistOptions = {
  * Update the Info.plist file of an xcframework to use the new library name.
  */
 export async function updateInfoPlist({
-  filePath,
+  frameworkPath,
   oldLibraryName,
   newLibraryName,
 }: UpdateInfoPlistOptions) {
-  const infoPlistContents = await fs.promises.readFile(filePath, "utf-8");
+  const { infoPlistPath, contents } = await readInfoPlist(frameworkPath);
+
   // TODO: Use a proper plist parser
-  const updatedContents = infoPlistContents.replaceAll(
-    oldLibraryName,
-    newLibraryName,
-  );
-  await fs.promises.writeFile(filePath, updatedContents, "utf-8");
+  const updatedContents = contents.replaceAll(oldLibraryName, newLibraryName);
+  await fs.promises.writeFile(infoPlistPath, updatedContents, "utf-8");
 }
 
 export async function linkXcframework({
@@ -126,7 +183,7 @@ export async function linkXcframework({
         );
         // Update the Info.plist file for the framework
         await updateInfoPlist({
-          filePath: path.join(newFrameworkPath, "Info.plist"),
+          frameworkPath: newFrameworkPath,
           oldLibraryName,
           newLibraryName,
         });
