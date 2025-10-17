@@ -10,7 +10,6 @@
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
   "files": [
-    "docs/",
     "dist/",
     "!*.test.d.ts",
     "!*.test.d.ts.map"
