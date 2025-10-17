@@ -1,5 +1,13 @@
 # cmake-rn
 
+## 0.4.1
+
+### Patch Changes
+
+- a23af5a: Use CMake file API to read shared library target paths
+- Updated dependencies [2b9a538]
+  - react-native-node-api@0.5.2
+
 ## 0.4.0
 
 ### Minor Changes
