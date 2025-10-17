@@ -133,7 +133,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   },
   async postBuild(
     { outputPath, triplets },
-    { configuration, autoLink, xcframeworkExtension },
+    { configuration, autoLink, xcframeworkExtension, target },
   ) {
     const prebuilds: Record<string, string[]> = {};
     for (const { buildPath } of triplets) {
@@ -144,7 +144,9 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         "2.0",
       );
       const sharedLibraries = targets.filter(
-        (target) => target.type === "SHARED_LIBRARY",
+        ({ type, name }) =>
+          type === "SHARED_LIBRARY" &&
+          (target.length === 0 || target.includes(name)),
       );
       assert.equal(
         sharedLibraries.length,
