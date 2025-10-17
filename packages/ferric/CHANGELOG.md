@@ -1,5 +1,12 @@
 # ferric-cli
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [2b9a538]
+  - react-native-node-api@0.5.2
+
 ## 0.3.3
 
 ### Patch Changes

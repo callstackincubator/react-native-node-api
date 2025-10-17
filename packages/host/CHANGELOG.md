@@ -1,5 +1,11 @@
 # react-native-node-api
 
+## 0.5.2
+
+### Patch Changes
+
+- 2b9a538: Handle Info.plist lookup in versioned frameworks
+
 ## 0.5.1
 
 ### Patch Changes
