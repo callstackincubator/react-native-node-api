@@ -121,7 +121,10 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     const { ANDROID_HOME } = process.env;
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
-  async postBuild({ outputPath, triplets }, { autoLink, configuration }) {
+  async postBuild(
+    { outputPath, triplets },
+    { autoLink, configuration, target },
+  ) {
     const prebuilds: Record<
       string,
       { triplet: Triplet; libraryPath: string }[]
@@ -135,7 +138,9 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
         "2.0",
       );
       const sharedLibraries = targets.filter(
-        (target) => target.type === "SHARED_LIBRARY",
+        ({ type, name }) =>
+          type === "SHARED_LIBRARY" &&
+          (target.length === 0 || target.includes(name)),
       );
       assert.equal(
         sharedLibraries.length,
