@@ -1,5 +1,11 @@
 # react-native-node-api
 
+## 0.5.3
+
+### Patch Changes
+
+- 9f1a301: Fix requireNodeAddon return type
+
 ## 0.5.2
 
 ### Patch Changes

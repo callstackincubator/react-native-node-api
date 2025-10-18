@@ -1,5 +1,13 @@
 # cmake-rn
 
+## 0.4.2
+
+### Patch Changes
+
+- d8e90a8: Filter CMake targets by target name when passed
+- Updated dependencies [9f1a301]
+  - react-native-node-api@0.5.3
+
 ## 0.4.1
 
 ### Patch Changes
