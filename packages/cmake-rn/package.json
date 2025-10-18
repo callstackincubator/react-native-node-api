@@ -14,7 +14,9 @@
   },
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map"
   ],
   "scripts": {
     "build": "tsc",

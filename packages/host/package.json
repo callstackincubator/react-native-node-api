@@ -26,6 +26,8 @@
     "logo.svg",
     "bin",
     "dist",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map",
     "cpp",
     "android",
     "!android/.cxx",
