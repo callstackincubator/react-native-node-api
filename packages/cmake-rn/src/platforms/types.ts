@@ -17,9 +17,17 @@ export type BaseOpts = Omit<InferOptionValues<typeof program>, "triplet">;
 
 export type TripletContext<Triplet extends string> = {
   triplet: Triplet;
-  buildPath: string;
-  outputPath: string;
+  /**
+   * Spawn a command in the context of this triplet
+   */
+  spawn: Spawn;
 };
+
+export type Spawn = (
+  command: string,
+  args: string[],
+  cwd?: string,
+) => Promise<void>;
 
 export type Platform<
   Triplets extends string[] = string[],
@@ -51,30 +59,29 @@ export type Platform<
    */
   isSupportedByHost(): boolean | Promise<boolean>;
   /**
-   * Platform specific arguments passed to CMake to configure a triplet project.
+   * Configure all projects for this platform.
    */
-  configureArgs(
-    context: TripletContext<Triplets[number]>,
+  configure(
+    triplets: TripletContext<Triplets[number]>[],
     options: BaseOpts & Opts,
-  ): string[];
+    spawn: Spawn,
+  ): Promise<void>;
   /**
-   * Platform specific arguments passed to CMake to build a triplet project.
+   * Platform specific command to build a triplet project.
    */
-  buildArgs(
+  build(
     context: TripletContext<Triplets[number]>,
     options: BaseOpts & Opts,
-  ): string[];
+  ): Promise<void>;
   /**
    * Called to combine multiple triplets into a single prebuilt artefact.
    */
   postBuild(
-    context: {
-      /**
-       * Location of the final prebuilt artefact.
-       */
-      outputPath: string;
-      triplets: TripletContext<Triplets[number]>[];
-    },
+    /**
+     * Location of the final prebuilt artefact.
+     */
+    outputPath: string,
+    triplets: TripletContext<Triplets[number]>[],
     options: BaseOpts & Opts,
   ): Promise<void>;
 };
