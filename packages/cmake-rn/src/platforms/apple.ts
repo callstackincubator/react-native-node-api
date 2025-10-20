@@ -12,6 +12,7 @@ import {
   AppleTriplet as Triplet,
   createAppleFramework,
   createXCframework,
+  dereferenceDirectory,
 } from "react-native-node-api";
 
 import type { Platform } from "./types.js";
@@ -375,6 +376,18 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         frameworkPaths.push(frameworkPath);
       }
     }
+
+    // Make sure none of the frameworks are symlinks
+    // We do this before creating an xcframework to avoid symlink paths being invalidated
+    // as the xcframework might be moved to a different location
+    await Promise.all(
+      frameworkPaths.map(async (frameworkPath) => {
+        const stat = await fs.promises.lstat(frameworkPath);
+        if (stat.isSymbolicLink()) {
+          await dereferenceDirectory(frameworkPath);
+        }
+      }),
+    );
 
     const extension = xcframeworkExtension ? ".xcframework" : ".apple.node";
 
