@@ -30,7 +30,14 @@ type XCframeworkOptions = {
   autoLink: boolean;
 };
 
-export async function createAppleFramework(libraryPath: string) {
+export async function createAppleFramework(
+  libraryPath: string,
+  versioned = false,
+) {
+  if (versioned) {
+    // TODO: Add support for generating a Versions/Current/Resources/Info.plist convention framework
+    throw new Error("Creating versioned frameworks is not supported yet");
+  }
   assert(fs.existsSync(libraryPath), `Library not found: ${libraryPath}`);
   // Write a info.plist file to the framework
   const libraryName = path.basename(libraryPath, path.extname(libraryPath));
