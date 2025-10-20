@@ -9,10 +9,9 @@ import {
   spawn,
   UsageError,
   wrapAction,
+  prettyPath,
 } from "@react-native-node-api/cli-utils";
 import { packageDirectorySync } from "pkg-dir";
-
-import { prettyPath } from "../path-utils";
 
 const HOST_PACKAGE_ROOT = path.resolve(__dirname, "../../..");
 // FIXME: make this configurable with reasonable fallback before public release

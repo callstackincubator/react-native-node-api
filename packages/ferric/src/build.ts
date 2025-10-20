@@ -8,6 +8,7 @@ import {
   oraPromise,
   assertFixable,
   wrapAction,
+  prettyPath,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -19,7 +20,6 @@ import {
   createXCframework,
   createUniversalAppleLibrary,
   determineLibraryBasename,
-  prettyPath,
 } from "react-native-node-api";
 
 import { ensureCargo, build } from "./cargo.js";

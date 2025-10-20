@@ -5,3 +5,4 @@ export * from "bufout";
 
 export * from "./actions.js";
 export * from "./errors.js";
+export * from "./paths.js";
