@@ -11,7 +11,7 @@
   },
   "scripts": {
     "copy-examples": "tsx scripts/copy-examples.mts",
-    "gyp-to-cmake": "gyp-to-cmake --weak-node-api --apple-framework .",
+    "gyp-to-cmake": "gyp-to-cmake --weak-node-api .",
     "build": "tsx scripts/build-examples.mts",
     "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run build",
     "verify": "tsx scripts/verify-prebuilds.mts",

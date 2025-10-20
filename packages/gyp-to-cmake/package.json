@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "@react-native-node-api/cli-utils": "0.1.0",
-    "gyp-parser": "^1.0.4"
+    "gyp-parser": "^1.0.4",
+    "pkg-dir": "^8.0.0",
+    "read-pkg": "^9.0.1"
   }
 }
