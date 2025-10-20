@@ -74,7 +74,7 @@ const tripletOption = new Option(
 const buildPathOption = new Option(
   "--build <path>",
   "Specify the build directory to store the configured CMake project",
-);
+).default("{source}/build");
 
 const cleanOption = new Option(
   "--clean",
@@ -84,7 +84,7 @@ const cleanOption = new Option(
 const outPathOption = new Option(
   "--out <path>",
   "Specify the output directory to store the final build artifacts",
-).default(false, "./{build}/{configuration}");
+).default("./{build}/{configuration}");
 
 const defineOption = new Option(
   "-D,--define <entry...>",
@@ -151,8 +151,27 @@ for (const platform of platforms) {
   program = platform.amendCommand(program);
 }
 
+function expandTemplate(
+  input: string,
+  values: Record<string, unknown>,
+): string {
+  return input.replaceAll(/{([^}]+)}/g, (_, key: string) =>
+    typeof values[key] === "string" ? values[key] : "",
+  );
+}
+
 program = program.action(
   wrapAction(async ({ triplet: requestedTriplets, ...baseOptions }) => {
+    baseOptions.build = path.resolve(
+      process.cwd(),
+      expandTemplate(baseOptions.build, baseOptions),
+    );
+    baseOptions.out = path.resolve(
+      process.cwd(),
+      expandTemplate(baseOptions.out, baseOptions),
+    );
+    const { build: buildPath } = baseOptions;
+
     assertFixable(
       fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
       `No CMakeLists.txt found in source directory: ${chalk.dim(baseOptions.source)}`,
@@ -161,7 +180,6 @@ program = program.action(
       },
     );
 
-    const buildPath = getBuildPath(baseOptions);
     if (baseOptions.clean) {
       await fs.promises.rm(buildPath, { recursive: true, force: true });
     }
@@ -286,11 +304,6 @@ function getTripletsSummary(
       return `${platformId}: ${triplets.join(", ")}`;
     })
     .join(" / ");
-}
-
-function getBuildPath({ build, source }: BaseOpts) {
-  // TODO: Add configuration (debug vs release)
-  return path.resolve(process.cwd(), build || path.join(source, "build"));
 }
 
 /**
