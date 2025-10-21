@@ -9,11 +9,22 @@ import {
   isNodeApiModule,
   findNodeAddonForBindings,
   NamingStrategy,
-  PathSuffixChoice,
-  assertPathSuffix,
+  LibraryNamingChoice,
+  assertLibraryNamingChoice,
 } from "../path-utils";
 
 export type PluginOptions = {
+  /**
+   * Controls how the package name is transformed into a library name.
+   * The transformation is needed to disambiguate and avoid conflicts between addons with the same name (but in different sub-paths or packages).
+   *
+   * As an example, if the package name is `@my-org/my-pkg` and the path of the addon within the package is `build/Release/my-addon.node` (and `pathSuffix` is set to `"strip"`):
+   * - `"omit"`: Only the path within the package is used and the library name will be `my-addon`.
+   * - `"strip"`: Scope / org gets stripped and the library name will be `my-pkg--my-addon`.
+   * - `"keep"`: The org and name is kept and the library name will be `my-org--my-pkg--my-addon`.
+   */
+  packageName?: LibraryNamingChoice;
+
   /**
    * Controls how the path of the addon inside a package is transformed into a library name.
    * The transformation is needed to disambiguate and avoid conflicts between addons with the same name (but in different sub-paths or packages).
@@ -23,13 +34,16 @@ export type PluginOptions = {
    * - `"strip"` (default): Path gets stripped to its basename and the library name will be `my-pkg--my-addon`.
    * - `"keep"`: The full path is kept and the library name will be `my-pkg--build-Release-my-addon`.
    */
-  pathSuffix?: PathSuffixChoice;
+  pathSuffix?: LibraryNamingChoice;
 };
 
 function assertOptions(opts: unknown): asserts opts is PluginOptions {
   assert(typeof opts === "object" && opts !== null, "Expected an object");
   if ("pathSuffix" in opts) {
-    assertPathSuffix(opts.pathSuffix);
+    assertLibraryNamingChoice(opts.pathSuffix);
+  }
+  if ("packageName" in opts) {
+    assertLibraryNamingChoice(opts.packageName);
   }
 }
 
@@ -57,7 +71,7 @@ export function plugin(): PluginObj {
     visitor: {
       CallExpression(p) {
         assertOptions(this.opts);
-        const { pathSuffix = "strip" } = this.opts;
+        const { pathSuffix = "strip", packageName = "strip" } = this.opts;
         if (typeof this.filename !== "string") {
           // This transformation only works when the filename is known
           return;
@@ -80,6 +94,7 @@ export function plugin(): PluginObj {
               const resolvedPath = findNodeAddonForBindings(id, from);
               if (typeof resolvedPath === "string") {
                 replaceWithRequireNodeAddon(p.parentPath, resolvedPath, {
+                  packageName,
                   pathSuffix,
                 });
               }
@@ -89,7 +104,10 @@ export function plugin(): PluginObj {
             isNodeApiModule(path.join(from, id))
           ) {
             const relativePath = path.join(from, id);
-            replaceWithRequireNodeAddon(p, relativePath, { pathSuffix });
+            replaceWithRequireNodeAddon(p, relativePath, {
+              packageName,
+              pathSuffix,
+            });
           }
         }
       },
