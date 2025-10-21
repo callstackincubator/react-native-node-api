@@ -64,6 +64,18 @@ function testSuiteConfig(suitePath: string): RolldownOptions[] {
           delimiters: ["", ""],
         },
       ),
+      replacePlugin(
+        {
+          // Replace the default export to return a function instead of initializing the addon immediately
+          // This allows the test runner to intercept any errors which would normally be thrown when importing
+          // to work around Metro's `guardedLoadModule` swallowing errors during module initialization
+          // See https://github.com/facebook/metro/blob/34bb8913ec4b5b02690b39d2246599faf094f721/packages/metro-runtime/src/polyfills/require.js#L348-L353
+          "export default require_test();": "export default require_test;",
+        },
+        {
+          delimiters: ["", ""],
+        },
+      ),
       aliasPlugin({
         entries: [
           {
