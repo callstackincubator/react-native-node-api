@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 
+import plist from "@expo/plist";
 import { spawn } from "@react-native-node-api/cli-utils";
 
 import { getLatestMtime, getLibraryName } from "../path-utils.js";
@@ -12,7 +13,7 @@ import {
   LinkModuleResult,
 } from "./link-modules.js";
 
-function determineInfoPlistPath(frameworkPath: string) {
+export function determineInfoPlistPath(frameworkPath: string) {
   const checkedPaths = new Array<string>();
 
   // First, assume it is an "unversioned" framework that keeps its Info.plist in
@@ -47,28 +48,15 @@ function determineInfoPlistPath(frameworkPath: string) {
 /**
  * Resolves the Info.plist file within a framework and reads its contents.
  */
-export async function readInfoPlist(frameworkPath: string) {
-  let infoPlistPath: string;
+export async function readInfoPlist(infoPlistPath: string) {
   try {
-    infoPlistPath = determineInfoPlistPath(frameworkPath);
+    const contents = await fs.promises.readFile(infoPlistPath, "utf-8");
+    return plist.parse(contents) as Record<string, unknown>;
   } catch (cause) {
-    throw new Error(
-      `Unable to read Info.plist for framework at path "${frameworkPath}", as an Info.plist file couldn't be found.`,
-      { cause },
-    );
+    throw new Error(`Unable to read Info.plist at path "${infoPlistPath}"`, {
+      cause,
+    });
   }
-
-  let contents: string;
-  try {
-    contents = await fs.promises.readFile(infoPlistPath, "utf-8");
-  } catch (cause) {
-    throw new Error(
-      `Unable to read Info.plist for framework at path "${frameworkPath}", due to a file system error.`,
-      { cause },
-    );
-  }
-
-  return { infoPlistPath, contents };
 }
 
 type UpdateInfoPlistOptions = {
@@ -85,11 +73,25 @@ export async function updateInfoPlist({
   oldLibraryName,
   newLibraryName,
 }: UpdateInfoPlistOptions) {
-  const { infoPlistPath, contents } = await readInfoPlist(frameworkPath);
+  const infoPlistPath = determineInfoPlistPath(frameworkPath);
 
-  // TODO: Use a proper plist parser
-  const updatedContents = contents.replaceAll(oldLibraryName, newLibraryName);
-  await fs.promises.writeFile(infoPlistPath, updatedContents, "utf-8");
+  // Convert to XML format if needed
+  try {
+    await spawn("plutil", ["-convert", "xml1", infoPlistPath], {
+      outputMode: "inherit",
+    });
+  } catch (error) {
+    throw new Error(
+      `Failed to convert Info.plist at path "${infoPlistPath}" to XML format`,
+      { cause: error },
+    );
+  }
+
+  const contents = await readInfoPlist(infoPlistPath);
+  if (contents.CFBundleExecutable === oldLibraryName) {
+    contents.CFBundleExecutable = newLibraryName;
+  }
+  await fs.promises.writeFile(infoPlistPath, plist.build(contents), "utf-8");
 }
 
 export async function linkXcframework({

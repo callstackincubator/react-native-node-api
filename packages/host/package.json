@@ -80,6 +80,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@expo/plist": "^0.4.7",
     "@react-native-node-api/cli-utils": "0.1.0",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1"
