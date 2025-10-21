@@ -208,6 +208,7 @@ describe("getLibraryName", () => {
     });
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        packageName: "keep",
         pathSuffix: "keep",
       }),
       "my-package--addon",
@@ -215,6 +216,7 @@ describe("getLibraryName", () => {
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory/addon"), {
+        packageName: "keep",
         pathSuffix: "keep",
       }),
       "my-package--sub-directory-addon",
@@ -230,6 +232,7 @@ describe("getLibraryName", () => {
     });
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        packageName: "keep",
         pathSuffix: "strip",
       }),
       "my-package--addon",
@@ -237,6 +240,7 @@ describe("getLibraryName", () => {
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory", "addon"), {
+        packageName: "keep",
         pathSuffix: "strip",
       }),
       "my-package--addon",
@@ -252,6 +256,7 @@ describe("getLibraryName", () => {
     });
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        packageName: "keep",
         pathSuffix: "omit",
       }),
       "my-package",
@@ -259,9 +264,52 @@ describe("getLibraryName", () => {
 
     assert.equal(
       getLibraryName(path.join(tempDirectoryPath, "sub-directory", "addon"), {
+        packageName: "keep",
         pathSuffix: "omit",
       }),
       "my-package",
+    );
+  });
+
+  it("keeps and escapes scope from package name", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "@my-org/my-package" }`,
+      "addon.apple.node/addon.node": "// This is supposed to be a binary file",
+    });
+    assert.equal(
+      getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        packageName: "keep",
+        pathSuffix: "strip",
+      }),
+      "my-org__my-package--addon",
+    );
+  });
+
+  it("strips scope from package name", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "@my-org/my-package" }`,
+      "addon.apple.node/addon.node": "// This is supposed to be a binary file",
+    });
+    assert.equal(
+      getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        packageName: "strip",
+        pathSuffix: "strip",
+      }),
+      "my-package--addon",
+    );
+  });
+
+  it("omits scope from package name", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "package.json": `{ "name": "@my-org/my-package" }`,
+      "addon.apple.node/addon.node": "// This is supposed to be a binary file",
+    });
+    assert.equal(
+      getLibraryName(path.join(tempDirectoryPath, "addon"), {
+        packageName: "omit",
+        pathSuffix: "strip",
+      }),
+      "addon",
     );
   });
 });

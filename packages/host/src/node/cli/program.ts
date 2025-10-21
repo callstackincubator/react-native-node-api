@@ -23,7 +23,7 @@ import {
 } from "../path-utils";
 
 import { command as vendorHermes } from "./hermes";
-import { pathSuffixOption } from "./options";
+import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
 import { linkXcframework } from "./apple";
 import { linkAndroidDir } from "./android";
@@ -70,10 +70,14 @@ program
   )
   .option("--android", "Link Android modules")
   .option("--apple", "Link Apple modules")
+  .addOption(packageNameOption)
   .addOption(pathSuffixOption)
   .action(
     wrapAction(
-      async (pathArg, { force, prune, pathSuffix, android, apple }) => {
+      async (
+        pathArg,
+        { force, prune, pathSuffix, android, apple, packageName },
+      ) => {
         console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
         const platforms: PlatformName[] = [];
         if (android) {
@@ -101,7 +105,7 @@ program
                 platform,
                 fromPath: path.resolve(pathArg),
                 incremental: !force,
-                naming: { pathSuffix },
+                naming: { packageName, pathSuffix },
                 linker: getLinker(platform),
               }),
             {
@@ -173,9 +177,10 @@ program
   .description("Lists Node-API modules")
   .argument("[from-path]", "Some path inside the app package", process.cwd())
   .option("--json", "Output as JSON", false)
+  .addOption(packageNameOption)
   .addOption(pathSuffixOption)
   .action(
-    wrapAction(async (fromArg, { json, pathSuffix }) => {
+    wrapAction(async (fromArg, { json, pathSuffix, packageName }) => {
       const rootPath = path.resolve(fromArg);
       const dependencies = await findNodeApiModulePathsByDependency({
         fromPath: rootPath,
@@ -210,7 +215,7 @@ program
           );
           logModulePaths(
             dependency.modulePaths.map((p) => path.join(dependency.path, p)),
-            { pathSuffix },
+            { packageName, pathSuffix },
           );
         }
       }
@@ -222,21 +227,22 @@ program
   .description(
     "Utility to print, module path, the hash of a single Android library",
   )
+  .addOption(packageNameOption)
   .addOption(pathSuffixOption)
   .action(
-    wrapAction((pathInput, { pathSuffix }) => {
+    wrapAction((pathInput, { pathSuffix, packageName }) => {
       const resolvedModulePath = path.resolve(pathInput);
       const normalizedModulePath = normalizeModulePath(resolvedModulePath);
-      const { packageName, relativePath } =
-        determineModuleContext(resolvedModulePath);
+      const context = determineModuleContext(resolvedModulePath);
       const libraryName = getLibraryName(resolvedModulePath, {
+        packageName,
         pathSuffix,
       });
       console.log({
         resolvedModulePath,
         normalizedModulePath,
-        packageName,
-        relativePath,
+        packageName: context.packageName,
+        relativePath: context.relativePath,
         libraryName,
       });
     }),

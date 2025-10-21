@@ -18,22 +18,33 @@ export const PLATFORM_EXTENSIONS = {
   apple: ".apple.node",
 } as const satisfies Record<PlatformName, string>;
 
-export type PlatformExtentions = (typeof PLATFORM_EXTENSIONS)[PlatformName];
+export type PlatformExtensions = (typeof PLATFORM_EXTENSIONS)[PlatformName];
 
-export const PATH_SUFFIX_CHOICES = ["strip", "keep", "omit"] as const;
-export type PathSuffixChoice = (typeof PATH_SUFFIX_CHOICES)[number];
+export const LIBRARY_NAMING_CHOICES = ["strip", "keep", "omit"] as const;
+export type LibraryNamingChoice = (typeof LIBRARY_NAMING_CHOICES)[number];
 
-export function assertPathSuffix(
+export function assertLibraryNamingChoice(
   value: unknown,
-): asserts value is PathSuffixChoice {
+): asserts value is LibraryNamingChoice {
   assert(typeof value === "string", `Expected a string, got ${typeof value}`);
   assert(
-    (PATH_SUFFIX_CHOICES as readonly string[]).includes(value),
-    `Expected one of ${PATH_SUFFIX_CHOICES.join(", ")}`,
+    (LIBRARY_NAMING_CHOICES as readonly string[]).includes(value),
+    `Expected one of ${LIBRARY_NAMING_CHOICES.join(", ")}`,
   );
 }
 
 export type NamingStrategy = {
+  /**
+   * Controls how the package name is transformed into a library name.
+   * The transformation is needed to disambiguate and avoid conflicts between addons with the same name (but in different sub-paths or packages).
+   *
+   * As an example, if the package name is `@my-org/my-pkg` and the path of the addon within the package is `build/Release/my-addon.node` (and `pathSuffix` is set to `"strip"`):
+   * - `"omit"`: Only the path within the package is used and the library name will be `my-addon`.
+   * - `"strip"`: Scope / org gets stripped and the library name will be `my-pkg--my-addon`.
+   * - `"keep"`: The org and name is kept and the library name will be `my-org--my-pkg--my-addon`.
+   */
+  packageName: LibraryNamingChoice;
+
   /**
    * Controls how the path of the addon inside a package is transformed into a library name.
    * The transformation is needed to disambiguate and avoid conflicts between addons with the same name (but in different sub-paths or packages).
@@ -43,7 +54,7 @@ export type NamingStrategy = {
    * - `"strip"`: Path gets stripped to its basename and the library name will be `my-pkg--my-addon`.
    * - `"keep"`: The full path is kept and the library name will be `my-pkg--build-Release-my-addon`.
    */
-  pathSuffix: PathSuffixChoice;
+  pathSuffix: LibraryNamingChoice;
 };
 
 // Cache mapping package directory to package name across calls
@@ -176,22 +187,70 @@ export function normalizeModulePath(modulePath: string) {
 }
 
 export function escapePath(modulePath: string) {
-  return modulePath.replace(/[^a-zA-Z0-9]/g, "-");
+  return (
+    modulePath
+      // Replace any non-alphanumeric character with a dash
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+  );
+}
+
+export function transformPackageName(
+  packageName: string,
+  strategy: LibraryNamingChoice,
+) {
+  if (strategy === "omit") {
+    return "";
+  } else if (packageName.startsWith("@")) {
+    const [first, ...rest] = packageName.split("/");
+    if (strategy === "strip") {
+      return escapePath(rest.join("/"));
+    } else {
+      // Stripping away the @ and using double underscore to separate scope and name is common practice other projects (like DefinitelyTyped)
+      return escapePath(`${first.replace(/^@/, "")}__${rest.join("/")}`);
+    }
+  } else {
+    return escapePath(packageName);
+  }
+}
+
+export function transformPathSuffix(
+  relativePath: string,
+  strategy: LibraryNamingChoice,
+) {
+  if (strategy === "omit") {
+    return "";
+  } else if (strategy === "strip") {
+    return escapePath(path.basename(relativePath));
+  } else {
+    return escapePath(relativePath.replaceAll(/[/\\]/g, "-"));
+  }
 }
 
 /**
  * Get the name of the library which will be used when the module is linked in.
  */
 export function getLibraryName(modulePath: string, naming: NamingStrategy) {
+  assert(
+    naming.packageName !== "omit" || naming.pathSuffix !== "omit",
+    "Both packageName and pathSuffix cannot be 'omit' at the same time",
+  );
   const { packageName, relativePath } = determineModuleContext(modulePath);
-  const escapedPackageName = escapePath(packageName);
-  return naming.pathSuffix === "omit"
-    ? escapedPackageName
-    : `${escapedPackageName}--${escapePath(
-        naming.pathSuffix === "strip"
-          ? path.basename(relativePath)
-          : relativePath,
-      )}`;
+  const transformedPackageName = transformPackageName(
+    packageName,
+    naming.packageName,
+  );
+  const transformedRelativePath = transformPathSuffix(
+    relativePath,
+    naming.pathSuffix,
+  );
+  const parts = [];
+  if (transformedPackageName) {
+    parts.push(transformedPackageName);
+  }
+  if (transformedRelativePath) {
+    parts.push(transformedRelativePath);
+  }
+  return parts.join("--");
 }
 
 export function prettyPath(p: string) {
