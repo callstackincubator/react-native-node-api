@@ -28,7 +28,7 @@ export function generateProjectName(gypPath: string) {
   return name
     .replace(/^@/g, "")
     .replace(/\//g, "--")
-    .replace(/[^a-zA-Z0-9_]/g, "_");
+    .replace(/[^a-zA-Z0-9_-]/g, "_");
 }
 
 export function transformBindingGypFile(
