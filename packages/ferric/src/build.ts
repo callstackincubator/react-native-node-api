@@ -258,9 +258,7 @@ export const buildCommand = new Command("build")
             }),
             {
               text: "Assembling XCFramework",
-              successText: `XCFramework assembled into ${chalk.dim(
-                path.relative(process.cwd(), xcframeworkOutputPath),
-              )}`,
+              successText: `XCFramework assembled into ${prettyPath(xcframeworkOutputPath)}`,
               failText: ({ message }) =>
                 `Failed to assemble XCFramework: ${message}`,
             },

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
+import {
+  Option,
+  oraPromise,
+  prettyPath,
+} from "@react-native-node-api/cli-utils";
 import {
   createAndroidLibsDirectory,
   AndroidTriplet as Triplet,
@@ -177,9 +181,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
         }),
         {
           text: `Assembling Android libs directory (${libraryName})`,
-          successText: `Android libs directory (${libraryName}) assembled into ${chalk.dim(
-            path.relative(process.cwd(), prebuildOutputPath),
-          )}`,
+          successText: `Android libs directory (${libraryName}) assembled into ${prettyPath(prebuildOutputPath)}`,
           failText: ({ message }) =>
             `Failed to assemble Android libs directory (${libraryName}): ${message}`,
         },

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 
-import { Option, oraPromise, chalk } from "@react-native-node-api/cli-utils";
+import {
+  Option,
+  oraPromise,
+  prettyPath,
+} from "@react-native-node-api/cli-utils";
 import {
   AppleTriplet as Triplet,
   createAppleFramework,
@@ -187,9 +191,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         }),
         {
           text: `Assembling XCFramework (${libraryName})`,
-          successText: `XCFramework (${libraryName}) assembled into ${chalk.dim(
-            path.relative(process.cwd(), xcframeworkOutputPath),
-          )}`,
+          successText: `XCFramework (${libraryName}) assembled into ${prettyPath(xcframeworkOutputPath)}`,
           failText: ({ message }) =>
             `Failed to assemble XCFramework (${libraryName}): ${message}`,
         },
