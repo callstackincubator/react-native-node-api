@@ -84,7 +84,7 @@ const cleanOption = new Option(
 const outPathOption = new Option(
   "--out <path>",
   "Specify the output directory to store the final build artifacts",
-).default("./{build}/{configuration}");
+).default("{build}/{configuration}");
 
 const defineOption = new Option(
   "-D,--define <entry...>",
@@ -170,7 +170,7 @@ program = program.action(
       process.cwd(),
       expandTemplate(baseOptions.out, baseOptions),
     );
-    const { build: buildPath } = baseOptions;
+    const { out, build: buildPath } = baseOptions;
 
     assertFixable(
       fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
@@ -213,10 +213,6 @@ program = program.action(
           chalk.dim("(" + [...triplets].join(", ") + ")"),
         );
       }
-    }
-
-    if (!baseOptions.out) {
-      baseOptions.out = path.join(buildPath, baseOptions.configuration);
     }
 
     const tripletContexts = [...triplets].map((triplet) => {
@@ -280,7 +276,7 @@ program = program.action(
       }
       await platform.postBuild(
         {
-          outputPath: baseOptions.out || baseOptions.source,
+          outputPath: out,
           triplets: relevantTriplets,
         },
         baseOptions,
