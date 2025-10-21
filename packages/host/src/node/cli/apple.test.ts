@@ -87,10 +87,13 @@ describe("apple", () => {
   });
 
   describe("updateInfoPlist", () => {
-    it("updates an xml plist", async (context) => {
-      const infoPlistSubPath = "Info.plist";
-      const tempDirectoryPath = setupTempDirectory(context, {
-        [infoPlistSubPath]: `
+    it(
+      "updates an xml plist",
+      { skip: process.platform !== "darwin" },
+      async (context) => {
+        const infoPlistSubPath = "Info.plist";
+        const tempDirectoryPath = setupTempDirectory(context, {
+          [infoPlistSubPath]: `
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -100,48 +103,82 @@ describe("apple", () => {
             </dict>
           </plist>
         `,
-      });
+        });
 
-      await updateInfoPlist({
-        frameworkPath: tempDirectoryPath,
-        oldLibraryName: "addon",
-        newLibraryName: "new-addon-name",
-      });
+        await updateInfoPlist({
+          frameworkPath: tempDirectoryPath,
+          oldLibraryName: "addon",
+          newLibraryName: "new-addon-name",
+        });
 
-      const contents = await fs.promises.readFile(
-        path.join(tempDirectoryPath, infoPlistSubPath),
-        "utf-8",
-      );
-      assert.match(contents, /<\?xml version="1.0" encoding="UTF-8"\?>/);
-      assert.match(
-        contents,
-        /<key>CFBundleExecutable<\/key>\s*<string>new-addon-name<\/string>/,
-      );
-    });
+        const contents = await fs.promises.readFile(
+          path.join(tempDirectoryPath, infoPlistSubPath),
+          "utf-8",
+        );
+        assert.match(contents, /<\?xml version="1.0" encoding="UTF-8"\?>/);
+        assert.match(
+          contents,
+          /<key>CFBundleExecutable<\/key>\s*<string>new-addon-name<\/string>/,
+        );
+      },
+    );
 
-    it("converts a binary plist to xml", async (context) => {
-      const tempDirectoryPath = setupTempDirectory(context, {});
-      // Write a binary plist file
-      const binaryPlistContents = Buffer.from(
-        // Generated running "base64 -i <path-to-binary-plist>" on a plist file from a framework in the node-examples package
-        "YnBsaXN0MDDfEBUBAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4cICEiIyQiJSYnJChfEBNCdWlsZE1hY2hpbmVPU0J1aWxkXxAZQ0ZCdW5kbGVEZXZlbG9wbWVudFJlZ2lvbl8QEkNGQnVuZGxlRXhlY3V0YWJsZV8QEkNGQnVuZGxlSWRlbnRpZmllcl8QHUNGQnVuZGxlSW5mb0RpY3Rpb25hcnlWZXJzaW9uXxATQ0ZCdW5kbGVQYWNrYWdlVHlwZV8QGkNGQnVuZGxlU2hvcnRWZXJzaW9uU3RyaW5nXxARQ0ZCdW5kbGVTaWduYXR1cmVfEBpDRkJ1bmRsZVN1cHBvcnRlZFBsYXRmb3Jtc18QD0NGQnVuZGxlVmVyc2lvbl8QFUNTUmVzb3VyY2VzRmlsZU1hcHBlZFpEVENvbXBpbGVyXxAPRFRQbGF0Zm9ybUJ1aWxkXkRUUGxhdGZvcm1OYW1lXxARRFRQbGF0Zm9ybVZlcnNpb25aRFRTREtCdWlsZFlEVFNES05hbWVXRFRYY29kZVxEVFhjb2RlQnVpbGRfEBBNaW5pbXVtT1NWZXJzaW9uXlVJRGV2aWNlRmFtaWx5VjI0RzIzMVdFbmdsaXNoVWFkZG9uXxAPZXhhbXBsZV82LmFkZG9uUzYuMFRGTVdLUzEuMFQ/Pz8/oR9fEA9pUGhvbmVTaW11bGF0b3IJXxAiY29tLmFwcGxlLmNvbXBpbGVycy5sbHZtLmNsYW5nLjFfMFYyMkMxNDZfEA9pcGhvbmVzaW11bGF0b3JUMTguMl8QE2lwaG9uZXNpbXVsYXRvcjE4LjJUMTYyMFgxNkM1MDMyYaEpEAEACAA1AEsAZwB8AJEAsQDHAOQA+AEVAScBPwFKAVwBawF/AYoBlAGcAakBvAHLAdIB2gHgAfIB9gH7Af8CBAIGAhgCGQI+AkUCVwJcAnICdwKAAoIAAAAAAAACAQAAAAAAAAAqAAAAAAAAAAAAAAAAAAAChA==",
-        "base64",
-      );
-      const binaryPlistPath = path.join(tempDirectoryPath, "Info.plist");
-      await fs.promises.writeFile(binaryPlistPath, binaryPlistContents);
+    it(
+      "converts a binary plist to xml",
+      { skip: process.platform !== "darwin" },
+      async (context) => {
+        const tempDirectoryPath = setupTempDirectory(context, {});
+        // Write a binary plist file
+        const binaryPlistContents = Buffer.from(
+          // Generated running "base64 -i <path-to-binary-plist>" on a plist file from a framework in the node-examples package
+          "YnBsaXN0MDDfEBUBAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4cICEiIyQiJSYnJChfEBNCdWlsZE1hY2hpbmVPU0J1aWxkXxAZQ0ZCdW5kbGVEZXZlbG9wbWVudFJlZ2lvbl8QEkNGQnVuZGxlRXhlY3V0YWJsZV8QEkNGQnVuZGxlSWRlbnRpZmllcl8QHUNGQnVuZGxlSW5mb0RpY3Rpb25hcnlWZXJzaW9uXxATQ0ZCdW5kbGVQYWNrYWdlVHlwZV8QGkNGQnVuZGxlU2hvcnRWZXJzaW9uU3RyaW5nXxARQ0ZCdW5kbGVTaWduYXR1cmVfEBpDRkJ1bmRsZVN1cHBvcnRlZFBsYXRmb3Jtc18QD0NGQnVuZGxlVmVyc2lvbl8QFUNTUmVzb3VyY2VzRmlsZU1hcHBlZFpEVENvbXBpbGVyXxAPRFRQbGF0Zm9ybUJ1aWxkXkRUUGxhdGZvcm1OYW1lXxARRFRQbGF0Zm9ybVZlcnNpb25aRFRTREtCdWlsZFlEVFNES05hbWVXRFRYY29kZVxEVFhjb2RlQnVpbGRfEBBNaW5pbXVtT1NWZXJzaW9uXlVJRGV2aWNlRmFtaWx5VjI0RzIzMVdFbmdsaXNoVWFkZG9uXxAPZXhhbXBsZV82LmFkZG9uUzYuMFRGTVdLUzEuMFQ/Pz8/oR9fEA9pUGhvbmVTaW11bGF0b3IJXxAiY29tLmFwcGxlLmNvbXBpbGVycy5sbHZtLmNsYW5nLjFfMFYyMkMxNDZfEA9pcGhvbmVzaW11bGF0b3JUMTguMl8QE2lwaG9uZXNpbXVsYXRvcjE4LjJUMTYyMFgxNkM1MDMyYaEpEAEACAA1AEsAZwB8AJEAsQDHAOQA+AEVAScBPwFKAVwBawF/AYoBlAGcAakBvAHLAdIB2gHgAfIB9gH7Af8CBAIGAhgCGQI+AkUCVwJcAnICdwKAAoIAAAAAAAACAQAAAAAAAAAqAAAAAAAAAAAAAAAAAAAChA==",
+          "base64",
+        );
+        const binaryPlistPath = path.join(tempDirectoryPath, "Info.plist");
+        await fs.promises.writeFile(binaryPlistPath, binaryPlistContents);
 
-      await updateInfoPlist({
-        frameworkPath: tempDirectoryPath,
-        oldLibraryName: "addon",
-        newLibraryName: "new-addon-name",
-      });
+        await updateInfoPlist({
+          frameworkPath: tempDirectoryPath,
+          oldLibraryName: "addon",
+          newLibraryName: "new-addon-name",
+        });
 
-      const contents = await fs.promises.readFile(binaryPlistPath, "utf-8");
-      assert.match(contents, /<\?xml version="1.0" encoding="UTF-8"\?>/);
-      assert.match(
-        contents,
-        /<key>CFBundleExecutable<\/key>\s*<string>new-addon-name<\/string>/,
-      );
-    });
+        const contents = await fs.promises.readFile(binaryPlistPath, "utf-8");
+        assert.match(contents, /<\?xml version="1.0" encoding="UTF-8"\?>/);
+        assert.match(
+          contents,
+          /<key>CFBundleExecutable<\/key>\s*<string>new-addon-name<\/string>/,
+        );
+      },
+    );
+
+    it(
+      "throws when not on darwin",
+      { skip: process.platform === "darwin" },
+      async (context) => {
+        const tempDirectoryPath = setupTempDirectory(context, {
+          ["Info.plist"]: '<?xml version="1.0" encoding="UTF-8"?>',
+        });
+
+        await assert.rejects(
+          () =>
+            updateInfoPlist({
+              frameworkPath: tempDirectoryPath,
+              oldLibraryName: "addon",
+              newLibraryName: "new-addon-name",
+            }),
+          (err) => {
+            assert(err instanceof Error);
+            assert.match(err.message, /Failed to convert Info.plist at path/);
+            assert(err.cause instanceof Error);
+            assert.match(
+              err.cause.message,
+              /Updating Info.plist files are not supported on this platform/,
+            );
+            return true;
+          },
+        );
+      },
+    );
   });
 });

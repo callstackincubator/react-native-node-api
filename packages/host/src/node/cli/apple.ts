@@ -77,6 +77,10 @@ export async function updateInfoPlist({
 
   // Convert to XML format if needed
   try {
+    assert(
+      process.platform === "darwin",
+      "Updating Info.plist files are not supported on this platform",
+    );
     await spawn("plutil", ["-convert", "xml1", infoPlistPath], {
       outputMode: "inherit",
     });
