@@ -36,7 +36,7 @@ function suiteToString(suite: TestSuite, indent = 1): string {
   return Object.entries(suite)
     .map(([key, value]) => {
       if (typeof value === "string") {
-        return `${padding}"${key}": () => require("./${value}")`;
+        return `${padding}"${key}": require("./${value}")`;
       } else {
         return `${padding}"${key}": {\n${suiteToString(
           value,
