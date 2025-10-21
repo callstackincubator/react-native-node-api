@@ -18,7 +18,7 @@
   "homepage": "https://github.com/callstackincubator/react-native-node-api#readme",
   "scripts": {
     "build": "tsc --build",
-    "clean": "tsc --build --clean",
+    "clean": "tsc --build --clean && git clean -fdx -e node_modules",
     "dev": "tsc --build --watch",
     "lint": "eslint .",
     "prettier:check": "prettier --experimental-cli --check .",
