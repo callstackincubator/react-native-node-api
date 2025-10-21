@@ -570,11 +570,19 @@ describe("dereferenceDirectory", () => {
         "file",
       );
 
+      {
+        // Verify that outer link is no longer a link
+        const stat = await fs.promises.lstat(symlinkPath);
+        assert(stat.isSymbolicLink());
+      }
+
       await dereferenceDirectory(symlinkPath);
 
-      // Verify that outer link is no longer a link
-      const symlinkStat = await fs.promises.lstat(symlinkPath);
-      assert(!symlinkStat.isSymbolicLink());
+      {
+        // Verify that outer link is no longer a link
+        const stat = await fs.promises.lstat(symlinkPath);
+        assert(!stat.isSymbolicLink());
+      }
 
       // Verify that the internal link is still a link to a readable file
       const internalLinkPath = path.join(symlinkPath, "linked-file.txt");
