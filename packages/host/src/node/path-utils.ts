@@ -202,10 +202,11 @@ export function transformPackageName(
     return "";
   } else if (packageName.startsWith("@")) {
     const [first, ...rest] = packageName.split("/");
+    assert(rest.length > 0, `Invalid scoped package name (${packageName})`);
     if (strategy === "strip") {
       return escapePath(rest.join("/"));
     } else {
-      // Stripping away the @ and using double underscore to separate scope and name is common practice other projects (like DefinitelyTyped)
+      // Stripping away the @ and using double underscore to separate scope and name is common practice in other projects (like DefinitelyTyped)
       return escapePath(`${first.replace(/^@/, "")}__${rest.join("/")}`);
     }
   } else {
