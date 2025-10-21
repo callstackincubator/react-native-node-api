@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
+import plist from "@expo/plist";
 import { spawn } from "@react-native-node-api/cli-utils";
 
 import { AppleTriplet } from "./triplets.js";
@@ -22,21 +23,6 @@ export const APPLE_ARCHITECTURES = {
   "arm64-apple-visionos": "arm64",
   "arm64-apple-visionos-sim": "arm64",
 } satisfies Record<AppleTriplet, AppleArchitecture>;
-
-export function createPlistContent(values: Record<string, string>) {
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
-    '<plist version="1.0">',
-    "  <dict>",
-    ...Object.entries(values).flatMap(([key, value]) => [
-      `    <key>${key}</key>`,
-      `    <string>${value}</string>`,
-    ]),
-    "  </dict>",
-    "</plist>",
-  ].join("\n");
-}
 
 type XCframeworkOptions = {
   frameworkPaths: string[];
@@ -59,7 +45,7 @@ export async function createAppleFramework(libraryPath: string) {
   // Create an empty Info.plist file
   await fs.promises.writeFile(
     path.join(frameworkPath, "Info.plist"),
-    createPlistContent({
+    plist.build({
       CFBundleDevelopmentRegion: "en",
       CFBundleExecutable: libraryName,
       CFBundleIdentifier: `com.callstackincubator.node-api.${libraryName}`,
