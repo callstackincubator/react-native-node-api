@@ -16,8 +16,10 @@ export function toCmakePath(input: string) {
   return input.split(path.win32.sep).join(path.posix.sep);
 }
 
-export function getWeakNodeApiPath(triplet: SupportedTriplet): string {
-  if (isAppleTriplet(triplet)) {
+export function getWeakNodeApiPath(
+  triplet: SupportedTriplet | "apple",
+): string {
+  if (triplet === "apple" || isAppleTriplet(triplet)) {
     const xcframeworkPath = path.join(
       weakNodeApiPath,
       "weak-node-api.xcframework",
@@ -53,7 +55,7 @@ function getNodeApiIncludePaths() {
 }
 
 export function getWeakNodeApiVariables(
-  triplet: SupportedTriplet,
+  triplet: SupportedTriplet | "apple",
 ): Record<string, string> {
   return {
     // Expose an includable CMake config file declaring the weak-node-api target
@@ -67,7 +69,7 @@ export function getWeakNodeApiVariables(
  * For compatibility with cmake-js
  */
 export function getCmakeJSVariables(
-  triplet: SupportedTriplet,
+  triplet: SupportedTriplet | "apple",
 ): Record<string, string> {
   return {
     CMAKE_JS_INC: getNodeApiIncludePaths().join(";"),

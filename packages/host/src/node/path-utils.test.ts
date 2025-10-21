@@ -13,6 +13,7 @@ import {
   isNodeApiModule,
   stripExtension,
   findNodeApiModulePathsByDependency,
+  dereferenceDirectory,
 } from "./path-utils.js";
 import { setupTempDirectory } from "./test-utils.js";
 
@@ -549,4 +550,46 @@ describe("findNodeAddonForBindings()", () => {
       assert.equal(actualPath, expectedAbsPath);
     });
   }
+});
+
+describe("dereferenceDirectory", () => {
+  describe("when directory contains symlinks", () => {
+    it("should dereference symlinks", async (context) => {
+      // Create a temp directory with a symlink
+      const tempDir = setupTempDirectory(context, {
+        "original/file.txt": "Hello, world!",
+      });
+      const originalPath = path.join(tempDir, "original");
+      const symlinkPath = path.join(tempDir, "link");
+      // Create a link to the original directory
+      fs.symlinkSync(originalPath, symlinkPath, "dir");
+      // And an internal link
+      fs.symlinkSync(
+        path.join(originalPath, "file.txt"),
+        path.join(originalPath, "linked-file.txt"),
+        "file",
+      );
+
+      {
+        // Verify that outer link is no longer a link
+        const stat = await fs.promises.lstat(symlinkPath);
+        assert(stat.isSymbolicLink());
+      }
+
+      await dereferenceDirectory(symlinkPath);
+
+      {
+        // Verify that outer link is no longer a link
+        const stat = await fs.promises.lstat(symlinkPath);
+        assert(!stat.isSymbolicLink());
+      }
+
+      // Verify that the internal link is still a link to a readable file
+      const internalLinkPath = path.join(symlinkPath, "linked-file.txt");
+      const internalLinkStat = await fs.promises.lstat(internalLinkPath);
+      assert(internalLinkStat.isSymbolicLink());
+      const content = await fs.promises.readFile(internalLinkPath, "utf8");
+      assert.equal(content, "Hello, world!");
+    });
+  });
 });

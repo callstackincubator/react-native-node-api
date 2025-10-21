@@ -12,20 +12,14 @@ import {
   assertFixable,
   wrapAction,
 } from "@react-native-node-api/cli-utils";
-import { isSupportedTriplet } from "react-native-node-api";
-import * as cmakeFileApi from "cmake-file-api";
 
-import {
-  getCmakeJSVariables,
-  getWeakNodeApiVariables,
-} from "./weak-node-api.js";
 import {
   platforms,
   allTriplets as allTriplets,
   findPlatformForTriplet,
   platformHasTriplet,
 } from "./platforms.js";
-import { BaseOpts, TripletContext, Platform } from "./platforms/types.js";
+import { Platform } from "./platforms/types.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -170,17 +164,17 @@ program = program.action(
       process.cwd(),
       expandTemplate(baseOptions.out, baseOptions),
     );
-    const { out, build: buildPath } = baseOptions;
+    const { verbose, clean, source, out, build: buildPath } = baseOptions;
 
     assertFixable(
-      fs.existsSync(path.join(baseOptions.source, "CMakeLists.txt")),
-      `No CMakeLists.txt found in source directory: ${chalk.dim(baseOptions.source)}`,
+      fs.existsSync(path.join(source, "CMakeLists.txt")),
+      `No CMakeLists.txt found in source directory: ${chalk.dim(source)}`,
       {
         instructions: `Change working directory into a directory with a CMakeLists.txt, create one or specify the correct source directory using --source`,
       },
     );
 
-    if (baseOptions.clean) {
+    if (clean) {
       await fs.promises.rm(buildPath, { recursive: true, force: true });
     }
     const triplets = new Set<string>(requestedTriplets);
@@ -217,13 +211,17 @@ program = program.action(
 
     const tripletContexts = [...triplets].map((triplet) => {
       const platform = findPlatformForTriplet(triplet);
-      const tripletBuildPath = getTripletBuildPath(buildPath, triplet);
+
       return {
         triplet,
         platform,
-        buildPath: tripletBuildPath,
-        outputPath: path.join(tripletBuildPath, "out"),
-        options: baseOptions,
+        async spawn(command: string, args: string[], cwd?: string) {
+          await spawn(command, args, {
+            outputMode: verbose ? "inherit" : "buffered",
+            outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
+            cwd,
+          });
+        },
       };
     });
 
@@ -231,11 +229,29 @@ program = program.action(
     const tripletsSummary = chalk.dim(
       `(${getTripletsSummary(tripletContexts)})`,
     );
+
+    // Perform configure steps for each platform in sequence
     await oraPromise(
       Promise.all(
-        tripletContexts.map(({ platform, ...context }) =>
-          configureProject(platform, context, baseOptions),
-        ),
+        platforms.map(async (platform) => {
+          const relevantTriplets = tripletContexts.filter(({ triplet }) =>
+            platformHasTriplet(platform, triplet),
+          );
+          if (relevantTriplets.length > 0) {
+            await platform.configure(
+              relevantTriplets,
+              baseOptions,
+              (command, args, cwd) =>
+                spawn(command, args, {
+                  outputMode: verbose ? "inherit" : "buffered",
+                  outputPrefix: verbose
+                    ? chalk.dim(`[${platform.name}] `)
+                    : undefined,
+                  cwd,
+                }),
+            );
+          }
+        }),
       ),
       {
         text: `Configuring projects ${tripletsSummary}`,
@@ -249,13 +265,14 @@ program = program.action(
     await oraPromise(
       Promise.all(
         tripletContexts.map(async ({ platform, ...context }) => {
-          // Delete any stale build artifacts before building
-          // This is important, since we might rename the output files
-          await fs.promises.rm(context.outputPath, {
-            recursive: true,
-            force: true,
-          });
-          await buildProject(platform, context, baseOptions);
+          // TODO: Consider if this is still important 😬
+          // // Delete any stale build artifacts before building
+          // // This is important, since we might rename the output files
+          // await fs.promises.rm(context.outputPath, {
+          //   recursive: true,
+          //   force: true,
+          // });
+          await platform.build(context, baseOptions);
         }),
       ),
       {
@@ -274,13 +291,7 @@ program = program.action(
       if (relevantTriplets.length == 0) {
         continue;
       }
-      await platform.postBuild(
-        {
-          outputPath: out,
-          triplets: relevantTriplets,
-        },
-        baseOptions,
-      );
+      await platform.postBuild(out, relevantTriplets, baseOptions);
     }
   }),
 );
@@ -300,94 +311,6 @@ function getTripletsSummary(
       return `${platformId}: ${triplets.join(", ")}`;
     })
     .join(" / ");
-}
-
-/**
- * Namespaces the output path with a triplet name
- */
-function getTripletBuildPath(buildPath: string, triplet: unknown) {
-  assert(typeof triplet === "string", "Expected triplet to be a string");
-  return path.join(buildPath, triplet.replace(/;/g, "_"));
-}
-
-async function configureProject<T extends string>(
-  platform: Platform<T[], Record<string, unknown>>,
-  context: TripletContext<T>,
-  options: BaseOpts,
-) {
-  const { triplet, buildPath, outputPath } = context;
-  const { verbose, source, weakNodeApiLinkage, cmakeJs } = options;
-
-  // TODO: Make the two following definitions a part of the platform definition
-
-  const nodeApiDefinitions =
-    weakNodeApiLinkage && isSupportedTriplet(triplet)
-      ? [getWeakNodeApiVariables(triplet)]
-      : [];
-
-  const cmakeJsDefinitions =
-    cmakeJs && isSupportedTriplet(triplet)
-      ? [getCmakeJSVariables(triplet)]
-      : [];
-
-  const definitions = [
-    ...nodeApiDefinitions,
-    ...cmakeJsDefinitions,
-    ...options.define,
-    { CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath },
-  ];
-
-  await cmakeFileApi.createSharedStatelessQuery(buildPath, "codemodel", "2");
-
-  await spawn(
-    "cmake",
-    [
-      "-S",
-      source,
-      "-B",
-      buildPath,
-      ...platform.configureArgs(context, options),
-      ...toDefineArguments(definitions),
-    ],
-    {
-      outputMode: verbose ? "inherit" : "buffered",
-      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
-    },
-  );
-}
-
-async function buildProject<T extends string>(
-  platform: Platform<T[], Record<string, unknown>>,
-  context: TripletContext<T>,
-  options: BaseOpts,
-) {
-  const { triplet, buildPath } = context;
-  const { verbose, configuration } = options;
-  await spawn(
-    "cmake",
-    [
-      "--build",
-      buildPath,
-      "--config",
-      configuration,
-      ...(options.target.length > 0 ? ["--target", ...options.target] : []),
-      "--",
-      ...platform.buildArgs(context, options),
-    ],
-    {
-      outputMode: verbose ? "inherit" : "buffered",
-      outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
-    },
-  );
-}
-
-function toDefineArguments(declarations: Array<Record<string, string>>) {
-  return declarations.flatMap((values) =>
-    Object.entries(values).flatMap(([key, definition]) => [
-      "-D",
-      `${key}=${definition}`,
-    ]),
-  );
 }
 
 export { program };

@@ -16,11 +16,28 @@ To link against `weak-node-api` just include the CMake config exposed through `W
 cmake_minimum_required(VERSION 3.15...3.31)
 project(tests-buffers)
 
+# Defines the "weak-node-api" target
 include(${WEAK_NODE_API_CONFIG})
 
 add_library(addon SHARED addon.c)
 target_link_libraries(addon PRIVATE weak-node-api)
 target_compile_features(addon PRIVATE cxx_std_20)
+
+if(APPLE)
+  # Build frameworks when building for Apple (optional)
+  set_target_properties(addon PROPERTIES
+    FRAMEWORK TRUE
+    MACOSX_FRAMEWORK_IDENTIFIER async_test.addon
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
+    MACOSX_FRAMEWORK_BUNDLE_VERSION 1.0
+    XCODE_ATTRIBUTE_SKIP_INSTALL NO
+   )
+else()
+  set_target_properties(addon PROPERTIES
+    PREFIX ""
+    SUFFIX .node
+   )
+endif()
 ```
 
 This is different from how `cmake-js` "injects" the Node-API for linking (via `${CMAKE_JS_INC}`, `${CMAKE_JS_SRC}` and `${CMAKE_JS_LIB}`). To allow for interoperability between these tools, we inject these when you pass `--cmake-js` to `cmake-rn`.

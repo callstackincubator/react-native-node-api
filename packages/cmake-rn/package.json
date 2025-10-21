@@ -26,7 +26,8 @@
   "dependencies": {
     "@react-native-node-api/cli-utils": "0.1.0",
     "cmake-file-api": "0.1.0",
-    "react-native-node-api": "0.5.2"
+    "react-native-node-api": "0.5.2",
+    "zod": "^4.1.11"
   },
   "peerDependencies": {
     "node-addon-api": "^8.3.1",

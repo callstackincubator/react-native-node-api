@@ -3,13 +3,18 @@ project(weak-node-api)
 
 add_library(${PROJECT_NAME} SHARED
   weak_node_api.cpp
-  ${CMAKE_JS_SRC}
 )
 
 # Stripping the prefix from the library name
 # to make sure the name of the XCFramework will match the name of the library
 if(APPLE)
-  set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+  set_target_properties(${PROJECT_NAME} PROPERTIES
+    FRAMEWORK TRUE
+    MACOSX_FRAMEWORK_IDENTIFIER com.callstack.${PROJECT_NAME}
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
+    MACOSX_FRAMEWORK_BUNDLE_VERSION 1.0
+    XCODE_ATTRIBUTE_SKIP_INSTALL NO
+  )
 endif()
 
 target_include_directories(${PROJECT_NAME}

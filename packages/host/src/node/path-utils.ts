@@ -543,3 +543,18 @@ export function findNodeAddonForBindings(id: string, fromDir: string) {
   }
   return undefined;
 }
+
+export async function dereferenceDirectory(dirPath: string) {
+  const tempPath = dirPath + ".tmp";
+  const stat = await fs.promises.lstat(dirPath);
+  assert(stat.isSymbolicLink(), `Expected a symbolic link at: ${dirPath}`);
+  // Move the existing framework out of the way
+  await fs.promises.rename(dirPath, tempPath);
+  // Only dereference the symlink at tempPath (not recursively)
+  const realPath = await fs.promises.realpath(tempPath);
+  await fs.promises.cp(realPath, dirPath, {
+    recursive: true,
+    verbatimSymlinks: true,
+  });
+  await fs.promises.unlink(tempPath);
+}

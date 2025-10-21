@@ -14,6 +14,11 @@ import {
 import * as cmakeFileApi from "cmake-file-api";
 
 import type { Platform } from "./types.js";
+import { toDefineArguments } from "../helpers.js";
+import {
+  getCmakeJSVariables,
+  getWeakNodeApiVariables,
+} from "../weak-node-api.js";
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
@@ -40,6 +45,10 @@ const androidSdkVersionOption = new Option(
 
 type AndroidOpts = { ndkVersion: string; androidSdkVersion: string };
 
+function getBuildPath(baseBuildPath: string, triplet: Triplet) {
+  return path.join(baseBuildPath, triplet);
+}
+
 export const platform: Platform<Triplet[], AndroidOpts> = {
   id: "android",
   name: "Android",
@@ -63,7 +72,19 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       .addOption(ndkVersionOption)
       .addOption(androidSdkVersionOption);
   },
-  configureArgs({ triplet }, { ndkVersion, androidSdkVersion }) {
+  async configure(
+    triplets,
+    {
+      configuration,
+      ndkVersion,
+      androidSdkVersion,
+      source,
+      define,
+      build,
+      weakNodeApiLinkage,
+      cmakeJs,
+    },
+  ) {
     const { ANDROID_HOME } = process.env;
     assert(
       typeof ANDROID_HOME === "string",
@@ -84,57 +105,84 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       ndkPath,
       "build/cmake/android.toolchain.cmake",
     );
-    const architecture = ANDROID_ARCHITECTURES[triplet];
 
-    return [
-      "-G",
-      "Ninja",
-      "--toolchain",
-      toolchainPath,
-      "-D",
-      "CMAKE_SYSTEM_NAME=Android",
-      // "-D",
-      // `CPACK_SYSTEM_NAME=Android-${architecture}`,
-      // "-D",
-      // `CMAKE_INSTALL_PREFIX=${installPath}`,
-      // "-D",
-      // `CMAKE_BUILD_TYPE=${configuration}`,
-      "-D",
-      "CMAKE_MAKE_PROGRAM=ninja",
-      // "-D",
-      // "CMAKE_C_COMPILER_LAUNCHER=ccache",
-      // "-D",
-      // "CMAKE_CXX_COMPILER_LAUNCHER=ccache",
-      "-D",
-      `ANDROID_NDK=${ndkPath}`,
-      "-D",
-      `ANDROID_ABI=${architecture}`,
-      "-D",
-      "ANDROID_TOOLCHAIN=clang",
-      "-D",
-      `ANDROID_PLATFORM=${androidSdkVersion}`,
-      "-D",
-      // TODO: Make this configurable
-      "ANDROID_STL=c++_shared",
+    const commonDefinitions = [
+      ...define,
+      {
+        CMAKE_BUILD_TYPE: configuration,
+        CMAKE_SYSTEM_NAME: "Android",
+        // "CMAKE_INSTALL_PREFIX": installPath,
+        CMAKE_MAKE_PROGRAM: "ninja",
+        // "-D",
+        // "CMAKE_C_COMPILER_LAUNCHER=ccache",
+        // "-D",
+        // "CMAKE_CXX_COMPILER_LAUNCHER=ccache",
+        ANDROID_NDK: ndkPath,
+        ANDROID_TOOLCHAIN: "clang",
+        ANDROID_PLATFORM: androidSdkVersion,
+        // TODO: Make this configurable
+        ANDROID_STL: "c++_shared",
+      },
     ];
+
+    await Promise.all(
+      triplets.map(async ({ triplet, spawn }) => {
+        const buildPath = getBuildPath(build, triplet);
+        const outputPath = path.join(buildPath, "out");
+        // We want to use the CMake File API to query information later
+        await cmakeFileApi.createSharedStatelessQuery(
+          buildPath,
+          "codemodel",
+          "2",
+        );
+
+        await spawn("cmake", [
+          "-S",
+          source,
+          "-B",
+          buildPath,
+          "-G",
+          "Ninja",
+          "--toolchain",
+          toolchainPath,
+          ...toDefineArguments([
+            ...(weakNodeApiLinkage ? [getWeakNodeApiVariables(triplet)] : []),
+            ...(cmakeJs ? [getCmakeJSVariables(triplet)] : []),
+            ...commonDefinitions,
+            {
+              // "CPACK_SYSTEM_NAME": `Android-${architecture}`,
+              CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
+              ANDROID_ABI: ANDROID_ARCHITECTURES[triplet],
+            },
+          ]),
+        ]);
+      }),
+    );
   },
-  buildArgs() {
-    return [];
+  async build({ triplet, spawn }, { target, build }) {
+    const buildPath = getBuildPath(build, triplet);
+    await spawn("cmake", [
+      "--build",
+      buildPath,
+      ...(target.length > 0 ? ["--target", ...target] : []),
+    ]);
   },
   isSupportedByHost() {
     const { ANDROID_HOME } = process.env;
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
   async postBuild(
-    { outputPath, triplets },
-    { autoLink, configuration, target },
+    outputPath,
+    triplets,
+    { autoLink, configuration, target, build },
   ) {
     const prebuilds: Record<
       string,
       { triplet: Triplet; libraryPath: string }[]
     > = {};
 
-    for (const { triplet, buildPath } of triplets) {
+    for (const { triplet } of triplets) {
+      const buildPath = getBuildPath(build, triplet);
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
       const targets = await cmakeFileApi.readCurrentTargetsDeep(
         buildPath,

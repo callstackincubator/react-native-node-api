@@ -15,6 +15,7 @@ export type GypToCmakeListsOptions = {
   compileFeatures?: string[];
   defineNapiVersion?: boolean;
   weakNodeApi?: boolean;
+  appleFramework?: boolean;
 };
 
 function isCmdExpansion(value: string) {
@@ -24,6 +25,10 @@ function isCmdExpansion(value: string) {
 
 function escapeSpaces(source: string) {
   return source.replace(/ /g, "\\ ");
+}
+
+function escapeBundleIdentifier(identifier: string) {
+  return identifier.replaceAll("__", ".").replace(/[^A-Za-z0-9.-_]/g, "-");
 }
 
 /**
@@ -39,6 +44,7 @@ export function bindingGypToCmakeLists({
   transformWinPathsToPosix = true,
   defineNapiVersion = true,
   weakNodeApi = false,
+  appleFramework = true,
   compileFeatures = [],
 }: GypToCmakeListsOptions): string {
   function mapExpansion(value: string): string[] {
@@ -113,10 +119,58 @@ export function bindingGypToCmakeLists({
       escapedIncludes.push("${CMAKE_JS_INC}");
     }
 
-    lines.push(
-      `add_library(${targetName} SHARED ${escapedSources.join(" ")})`,
-      `set_target_properties(${targetName} PROPERTIES PREFIX "" SUFFIX ".node")`,
-    );
+    function setTargetPropertiesLines(
+      properties: Record<string, string>,
+      indent = "",
+    ): string[] {
+      return [
+        `${indent}set_target_properties(${targetName} PROPERTIES`,
+        ...Object.entries(properties).map(
+          ([key, value]) => `${indent}  ${key} ${value ? value : '""'}`,
+        ),
+        `${indent} )`,
+      ];
+    }
+
+    lines.push(`add_library(${targetName} SHARED ${escapedSources.join(" ")})`);
+
+    if (appleFramework) {
+      lines.push(
+        "",
+        'option(BUILD_APPLE_FRAMEWORK "Wrap addon in an Apple framework" ON)',
+        "",
+        "if(APPLE AND BUILD_APPLE_FRAMEWORK)",
+        ...setTargetPropertiesLines(
+          {
+            FRAMEWORK: "TRUE",
+            MACOSX_FRAMEWORK_IDENTIFIER: escapeBundleIdentifier(
+              `${projectName}.${targetName}`,
+            ),
+            MACOSX_FRAMEWORK_SHORT_VERSION_STRING: "1.0",
+            MACOSX_FRAMEWORK_BUNDLE_VERSION: "1.0",
+            XCODE_ATTRIBUTE_SKIP_INSTALL: "NO",
+          },
+          "  ",
+        ),
+        "else()",
+        ...setTargetPropertiesLines(
+          {
+            PREFIX: "",
+            SUFFIX: ".node",
+          },
+          "  ",
+        ),
+        "endif()",
+        "",
+      );
+    } else {
+      lines.push(
+        ...setTargetPropertiesLines({
+          PREFIX: "",
+          SUFFIX: ".node",
+        }),
+      );
+    }
 
     if (libraries.length > 0) {
       lines.push(

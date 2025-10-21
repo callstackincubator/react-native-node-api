@@ -22,6 +22,9 @@ export {
   determineXCFrameworkFilename,
 } from "./prebuilds/apple.js";
 
-export { determineLibraryBasename } from "./path-utils.js";
+export {
+  determineLibraryBasename,
+  dereferenceDirectory,
+} from "./path-utils.js";
 
 export { weakNodeApiPath } from "./weak-node-api.js";

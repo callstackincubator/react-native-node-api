@@ -237,7 +237,10 @@ export const buildCommand = new Command("build")
         if (appleLibraries.length > 0) {
           const libraryPaths = await combineLibraries(appleLibraries);
           const frameworkPaths = await Promise.all(
-            libraryPaths.map(createAppleFramework),
+            libraryPaths.map((libraryPath) =>
+              // TODO: Pass true as `versioned` argument for -darwin targets
+              createAppleFramework(libraryPath),
+            ),
           );
           const xcframeworkFilename = determineXCFrameworkFilename(
             frameworkPaths,
