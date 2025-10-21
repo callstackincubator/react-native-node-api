@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
-import os from "node:os";
 
 import plist from "@expo/plist";
+import * as zod from "zod";
+
 import { spawn } from "@react-native-node-api/cli-utils";
 
 import { getLatestMtime, getLibraryName } from "../path-utils.js";
@@ -12,6 +13,86 @@ import {
   LinkModuleOptions,
   LinkModuleResult,
 } from "./link-modules.js";
+
+/**
+ * Reads and parses a plist file, converting it to XML format if needed.
+ */
+async function readAndParsePlist(plistPath: string): Promise<unknown> {
+  try {
+    // Convert to XML format if needed
+    assert(
+      process.platform === "darwin",
+      "Updating Info.plist files are not supported on this platform",
+    );
+    // Try reading the file to see if it is already in XML format
+    const contents = await fs.promises.readFile(plistPath, "utf-8");
+    if (contents.startsWith("<?xml")) {
+      return plist.parse(contents) as unknown;
+    } else {
+      await spawn("plutil", ["-convert", "xml1", plistPath], {
+        outputMode: "inherit",
+      });
+      // Read it again
+      return plist.parse(
+        await fs.promises.readFile(plistPath, "utf-8"),
+      ) as unknown;
+    }
+  } catch (error) {
+    throw new Error(
+      `Failed to convert plist at path "${plistPath}" to XML format`,
+      { cause: error },
+    );
+  }
+}
+
+// Using a looseObject to allow additional fields that we don't know about
+const XcframeworkInfoSchema = zod.looseObject({
+  AvailableLibraries: zod.array(
+    zod.object({
+      BinaryPath: zod.string(),
+      LibraryIdentifier: zod.string(),
+      LibraryPath: zod.string(),
+    }),
+  ),
+  CFBundlePackageType: zod.literal("XFWK"),
+  XCFrameworkFormatVersion: zod.literal("1.0"),
+});
+
+export async function readXcframeworkInfo(xcframeworkPath: string) {
+  const infoPlistPath = path.join(xcframeworkPath, "Info.plist");
+  const infoPlist = await readAndParsePlist(infoPlistPath);
+  return XcframeworkInfoSchema.parse(infoPlist);
+}
+
+export async function writeXcframeworkInfo(
+  xcframeworkPath: string,
+  info: zod.infer<typeof XcframeworkInfoSchema>,
+) {
+  const infoPlistPath = path.join(xcframeworkPath, "Info.plist");
+  const infoPlistXml = plist.build(info);
+  await fs.promises.writeFile(infoPlistPath, infoPlistXml, "utf-8");
+}
+
+const FrameworkInfoSchema = zod.looseObject({
+  CFBundlePackageType: zod.literal("FMWK"),
+  CFBundleInfoDictionaryVersion: zod.literal("6.0"),
+  CFBundleExecutable: zod.string(),
+});
+
+export async function readFrameworkInfo(frameworkPath: string) {
+  const infoPlistPath = path.join(frameworkPath, "Info.plist");
+  const infoPlist = await readAndParsePlist(infoPlistPath);
+  return FrameworkInfoSchema.parse(infoPlist);
+}
+
+export async function writeFrameworkInfo(
+  frameworkPath: string,
+  info: zod.infer<typeof FrameworkInfoSchema>,
+) {
+  const infoPlistPath = path.join(frameworkPath, "Info.plist");
+  const infoPlistXml = plist.build(info);
+  await fs.promises.writeFile(infoPlistPath, infoPlistXml, "utf-8");
+}
 
 export function determineInfoPlistPath(frameworkPath: string) {
   const checkedPaths = new Array<string>();
@@ -109,121 +190,86 @@ export async function linkXcframework({
 }: LinkModuleOptions): Promise<LinkModuleResult> {
   // Copy the xcframework to the output directory and rename the framework and binary
   const newLibraryName = getLibraryName(modulePath, naming);
+  const newFrameworkRelativePath = `${newLibraryName}.framework`;
+  const newBinaryRelativePath = `${newFrameworkRelativePath}/${newLibraryName}`;
   const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
-  const tempPath = await fs.promises.mkdtemp(
-    path.join(os.tmpdir(), `react-native-node-api-${newLibraryName}-`),
-  );
-  try {
-    if (incremental && fs.existsSync(outputPath)) {
-      const moduleModified = getLatestMtime(modulePath);
-      const outputModified = getLatestMtime(outputPath);
-      if (moduleModified < outputModified) {
-        return {
-          originalPath: modulePath,
-          libraryName: newLibraryName,
-          outputPath,
-          skipped: true,
-        };
-      }
-    }
-    // Delete any existing xcframework (or xcodebuild will try to amend it)
-    await fs.promises.rm(outputPath, { recursive: true, force: true });
-    await fs.promises.cp(modulePath, tempPath, { recursive: true });
 
-    // Following extracted function mimics `glob("*/*.framework/")`
-    function globFrameworkDirs<T>(
-      startPath: string,
-      fn: (parentPath: string, name: string) => Promise<T>,
-    ) {
-      return fs
-        .readdirSync(startPath, { withFileTypes: true })
-        .filter((tripletEntry) => tripletEntry.isDirectory())
-        .flatMap((tripletEntry) => {
-          const tripletPath = path.join(startPath, tripletEntry.name);
-          return fs
-            .readdirSync(tripletPath, { withFileTypes: true })
-            .filter(
-              (frameworkEntry) =>
-                frameworkEntry.isDirectory() &&
-                path.extname(frameworkEntry.name) === ".framework",
-            )
-            .flatMap(
-              async (frameworkEntry) =>
-                await fn(tripletPath, frameworkEntry.name),
-            );
-        });
-    }
-
-    const frameworkPaths = await Promise.all(
-      globFrameworkDirs(tempPath, async (tripletPath, frameworkEntryName) => {
-        const frameworkPath = path.join(tripletPath, frameworkEntryName);
-        const oldLibraryName = path.basename(frameworkEntryName, ".framework");
-        const oldLibraryPath = path.join(frameworkPath, oldLibraryName);
-        const newFrameworkPath = path.join(
-          tripletPath,
-          `${newLibraryName}.framework`,
-        );
-        const newLibraryPath = path.join(newFrameworkPath, newLibraryName);
-        assert(
-          fs.existsSync(oldLibraryPath),
-          `Expected a library at '${oldLibraryPath}'`,
-        );
-        // Rename the library
-        await fs.promises.rename(
-          oldLibraryPath,
-          // Cannot use newLibraryPath here, because the framework isn't renamed yet
-          path.join(frameworkPath, newLibraryName),
-        );
-        // Rename the framework
-        await fs.promises.rename(frameworkPath, newFrameworkPath);
-        // Expect the library in the new location
-        assert(fs.existsSync(newLibraryPath));
-        // Update the binary
-        await spawn(
-          "install_name_tool",
-          [
-            "-id",
-            `@rpath/${newLibraryName}.framework/${newLibraryName}`,
-            newLibraryPath,
-          ],
-          {
-            outputMode: "buffered",
-          },
-        );
-        // Update the Info.plist file for the framework
-        await updateInfoPlist({
-          frameworkPath: newFrameworkPath,
-          oldLibraryName,
-          newLibraryName,
-        });
-        return newFrameworkPath;
-      }),
-    );
-
-    // Create a new xcframework from the renamed frameworks
-    await spawn(
-      "xcodebuild",
-      [
-        "-create-xcframework",
-        ...frameworkPaths.flatMap((frameworkPath) => [
-          "-framework",
-          frameworkPath,
-        ]),
-        "-output",
+  if (incremental && fs.existsSync(outputPath)) {
+    const moduleModified = getLatestMtime(modulePath);
+    const outputModified = getLatestMtime(outputPath);
+    if (moduleModified < outputModified) {
+      return {
+        originalPath: modulePath,
+        libraryName: newLibraryName,
         outputPath,
-      ],
-      {
-        outputMode: "buffered",
-      },
-    );
-
-    return {
-      originalPath: modulePath,
-      libraryName: newLibraryName,
-      outputPath,
-      skipped: false,
-    };
-  } finally {
-    await fs.promises.rm(tempPath, { recursive: true, force: true });
+        skipped: true,
+      };
+    }
   }
+  // Delete any existing xcframework (or xcodebuild will try to amend it)
+  await fs.promises.rm(outputPath, { recursive: true, force: true });
+  // Copy the existing xcframework to the output path
+  await fs.promises.cp(modulePath, outputPath, { recursive: true });
+
+  const info = await readXcframeworkInfo(outputPath);
+
+  await Promise.all(
+    info.AvailableLibraries.map(async (framework) => {
+      const frameworkPath = path.join(
+        outputPath,
+        framework.LibraryIdentifier,
+        framework.LibraryPath,
+      );
+      assert(
+        fs.existsSync(frameworkPath),
+        `Expected framework at '${frameworkPath}'`,
+      );
+      const frameworkInfo = await readFrameworkInfo(frameworkPath);
+      // Update install name
+      await spawn(
+        "install_name_tool",
+        [
+          "-id",
+          `@rpath/${newBinaryRelativePath}`,
+          frameworkInfo.CFBundleExecutable,
+        ],
+        {
+          outputMode: "buffered",
+          cwd: frameworkPath,
+        },
+      );
+      await writeFrameworkInfo(frameworkPath, {
+        ...frameworkInfo,
+        CFBundleExecutable: newLibraryName,
+      });
+      // Rename the actual binary
+      await fs.promises.rename(
+        path.join(frameworkPath, frameworkInfo.CFBundleExecutable),
+        path.join(frameworkPath, newLibraryName),
+      );
+      // Rename the framework directory
+      await fs.promises.rename(
+        frameworkPath,
+        path.join(path.dirname(frameworkPath), newFrameworkRelativePath),
+      );
+    }),
+  );
+
+  await writeXcframeworkInfo(outputPath, {
+    ...info,
+    AvailableLibraries: info.AvailableLibraries.map((library) => {
+      return {
+        ...library,
+        BinaryPath: newBinaryRelativePath,
+        LibraryPath: newFrameworkRelativePath,
+      };
+    }),
+  });
+
+  return {
+    originalPath: modulePath,
+    libraryName: newLibraryName,
+    outputPath,
+    skipped: false,
+  };
 }
