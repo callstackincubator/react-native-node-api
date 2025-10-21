@@ -92,9 +92,12 @@ export async function updateInfoPlist({
   }
 
   const contents = await readInfoPlist(infoPlistPath);
-  if (contents.CFBundleExecutable === oldLibraryName) {
-    contents.CFBundleExecutable = newLibraryName;
-  }
+  assert.equal(
+    contents.CFBundleExecutable,
+    oldLibraryName,
+    "Unexpected CFBundleExecutable value in Info.plist",
+  );
+  contents.CFBundleExecutable = newLibraryName;
   await fs.promises.writeFile(infoPlistPath, plist.build(contents), "utf-8");
 }
 
