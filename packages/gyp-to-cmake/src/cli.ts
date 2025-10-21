@@ -4,7 +4,6 @@ import {
   Command,
   prettyPath,
   wrapAction,
-  Option,
 } from "@react-native-node-api/cli-utils";
 
 import { readBindingFile } from "./gyp.js";
