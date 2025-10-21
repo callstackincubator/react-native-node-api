@@ -291,6 +291,11 @@ export async function linkXcframework({
     }),
   });
 
+  // Delete any leftover "magic file"
+  await fs.promises.rm(path.join(outputPath, "react-native-node-api-module"), {
+    force: true,
+  });
+
   return {
     originalPath: modulePath,
     libraryName: newLibraryName,
