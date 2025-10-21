@@ -1,7 +1,11 @@
 import path from "node:path";
 import fs from "node:fs";
 
-import { chalk, SpawnFailure } from "@react-native-node-api/cli-utils";
+import {
+  chalk,
+  SpawnFailure,
+  prettyPath,
+} from "@react-native-node-api/cli-utils";
 
 import {
   findNodeApiModulePathsByDependency,
@@ -10,7 +14,6 @@ import {
   logModulePaths,
   NamingStrategy,
   PlatformName,
-  prettyPath,
 } from "../path-utils";
 
 export type ModuleLinker = (

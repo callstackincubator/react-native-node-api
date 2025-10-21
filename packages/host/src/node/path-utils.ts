@@ -5,7 +5,7 @@ import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 import { createRequire } from "node:module";
 
-import { chalk } from "@react-native-node-api/cli-utils";
+import { chalk, prettyPath } from "@react-native-node-api/cli-utils";
 
 import { findDuplicates } from "./duplicates";
 
@@ -192,12 +192,6 @@ export function getLibraryName(modulePath: string, naming: NamingStrategy) {
           ? path.basename(relativePath)
           : relativePath,
       )}`;
-}
-
-export function prettyPath(p: string) {
-  return chalk.dim(
-    path.relative(process.cwd(), p) || chalk.italic("current directory"),
-  );
 }
 
 export function resolvePackageRoot(

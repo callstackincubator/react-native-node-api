@@ -8,6 +8,7 @@ import {
   oraPromise,
   assertFixable,
   wrapAction,
+  prettyPath,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -19,7 +20,6 @@ import {
   createXCframework,
   createUniversalAppleLibrary,
   determineLibraryBasename,
-  prettyPath,
 } from "react-native-node-api";
 
 import { ensureCargo, build } from "./cargo.js";
@@ -258,9 +258,7 @@ export const buildCommand = new Command("build")
             }),
             {
               text: "Assembling XCFramework",
-              successText: `XCFramework assembled into ${chalk.dim(
-                path.relative(process.cwd(), xcframeworkOutputPath),
-              )}`,
+              successText: `XCFramework assembled into ${prettyPath(xcframeworkOutputPath)}`,
               failText: ({ message }) =>
                 `Failed to assemble XCFramework: ${message}`,
             },

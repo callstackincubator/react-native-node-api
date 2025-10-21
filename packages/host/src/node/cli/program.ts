@@ -8,6 +8,7 @@ import {
   SpawnFailure,
   oraPromise,
   wrapAction,
+  prettyPath,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -19,7 +20,6 @@ import {
   normalizeModulePath,
   PlatformName,
   PLATFORMS,
-  prettyPath,
 } from "../path-utils";
 
 import { command as vendorHermes } from "./hermes";

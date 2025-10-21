@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-
-import { Command, wrapAction } from "@react-native-node-api/cli-utils";
+import {
+  Command,
+  prettyPath,
+  wrapAction,
+} from "@react-native-node-api/cli-utils";
 
 import { readBindingFile } from "./gyp.js";
 import {
@@ -29,15 +32,18 @@ export function transformBindingGypFile(
     ...restOfOptions
   }: TransformOptions,
 ) {
-  console.log("Transforming", gypPath);
-  const gyp = readBindingFile(gypPath, disallowUnknownProperties);
   const parentPath = path.dirname(gypPath);
+  const cmakeListsPath = path.join(parentPath, "CMakeLists.txt");
+  console.log(
+    `Transforming ${prettyPath(gypPath)} → ${prettyPath(cmakeListsPath)}`,
+  );
+
+  const gyp = readBindingFile(gypPath, disallowUnknownProperties);
   const result = bindingGypToCmakeLists({
     gyp,
     projectName,
     ...restOfOptions,
   });
-  const cmakeListsPath = path.join(parentPath, "CMakeLists.txt");
   fs.writeFileSync(cmakeListsPath, result, "utf-8");
 }
 
