@@ -284,7 +284,6 @@ program = program.action(
     );
 
     // Perform post-build steps for each platform in sequence
-    // console.log("📦 Writing prebuilds to:", prettyPath(out));
     for (const platform of platforms) {
       const relevantTriplets = tripletContexts.filter(({ triplet }) =>
         platformHasTriplet(platform, triplet),

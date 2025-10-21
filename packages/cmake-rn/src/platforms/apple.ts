@@ -235,7 +235,6 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     );
   },
   async build({ spawn, triplet }, { build, target, configuration }) {
-    // const outputPath = path.join(buildPath, `${triplet.replace(/;/g, "_")}-out`)
     // We expect the final application to sign these binaries
     if (target.length > 1) {
       throw new Error("Building for multiple targets is not supported yet");
@@ -281,9 +280,6 @@ export const platform: Platform<Triplet[], AppleOpts> = {
           scheme,
           "-configuration",
           configuration,
-
-          // Ideally, we would just pass -destination here,
-          // but I'm not able to configure / generate a single Xcode project supporting all
           "-destination",
           DESTINATION_BY_TRIPLET[triplet],
         ],
@@ -297,9 +293,6 @@ export const platform: Platform<Triplet[], AppleOpts> = {
           scheme,
           "-configuration",
           configuration,
-
-          // Ideally, we would just pass -destination here,
-          // but I'm not able to configure / generate a single Xcode project supporting all
           "-destination",
           DESTINATION_BY_TRIPLET[triplet],
         ],
