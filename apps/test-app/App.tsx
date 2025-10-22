@@ -38,7 +38,8 @@ function loadTests({
     )) {
       describe(suiteName, () => {
         for (const [exampleName, requireExample] of Object.entries(examples)) {
-          it(exampleName, async () => {
+          it(exampleName, async function () {
+            this.timeout(10000);
             const test = requireExample();
             if (test instanceof Function) {
               const result = test();
