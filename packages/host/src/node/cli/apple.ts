@@ -55,7 +55,7 @@ export async function readAndParsePlist(plistPath: string): Promise<unknown> {
 // Using a looseObject to allow additional fields that we don't know about
 const XcframeworkInfoSchema = zod.looseObject({
   AvailableLibraries: zod.array(
-    zod.object({
+    zod.looseObject({
       BinaryPath: zod.string(),
       LibraryIdentifier: zod.string(),
       LibraryPath: zod.string(),

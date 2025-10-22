@@ -4,7 +4,12 @@ import path from "node:path";
 import fs from "node:fs";
 import cp from "node:child_process";
 
-import { linkFlatFramework, readAndParsePlist } from "./apple";
+import {
+  linkFlatFramework,
+  readAndParsePlist,
+  readFrameworkInfo,
+  readXcframeworkInfo,
+} from "./apple";
 import { setupTempDirectory } from "../test-utils";
 
 describe("apple", { skip: process.platform !== "darwin" }, () => {
@@ -46,6 +51,103 @@ describe("apple", { skip: process.platform !== "darwin" }, () => {
         () => readAndParsePlist(infoPlistPath),
         /Expected an Info.plist/,
       );
+    });
+  });
+
+  describe("readXcframeworkInfo", () => {
+    it("should read xcframework Info.plist contents, plus extra keys not in schema", async (context) => {
+      const tempDirectoryPath = setupTempDirectory(context, {
+        "foo.xcframework": {
+          "Info.plist": `
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+              <key>AvailableLibraries</key>
+              <array>
+                <dict>
+                  <key>BinaryPath</key>
+                  <string>hello.framework/hello</string>
+                  <key>LibraryIdentifier</key>
+                  <string>tvos-arm64</string>
+                  <key>LibraryPath</key>
+                  <string>hello.framework</string>
+                  <key>SupportedArchitectures</key>
+                  <array>
+                    <string>arm64</string>
+                  </array>
+                  <key>SupportedPlatform</key>
+                  <string>tvos</string>
+                </dict>
+              </array>
+              <key>CFBundlePackageType</key>
+              <string>XFWK</string>
+              <key>XCFrameworkFormatVersion</key>
+              <string>1.0</string>
+            </dict>
+            </plist>
+          `,
+        },
+      });
+
+      const result = await readXcframeworkInfo(
+        path.join(tempDirectoryPath, "foo.xcframework", "Info.plist"),
+      );
+
+      assert.deepEqual(result, {
+        AvailableLibraries: [
+          {
+            BinaryPath: "hello.framework/hello",
+            LibraryIdentifier: "tvos-arm64",
+            LibraryPath: "hello.framework",
+            SupportedArchitectures: ["arm64"],
+            SupportedPlatform: "tvos",
+          },
+        ],
+        CFBundlePackageType: "XFWK",
+        XCFrameworkFormatVersion: "1.0",
+      });
+    });
+  });
+
+  describe("readFrameworkInfo", () => {
+    it("should read framework Info.plist contents, plus extra keys not in schema", async (context) => {
+      const tempDirectoryPath = setupTempDirectory(context, {
+        "foo.framework": {
+          "Info.plist": `
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+              <dict>
+                <key>CFBundlePackageType</key>
+                <string>FMWK</string>
+                <key>CFBundleInfoDictionaryVersion</key>
+                <string>6.0</string>
+                <key>CFBundleExecutable</key>
+                <string>example-0--hello</string>
+                <key>CFBundleIdentifier</key>
+                <string>example_0.hello</string>
+                <key>CFBundleSupportedPlatforms</key>
+                <array>
+                  <string>XRSimulator</string>
+                </array>
+              </dict>
+            </plist>
+          `,
+        },
+      });
+
+      const result = await readFrameworkInfo(
+        path.join(tempDirectoryPath, "foo.framework", "Info.plist"),
+      );
+
+      assert.deepEqual(result, {
+        CFBundlePackageType: "FMWK",
+        CFBundleInfoDictionaryVersion: "6.0",
+        CFBundleExecutable: "example-0--hello",
+        CFBundleIdentifier: "example_0.hello",
+        CFBundleSupportedPlatforms: ["XRSimulator"],
+      });
     });
   });
 
