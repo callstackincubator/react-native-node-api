@@ -1,5 +1,20 @@
 # react-native-node-api
 
+## 0.6.0
+
+### Minor Changes
+
+- 5156d35: Use of CMake targets producing Apple frameworks instead of free dylibs is now supported
+- 5016ed2: Scope is now stripped from package names when renaming libraries while linking
+
+### Patch Changes
+
+- acd06f2: Linking Node-API addons for Apple platforms is no longer re-creating Xcframeworks
+- 9f1a301: Fix requireNodeAddon return type
+- 5156d35: Refactored moving prettyPath util to CLI utils package
+- Updated dependencies [5156d35]
+  - @react-native-node-api/cli-utils@0.1.1
+
 ## 0.5.2
 
 ### Patch Changes
