@@ -59,6 +59,7 @@ const XcframeworkInfoSchema = zod.looseObject({
       BinaryPath: zod.string(),
       LibraryIdentifier: zod.string(),
       LibraryPath: zod.string(),
+      DebugSymbolsPath: zod.string().optional(),
     }),
   ),
   CFBundlePackageType: zod.literal("XFWK"),
@@ -100,13 +101,12 @@ export async function writeFrameworkInfo(
 
 type LinkFrameworkOptions = {
   frameworkPath: string;
+  debugSymbolsPath?: string;
   newLibraryName: string;
 };
 
-export async function linkFramework({
-  frameworkPath,
-  newLibraryName,
-}: LinkFrameworkOptions) {
+export async function linkFramework(options: LinkFrameworkOptions) {
+  const { frameworkPath } = options;
   assert.equal(
     process.platform,
     "darwin",
@@ -117,14 +117,15 @@ export async function linkFramework({
     `Expected framework at '${frameworkPath}'`,
   );
   if (fs.existsSync(path.join(frameworkPath, "Versions"))) {
-    await linkVersionedFramework({ frameworkPath, newLibraryName });
+    await linkVersionedFramework(options);
   } else {
-    await linkFlatFramework({ frameworkPath, newLibraryName });
+    await linkFlatFramework(options);
   }
 }
 
 export async function linkFlatFramework({
   frameworkPath,
+  debugSymbolsPath,
   newLibraryName,
 }: LinkFrameworkOptions) {
   assert.equal(
@@ -151,16 +152,44 @@ export async function linkFlatFramework({
     ...frameworkInfo,
     CFBundleExecutable: newLibraryName,
   });
+
   // Rename the actual binary
   await fs.promises.rename(
     path.join(frameworkPath, frameworkInfo.CFBundleExecutable),
     path.join(frameworkPath, newLibraryName),
   );
   // Rename the framework directory
-  await fs.promises.rename(
-    frameworkPath,
-    path.join(path.dirname(frameworkPath), `${newLibraryName}.framework`),
+  const newFrameworkPath = path.join(
+    path.dirname(frameworkPath),
+    `${newLibraryName}.framework`,
   );
+  await fs.promises.rename(frameworkPath, newFrameworkPath);
+
+  if (debugSymbolsPath) {
+    const frameworkDebugSymbolsPath = path.join(
+      debugSymbolsPath,
+      `${path.basename(frameworkPath)}.dSYM`,
+    );
+    if (fs.existsSync(frameworkDebugSymbolsPath)) {
+      // Remove existing DWARF data
+      await fs.promises.rm(frameworkDebugSymbolsPath, {
+        recursive: true,
+        force: true,
+      });
+      // Rebuild DWARF data
+      await spawn(
+        "dsymutil",
+        [
+          path.join(newFrameworkPath, newLibraryName),
+          "-o",
+          path.join(debugSymbolsPath, newLibraryName + ".dSYM"),
+        ],
+        {
+          outputMode: "buffered",
+        },
+      );
+    }
+  }
 }
 
 export async function linkVersionedFramework({
@@ -282,7 +311,17 @@ export async function linkXcframework({
         framework.LibraryIdentifier,
         framework.LibraryPath,
       );
-      await linkFramework({ frameworkPath, newLibraryName });
+      await linkFramework({
+        frameworkPath,
+        newLibraryName,
+        debugSymbolsPath: framework.DebugSymbolsPath
+          ? path.join(
+              outputPath,
+              framework.LibraryIdentifier,
+              framework.DebugSymbolsPath,
+            )
+          : undefined,
+      });
     }),
   );
 
