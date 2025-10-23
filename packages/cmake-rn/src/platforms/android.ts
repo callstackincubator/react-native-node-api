@@ -49,6 +49,34 @@ function getBuildPath(baseBuildPath: string, triplet: Triplet) {
   return path.join(baseBuildPath, triplet);
 }
 
+function getNdkPath(ndkVersion: string) {
+  const { ANDROID_HOME } = process.env;
+  assert(typeof ANDROID_HOME === "string", "Missing env variable ANDROID_HOME");
+  assert(
+    fs.existsSync(ANDROID_HOME),
+    `Expected the Android SDK at ${ANDROID_HOME}`,
+  );
+  const installNdkCommand = `sdkmanager --install "ndk;${ndkVersion}"`;
+  const ndkPath = path.resolve(ANDROID_HOME, "ndk", ndkVersion);
+  assert(
+    fs.existsSync(ndkPath),
+    `Missing Android NDK v${ndkVersion} (at ${ndkPath}) - run: ${installNdkCommand}`,
+  );
+  return ndkPath;
+}
+
+function getNdkToolchainPath(ndkPath: string) {
+  const toolchainPath = path.join(
+    ndkPath,
+    "build/cmake/android.toolchain.cmake",
+  );
+  assert(
+    fs.existsSync(toolchainPath),
+    `No CMake toolchain found in ${toolchainPath}`,
+  );
+  return toolchainPath;
+}
+
 export const platform: Platform<Triplet[], AndroidOpts> = {
   id: "android",
   name: "Android",
@@ -85,26 +113,8 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       cmakeJs,
     },
   ) {
-    const { ANDROID_HOME } = process.env;
-    assert(
-      typeof ANDROID_HOME === "string",
-      "Missing env variable ANDROID_HOME",
-    );
-    assert(
-      fs.existsSync(ANDROID_HOME),
-      `Expected the Android SDK at ${ANDROID_HOME}`,
-    );
-    const installNdkCommand = `sdkmanager --install "ndk;${ndkVersion}"`;
-    const ndkPath = path.resolve(ANDROID_HOME, "ndk", ndkVersion);
-    assert(
-      fs.existsSync(ndkPath),
-      `Missing Android NDK v${ndkVersion} (at ${ndkPath}) - run: ${installNdkCommand}`,
-    );
-
-    const toolchainPath = path.join(
-      ndkPath,
-      "build/cmake/android.toolchain.cmake",
-    );
+    const ndkPath = getNdkPath(ndkVersion);
+    const toolchainPath = getNdkToolchainPath(ndkPath);
 
     const commonDefinitions = [
       ...define,
