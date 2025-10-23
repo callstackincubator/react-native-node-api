@@ -36,9 +36,8 @@ const sourcePathOption = new Option(
   "Specify the source directory containing a CMakeLists.txt file",
 ).default(process.cwd());
 
-// TODO: Add "MinSizeRel" and "RelWithDebInfo"
 const configurationOption = new Option("--configuration <configuration>")
-  .choices(["Release", "Debug"] as const)
+  .choices(["Release", "Debug", "RelWithDebInfo", "MinSizeRel"] as const)
   .default("Release");
 
 // TODO: Derive default build triplets
