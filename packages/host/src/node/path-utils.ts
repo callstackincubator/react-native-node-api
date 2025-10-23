@@ -270,11 +270,7 @@ export function resolvePackageRoot(
  */
 export type LibraryMap = Map<string, string[]>;
 
-export function getLibraryMap(
-  modulePaths: string[],
-  // TODO: Default to iterating and printing for all supported naming strategies
-  naming: NamingStrategy,
-) {
+export function getLibraryMap(modulePaths: string[], naming: NamingStrategy) {
   const result = new Map<string, string[]>();
   for (const modulePath of modulePaths) {
     const libraryName = getLibraryName(modulePath, naming);
