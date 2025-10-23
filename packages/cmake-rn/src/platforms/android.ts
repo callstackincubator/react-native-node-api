@@ -77,6 +77,16 @@ function getNdkToolchainPath(ndkPath: string) {
   return toolchainPath;
 }
 
+function getNdkLlvmBinPath(ndkPath: string) {
+  const prebuiltPath = path.join(ndkPath, "toolchains/llvm/prebuilt");
+  const platforms = fs.readdirSync(prebuiltPath);
+  assert(
+    platforms.length === 1,
+    `Expected a single llvm prebuilt toolchain in ${prebuiltPath}`,
+  );
+  return path.join(prebuiltPath, platforms[0], "bin");
+}
+
 export const platform: Platform<Triplet[], AndroidOpts> = {
   id: "android",
   name: "Android",
@@ -184,14 +194,14 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
   async postBuild(
     outputPath,
     triplets,
-    { autoLink, configuration, target, build },
+    { autoLink, configuration, target, build, strip, ndkVersion },
   ) {
     const prebuilds: Record<
       string,
       { triplet: Triplet; libraryPath: string }[]
     > = {};
 
-    for (const { triplet } of triplets) {
+    for (const { spawn, triplet } of triplets) {
       const buildPath = getBuildPath(build, triplet);
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
       const targets = await cmakeFileApi.readCurrentTargetsDeep(
@@ -220,9 +230,24 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       if (!(sharedLibrary.name in prebuilds)) {
         prebuilds[sharedLibrary.name] = [];
       }
+      const libraryPath = path.join(buildPath, artifact.path);
+      assert(
+        fs.existsSync(libraryPath),
+        `Expected built library at ${libraryPath}`,
+      );
+
+      if (strip) {
+        const llvmBinPath = getNdkLlvmBinPath(getNdkPath(ndkVersion));
+        const stripToolPath = path.join(llvmBinPath, `llvm-strip`);
+        assert(
+          fs.existsSync(stripToolPath),
+          `Expected llvm-strip to exist at ${stripToolPath}`,
+        );
+        await spawn(stripToolPath, [libraryPath]);
+      }
       prebuilds[sharedLibrary.name].push({
         triplet,
-        libraryPath: path.join(buildPath, artifact.path),
+        libraryPath,
       });
     }
 
