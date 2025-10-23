@@ -1,5 +1,16 @@
 # cmake-rn
 
+## 0.5.1
+
+### Patch Changes
+
+- 5c9321b: Add `--strip` option to strip debug symbols from outputs
+- 5c3de89: Locate and include debug symbols when creating an Xcframework.
+- 5c3de89: Allow passing "RelWithDebInfo" and "MinSizeRel" as --configuration
+- Updated dependencies [5c3de89]
+- Updated dependencies [bb9a78c]
+  - react-native-node-api@0.6.1
+
 ## 0.5.0
 
 ### Minor Changes

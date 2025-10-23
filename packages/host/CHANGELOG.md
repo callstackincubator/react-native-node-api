@@ -1,5 +1,12 @@
 # react-native-node-api
 
+## 0.6.1
+
+### Patch Changes
+
+- 5c3de89: Rebuild any dSYM directory when linking frameworks.
+- bb9a78c: Fixed visualizing duplicate library names
+
 ## 0.6.0
 
 ### Minor Changes
