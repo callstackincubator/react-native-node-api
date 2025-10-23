@@ -1,5 +1,18 @@
 # ferric-cli
 
+## 0.3.5
+
+### Patch Changes
+
+- 5156d35: Refactored moving prettyPath util to CLI utils package
+- Updated dependencies [acd06f2]
+- Updated dependencies [5156d35]
+- Updated dependencies [9f1a301]
+- Updated dependencies [5016ed2]
+- Updated dependencies [5156d35]
+  - react-native-node-api@0.6.0
+  - @react-native-node-api/cli-utils@0.1.1
+
 ## 0.3.4
 
 ### Patch Changes

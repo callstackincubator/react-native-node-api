@@ -1,6 +1,6 @@
 {
   "name": "react-native-node-api",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Node-API for React Native",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
@@ -81,7 +81,7 @@
   "license": "MIT",
   "dependencies": {
     "@expo/plist": "^0.4.7",
-    "@react-native-node-api/cli-utils": "0.1.0",
+    "@react-native-node-api/cli-utils": "0.1.1",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1",
     "zod": "^4.1.11"

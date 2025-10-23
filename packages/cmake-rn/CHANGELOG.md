@@ -1,5 +1,24 @@
 # cmake-rn
 
+## 0.5.0
+
+### Minor Changes
+
+- 5156d35: Use of CMake targets producing Apple frameworks instead of free dylibs is now supported
+
+### Patch Changes
+
+- d8e90a8: Filter CMake targets by target name when passed
+- 0c3e8ba: Fix expansion of options in --build and --out
+- 5156d35: Refactored moving prettyPath util to CLI utils package
+- Updated dependencies [acd06f2]
+- Updated dependencies [5156d35]
+- Updated dependencies [9f1a301]
+- Updated dependencies [5016ed2]
+- Updated dependencies [5156d35]
+  - react-native-node-api@0.6.0
+  - @react-native-node-api/cli-utils@0.1.1
+
 ## 0.4.1
 
 ### Patch Changes
