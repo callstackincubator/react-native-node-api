@@ -521,11 +521,17 @@ export function getLatestMtime(fromPath: string): number {
 // https://github.com/TooTallNate/node-bindings/blob/v1.3.0/bindings.js#L21
 const nodeBindingsSubdirs = [
   "./",
+  "./build/MinSizeRel",
+  "./build/RelWithDebInfo",
   "./build/Release",
   "./build/Debug",
   "./build",
+  "./out/MinSizeRel",
+  "./out/RelWithDebInfo",
   "./out/Release",
   "./out/Debug",
+  "./MinSizeRel",
+  "./RelWithDebInfo",
   "./Release",
   "./Debug",
 ];
