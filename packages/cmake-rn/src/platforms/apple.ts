@@ -330,11 +330,11 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   async postBuild(
     outputPath,
     triplets,
-    { configuration, autoLink, xcframeworkExtension, target, build },
+    { configuration, autoLink, xcframeworkExtension, target, build, strip },
   ) {
     const libraryNames = new Set<string>();
     const frameworkPaths: string[] = [];
-    for (const { triplet } of triplets) {
+    for (const { spawn, triplet } of triplets) {
       const buildPath = getBuildPath(build, triplet);
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
       const sharedLibrary = await readCmakeSharedLibraryTarget(
@@ -348,10 +348,21 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         "Expected exactly one artifact",
       );
       const [artifact] = artifacts;
+
+      const artifactPath = path.join(buildPath, artifact.path);
+
+      if (strip) {
+        // -r: All relocation entries.
+        // -S: All symbol table entries.
+        // -T: All text relocation entries.
+        // -x: All local symbols.
+        await spawn("strip", ["-rSTx", artifactPath]);
+      }
+
       libraryNames.add(sharedLibrary.name);
       // Locate the path of the framework, if a free dynamic library was built
       if (artifact.path.includes(".framework/")) {
-        frameworkPaths.push(path.dirname(path.join(buildPath, artifact.path)));
+        frameworkPaths.push(path.dirname(artifactPath));
       } else {
         const libraryName = path.basename(
           artifact.path,
