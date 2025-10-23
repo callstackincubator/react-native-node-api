@@ -13,7 +13,7 @@ import {
 } from "react-native-node-api";
 import * as cmakeFileApi from "cmake-file-api";
 
-import type { Platform } from "./types.js";
+import type { BaseOpts, Platform } from "./types.js";
 import { toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
@@ -45,8 +45,12 @@ const androidSdkVersionOption = new Option(
 
 type AndroidOpts = { ndkVersion: string; androidSdkVersion: string };
 
-function getBuildPath(baseBuildPath: string, triplet: Triplet) {
-  return path.join(baseBuildPath, triplet);
+function getBuildPath(
+  baseBuildPath: string,
+  triplet: Triplet,
+  configuration: BaseOpts["configuration"],
+) {
+  return path.join(baseBuildPath, triplet + "-" + configuration);
 }
 
 function getNdkPath(ndkVersion: string) {
@@ -147,7 +151,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
 
     await Promise.all(
       triplets.map(async ({ triplet, spawn }) => {
-        const buildPath = getBuildPath(build, triplet);
+        const buildPath = getBuildPath(build, triplet, configuration);
         const outputPath = path.join(buildPath, "out");
         // We want to use the CMake File API to query information later
         await cmakeFileApi.createSharedStatelessQuery(
@@ -161,6 +165,8 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           source,
           "-B",
           buildPath,
+          // Ideally, we would use the "Ninja Multi-Config" generator here,
+          // but it doesn't support the "RelWithDebInfo" configuration on Android.
           "-G",
           "Ninja",
           "--toolchain",
@@ -179,8 +185,8 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       }),
     );
   },
-  async build({ triplet, spawn }, { target, build }) {
-    const buildPath = getBuildPath(build, triplet);
+  async build({ triplet, spawn }, { target, build, configuration }) {
+    const buildPath = getBuildPath(build, triplet, configuration);
     await spawn("cmake", [
       "--build",
       buildPath,
@@ -201,8 +207,8 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       { triplet: Triplet; libraryPath: string }[]
     > = {};
 
-    for (const { spawn, triplet } of triplets) {
-      const buildPath = getBuildPath(build, triplet);
+    for (const { triplet, spawn } of triplets) {
+      const buildPath = getBuildPath(build, triplet, configuration);
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
       const targets = await cmakeFileApi.readCurrentTargetsDeep(
         buildPath,
