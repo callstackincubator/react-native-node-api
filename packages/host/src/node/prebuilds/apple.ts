@@ -99,7 +99,19 @@ export async function createXCframework({
     "xcodebuild",
     [
       "-create-xcframework",
-      ...frameworkPaths.flatMap((p) => ["-framework", p]),
+      ...frameworkPaths.flatMap((frameworkPath) => {
+        const debugSymbolPath = frameworkPath + ".dSYM";
+        if (fs.existsSync(debugSymbolPath)) {
+          return [
+            "-framework",
+            frameworkPath,
+            "-debug-symbols",
+            debugSymbolPath,
+          ];
+        } else {
+          return ["-framework", frameworkPath];
+        }
+      }),
       "-output",
       xcodeOutputPath,
     ],
