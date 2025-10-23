@@ -172,7 +172,13 @@ export async function linkVersionedFramework({
     "darwin",
     "Linking Apple addons are only supported on macOS",
   );
-  const frameworkInfoPath = path.join(frameworkPath, "Resources", "Info.plist");
+  const frameworkInfoPath = path.join(
+    frameworkPath,
+    "Versions",
+    "Current",
+    "Resources",
+    "Info.plist",
+  );
   const frameworkInfo = await readFrameworkInfo(frameworkInfoPath);
   // Update install name
   await spawn(
