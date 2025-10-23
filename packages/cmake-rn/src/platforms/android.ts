@@ -49,6 +49,44 @@ function getBuildPath(baseBuildPath: string, triplet: Triplet) {
   return path.join(baseBuildPath, triplet);
 }
 
+function getNdkPath(ndkVersion: string) {
+  const { ANDROID_HOME } = process.env;
+  assert(typeof ANDROID_HOME === "string", "Missing env variable ANDROID_HOME");
+  assert(
+    fs.existsSync(ANDROID_HOME),
+    `Expected the Android SDK at ${ANDROID_HOME}`,
+  );
+  const installNdkCommand = `sdkmanager --install "ndk;${ndkVersion}"`;
+  const ndkPath = path.resolve(ANDROID_HOME, "ndk", ndkVersion);
+  assert(
+    fs.existsSync(ndkPath),
+    `Missing Android NDK v${ndkVersion} (at ${ndkPath}) - run: ${installNdkCommand}`,
+  );
+  return ndkPath;
+}
+
+function getNdkToolchainPath(ndkPath: string) {
+  const toolchainPath = path.join(
+    ndkPath,
+    "build/cmake/android.toolchain.cmake",
+  );
+  assert(
+    fs.existsSync(toolchainPath),
+    `No CMake toolchain found in ${toolchainPath}`,
+  );
+  return toolchainPath;
+}
+
+function getNdkLlvmBinPath(ndkPath: string) {
+  const prebuiltPath = path.join(ndkPath, "toolchains/llvm/prebuilt");
+  const platforms = fs.readdirSync(prebuiltPath);
+  assert(
+    platforms.length === 1,
+    `Expected a single llvm prebuilt toolchain in ${prebuiltPath}`,
+  );
+  return path.join(prebuiltPath, platforms[0], "bin");
+}
+
 export const platform: Platform<Triplet[], AndroidOpts> = {
   id: "android",
   name: "Android",
@@ -85,26 +123,8 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       cmakeJs,
     },
   ) {
-    const { ANDROID_HOME } = process.env;
-    assert(
-      typeof ANDROID_HOME === "string",
-      "Missing env variable ANDROID_HOME",
-    );
-    assert(
-      fs.existsSync(ANDROID_HOME),
-      `Expected the Android SDK at ${ANDROID_HOME}`,
-    );
-    const installNdkCommand = `sdkmanager --install "ndk;${ndkVersion}"`;
-    const ndkPath = path.resolve(ANDROID_HOME, "ndk", ndkVersion);
-    assert(
-      fs.existsSync(ndkPath),
-      `Missing Android NDK v${ndkVersion} (at ${ndkPath}) - run: ${installNdkCommand}`,
-    );
-
-    const toolchainPath = path.join(
-      ndkPath,
-      "build/cmake/android.toolchain.cmake",
-    );
+    const ndkPath = getNdkPath(ndkVersion);
+    const toolchainPath = getNdkToolchainPath(ndkPath);
 
     const commonDefinitions = [
       ...define,
@@ -174,14 +194,14 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
   async postBuild(
     outputPath,
     triplets,
-    { autoLink, configuration, target, build },
+    { autoLink, configuration, target, build, strip, ndkVersion },
   ) {
     const prebuilds: Record<
       string,
       { triplet: Triplet; libraryPath: string }[]
     > = {};
 
-    for (const { triplet } of triplets) {
+    for (const { spawn, triplet } of triplets) {
       const buildPath = getBuildPath(build, triplet);
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
       const targets = await cmakeFileApi.readCurrentTargetsDeep(
@@ -210,9 +230,24 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       if (!(sharedLibrary.name in prebuilds)) {
         prebuilds[sharedLibrary.name] = [];
       }
+      const libraryPath = path.join(buildPath, artifact.path);
+      assert(
+        fs.existsSync(libraryPath),
+        `Expected built library at ${libraryPath}`,
+      );
+
+      if (strip) {
+        const llvmBinPath = getNdkLlvmBinPath(getNdkPath(ndkVersion));
+        const stripToolPath = path.join(llvmBinPath, `llvm-strip`);
+        assert(
+          fs.existsSync(stripToolPath),
+          `Expected llvm-strip to exist at ${stripToolPath}`,
+        );
+        await spawn(stripToolPath, [libraryPath]);
+      }
       prebuilds[sharedLibrary.name].push({
         triplet,
-        libraryPath: path.join(buildPath, artifact.path),
+        libraryPath,
       });
     }
 

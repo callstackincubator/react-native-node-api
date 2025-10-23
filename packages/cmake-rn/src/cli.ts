@@ -106,6 +106,11 @@ const targetOption = new Option(
   "CMake targets to build",
 ).default([] as string[], "Build all targets of the CMake project");
 
+const stripOption = new Option(
+  "--strip",
+  "Strip debug symbols from the final binaries",
+).default(false);
+
 const noAutoLinkOption = new Option(
   "--no-auto-link",
   "Don't mark the output as auto-linkable by react-native-node-api",
@@ -132,6 +137,7 @@ let program = new Command("cmake-rn")
   .addOption(defineOption)
   .addOption(cleanOption)
   .addOption(targetOption)
+  .addOption(stripOption)
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption)
   .addOption(cmakeJsOption);
