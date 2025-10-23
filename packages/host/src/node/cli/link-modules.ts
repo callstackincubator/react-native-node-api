@@ -11,9 +11,10 @@ import {
   findNodeApiModulePathsByDependency,
   getAutolinkPath,
   getLibraryName,
-  logModulePaths,
+  visualizeLibraryMap,
   NamingStrategy,
   PlatformName,
+  getLibraryMap,
 } from "../path-utils";
 
 export type ModuleLinker = (
@@ -78,9 +79,14 @@ export async function linkModules({
       ),
   );
 
-  if (hasDuplicateLibraryNames(absoluteModulePaths, naming)) {
-    logModulePaths(absoluteModulePaths, naming);
-    throw new Error("Found conflicting library names");
+  const libraryMap = getLibraryMap(absoluteModulePaths, naming);
+  const duplicates = new Map(
+    Array.from(libraryMap.entries()).filter(([, paths]) => paths.length > 1),
+  );
+
+  if (duplicates.size > 0) {
+    const visualized = visualizeLibraryMap(duplicates);
+    throw new Error("Found conflicting library names:\n" + visualized);
   }
 
   return Promise.all(
@@ -131,17 +137,6 @@ export async function pruneLinkedModules(
       }
     }),
   );
-}
-
-export function hasDuplicateLibraryNames(
-  modulePaths: string[],
-  naming: NamingStrategy,
-): boolean {
-  const libraryNames = modulePaths.map((modulePath) => {
-    return getLibraryName(modulePath, naming);
-  });
-  const uniqueNames = new Set(libraryNames);
-  return uniqueNames.size !== libraryNames.length;
 }
 
 export function getLinkedModuleOutputPath(
