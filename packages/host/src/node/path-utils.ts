@@ -7,8 +7,6 @@ import { createRequire } from "node:module";
 
 import { chalk, prettyPath } from "@react-native-node-api/cli-utils";
 
-import { findDuplicates } from "./duplicates";
-
 // TODO: Change to .apple.node
 export const PLATFORMS = ["android", "apple"] as const;
 export type PlatformName = "android" | "apple";
@@ -267,32 +265,37 @@ export function resolvePackageRoot(
   }
 }
 
-export function logModulePaths(
+/**
+ * Module paths per library name.
+ */
+export type LibraryMap = Map<string, string[]>;
+
+export function getLibraryMap(
   modulePaths: string[],
   // TODO: Default to iterating and printing for all supported naming strategies
   naming: NamingStrategy,
 ) {
-  const pathsPerName = new Map<string, string[]>();
+  const result = new Map<string, string[]>();
   for (const modulePath of modulePaths) {
     const libraryName = getLibraryName(modulePath, naming);
-    const existingPaths = pathsPerName.get(libraryName) ?? [];
+    const existingPaths = result.get(libraryName) ?? [];
     existingPaths.push(modulePath);
-    pathsPerName.set(libraryName, existingPaths);
+    result.set(libraryName, existingPaths);
   }
+  return result;
+}
 
-  const allModulePaths = modulePaths.map((modulePath) => modulePath);
-  const duplicatePaths = findDuplicates(allModulePaths);
-  for (const [libraryName, modulePaths] of pathsPerName) {
-    console.log(
+export function visualizeLibraryMap(libraryMap: LibraryMap) {
+  const result = [];
+  for (const [libraryName, modulePaths] of libraryMap) {
+    result.push(
       chalk.greenBright(`${libraryName}`),
       ...modulePaths.flatMap((modulePath) => {
-        const line = duplicatePaths.has(modulePath)
-          ? chalk.redBright(prettyPath(modulePath))
-          : prettyPath(modulePath);
-        return `\n ↳ ${line}`;
+        return ` ↳ ${prettyPath(modulePath)}`;
       }),
     );
   }
+  return result.join("\n");
 }
 
 /**

@@ -16,10 +16,11 @@ import {
   findNodeApiModulePathsByDependency,
   getAutolinkPath,
   getLibraryName,
-  logModulePaths,
+  visualizeLibraryMap,
   normalizeModulePath,
   PlatformName,
   PLATFORMS,
+  getLibraryMap,
 } from "../path-utils";
 
 import { command as vendorHermes } from "./hermes";
@@ -115,10 +116,10 @@ program
               successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
                 platformOutputPath,
               )}`,
-              failText: (error) =>
+              failText: () =>
                 `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
                   platformOutputPath,
-                )}: ${error.message}`,
+                )}`,
             },
           );
 
@@ -209,14 +210,15 @@ program
           dependencies,
         )) {
           console.log(
-            chalk.blueBright(dependencyName),
+            "\n" + chalk.blueBright(dependencyName),
             "→",
             prettyPath(dependency.path),
           );
-          logModulePaths(
+          const libraryMap = getLibraryMap(
             dependency.modulePaths.map((p) => path.join(dependency.path, p)),
             { packageName, pathSuffix },
           );
+          console.log(visualizeLibraryMap(libraryMap));
         }
       }
     }),
