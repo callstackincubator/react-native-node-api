@@ -4,13 +4,20 @@ if ENV['RCT_USE_PREBUILT_RNCORE'] == '1'
   raise "React Native Node-API cannot reliably patch JSI when React Native Core is prebuilt."
 end
 
-VENDORED_HERMES_DIR ||= `npx react-native-node-api vendor-hermes --silent '#{Pod::Config.instance.installation_root}'`.strip
-if Dir.exist?(VENDORED_HERMES_DIR)
-  Pod::UI.info "Hermes vendored into #{VENDORED_HERMES_DIR.inspect}"
-else
-  raise "Hermes patching failed. Please check the output above for errors."
+if ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'].nil?
+  VENDORED_HERMES_DIR ||= `npx react-native-node-api vendor-hermes --silent '#{Pod::Config.instance.installation_root}'`.strip
+  # Signal the patched Hermes to React Native
+  ENV['BUILD_FROM_SOURCE'] = 'true'
+  ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'] = VENDORED_HERMES_DIR
+elsif Dir.exist?(ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'])
+  # Setting an override path implies building from source
+  ENV['BUILD_FROM_SOURCE'] = 'true'
 end
 
-# Signal the patched Hermes to React Native
-ENV['BUILD_FROM_SOURCE'] = 'true'
-ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'] = VENDORED_HERMES_DIR
+if !ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'].empty?
+  if Dir.exist?(ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'])
+    Pod::UI.info "[Node-API] Using overridden Hermes in #{ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'].inspect}"
+  else
+    raise "Hermes patching failed: Expected override to exist in #{ENV['REACT_NATIVE_OVERRIDE_HERMES_DIR'].inspect}"
+  end
+end
