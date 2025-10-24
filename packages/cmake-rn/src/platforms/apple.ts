@@ -224,12 +224,8 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         "arm64-apple-visionos",
         "arm64;x86_64-apple-visionos-sim",
       ];
-    } else if (process.arch === "arm64") {
-      return ["arm64-apple-ios-sim"];
-    } else if (process.arch === "x64") {
-      return ["x86_64-apple-ios-sim"];
     } else {
-      return [];
+      return ["arm64;x86_64-apple-ios-sim"];
     }
   },
   amendCommand(command) {

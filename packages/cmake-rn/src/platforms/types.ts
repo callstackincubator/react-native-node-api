@@ -53,7 +53,7 @@ export type Platform<
    */
   defaultTriplets(
     purpose: "development" | "release",
-  ): Readonly<Triplets> | Promise<Readonly<Triplets>>;
+  ): Triplet[] | Promise<Triplet[]>;
   /**
    * Implement this to add any platform specific options to the command.
    */

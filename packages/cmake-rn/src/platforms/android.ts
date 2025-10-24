@@ -102,7 +102,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
   ],
   defaultTriplets(purpose) {
     if (purpose === "release") {
-      return this.triplets;
+      return [...this.triplets];
     } else if (process.arch === "arm64") {
       return ["aarch64-linux-android"];
     } else if (process.arch === "x64") {
