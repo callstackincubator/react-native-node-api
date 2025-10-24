@@ -98,7 +98,7 @@ jobs:
       - run: npm ci
       - run: npm run bootstrap
         env:
-          CMAKE_RN_TRIPLETS: arm64-apple-ios-sim
+          CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim
       - run: npm run pod-install
         working-directory: apps/test-app

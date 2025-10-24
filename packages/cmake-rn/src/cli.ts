@@ -187,7 +187,7 @@ program = program.action(
     for (const platform of Object.values(platforms)) {
       // Forcing the types a bit here, since the platform id option is dynamically added
       if ((baseOptions as Record<string, unknown>)[platform.id]) {
-        for (const triplet of platform.triplets) {
+        for (const triplet of await platform.defaultTriplets("release")) {
           triplets.add(triplet);
         }
       }
@@ -196,7 +196,7 @@ program = program.action(
     if (triplets.size === 0) {
       for (const platform of Object.values(platforms)) {
         if (platform.isSupportedByHost()) {
-          for (const triplet of await platform.defaultTriplets()) {
+          for (const triplet of await platform.defaultTriplets("development")) {
             triplets.add(triplet);
           }
         }
