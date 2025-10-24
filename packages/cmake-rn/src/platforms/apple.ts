@@ -210,8 +210,27 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     "arm64-apple-visionos-sim",
     "arm64;x86_64-apple-visionos-sim",
   ],
-  defaultTriplets() {
-    return process.arch === "arm64" ? ["arm64-apple-ios-sim"] : [];
+  defaultTriplets(purpose) {
+    if (purpose === "release") {
+      return [
+        "arm64;x86_64-apple-darwin",
+
+        "arm64-apple-ios",
+        "arm64;x86_64-apple-ios-sim",
+
+        "arm64-apple-tvos",
+        "arm64;x86_64-apple-tvos-sim",
+
+        "arm64-apple-visionos",
+        "arm64;x86_64-apple-visionos-sim",
+      ];
+    } else if (process.arch === "arm64") {
+      return ["arm64-apple-ios-sim"];
+    } else if (process.arch === "x64") {
+      return ["x86_64-apple-ios-sim"];
+    } else {
+      return [];
+    }
   },
   amendCommand(command) {
     return command.addOption(xcframeworkExtensionOption);

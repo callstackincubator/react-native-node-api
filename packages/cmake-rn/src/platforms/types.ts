@@ -33,6 +33,7 @@ export type Platform<
   Triplets extends string[] = string[],
   Opts extends cli.OptionValues = Record<string, unknown>,
   Command = ExtendedCommand<Opts>,
+  Triplet extends string = Triplets[number],
 > = {
   /**
    * Used to identify the platform in the CLI.
@@ -47,9 +48,12 @@ export type Platform<
    */
   triplets: Readonly<Triplets>;
   /**
-   * Get the limited subset of triplets that should be built by default for this platform, to support a development workflow.
+   * Get the limited subset of triplets that should be built by default for this platform.
+   *
    */
-  defaultTriplets(): Triplets[number][] | Promise<Triplets[number][]>;
+  defaultTriplets(
+    purpose: "development" | "release",
+  ): Readonly<Triplets> | Promise<Readonly<Triplets>>;
   /**
    * Implement this to add any platform specific options to the command.
    */
@@ -62,7 +66,7 @@ export type Platform<
    * Configure all projects for this platform.
    */
   configure(
-    triplets: TripletContext<Triplets[number]>[],
+    triplets: TripletContext<Triplet>[],
     options: BaseOpts & Opts,
     spawn: Spawn,
   ): Promise<void>;
@@ -70,7 +74,7 @@ export type Platform<
    * Platform specific command to build a triplet project.
    */
   build(
-    context: TripletContext<Triplets[number]>,
+    context: TripletContext<Triplet>,
     options: BaseOpts & Opts,
   ): Promise<void>;
   /**
@@ -81,7 +85,7 @@ export type Platform<
      * Location of the final prebuilt artefact.
      */
     outputPath: string,
-    triplets: TripletContext<Triplets[number]>[],
+    triplets: TripletContext<Triplet>[],
     options: BaseOpts & Opts,
   ): Promise<void>;
 };
