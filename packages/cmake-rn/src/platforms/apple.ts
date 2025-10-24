@@ -150,21 +150,6 @@ export const APPLE_ARCHITECTURES = {
   "arm64;x86_64-apple-visionos-sim": "arm64;x86_64",
 } satisfies Record<Triplet, AppleArchitecture>;
 
-export function createPlistContent(values: Record<string, string>) {
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
-    '<plist version="1.0">',
-    "<dict>",
-    ...Object.entries(values).flatMap(([key, value]) => [
-      `<key>${key}</key>`,
-      `<string>${value}</string>`,
-    ]),
-    "</dict>",
-    "</plist>",
-  ].join("\n");
-}
-
 const xcframeworkExtensionOption = new Option(
   "--xcframework-extension",
   "Don't rename the xcframework to .apple.node",
