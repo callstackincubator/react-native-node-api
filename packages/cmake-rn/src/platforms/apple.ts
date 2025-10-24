@@ -191,13 +191,24 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   id: "apple",
   name: "Apple",
   triplets: [
+    "arm64-apple-darwin",
+    "x86_64-apple-darwin",
     "arm64;x86_64-apple-darwin",
+
     "arm64-apple-ios",
     "arm64-apple-ios-sim",
+    "x86_64-apple-ios-sim",
+    "arm64;x86_64-apple-ios-sim",
+
     "arm64-apple-tvos",
+    "x86_64-apple-tvos-sim",
     "arm64-apple-tvos-sim",
+    "arm64;x86_64-apple-tvos-sim",
+
     "arm64-apple-visionos",
+    "x86_64-apple-visionos-sim",
     "arm64-apple-visionos-sim",
+    "arm64;x86_64-apple-visionos-sim",
   ],
   defaultTriplets() {
     return process.arch === "arm64" ? ["arm64-apple-ios-sim"] : [];
