@@ -11,16 +11,25 @@ export const ANDROID_TRIPLETS = [
 export type AndroidTriplet = (typeof ANDROID_TRIPLETS)[number];
 
 export const APPLE_TRIPLETS = [
-  "arm64;x86_64-apple-darwin",
   "x86_64-apple-darwin",
   "arm64-apple-darwin",
+  "arm64;x86_64-apple-darwin",
+
   "arm64-apple-ios",
+  "x86_64-apple-ios-sim",
   "arm64-apple-ios-sim",
+  "arm64;x86_64-apple-ios-sim",
+
   "arm64-apple-tvos",
-  "arm64-apple-tvos-sim",
   // "x86_64-apple-tvos",
+  "x86_64-apple-tvos-sim",
+  "arm64-apple-tvos-sim",
+  "arm64;x86_64-apple-tvos-sim",
+
   "arm64-apple-visionos",
+  "x86_64-apple-visionos-sim",
   "arm64-apple-visionos-sim",
+  "arm64;x86_64-apple-visionos-sim",
 ] as const;
 
 export type AppleTriplet = (typeof APPLE_TRIPLETS)[number];
