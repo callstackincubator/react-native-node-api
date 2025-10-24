@@ -5,17 +5,23 @@ import path from "node:path";
 import {
   chalk,
   Command,
+  Option,
   oraPromise,
   spawn,
   UsageError,
   wrapAction,
   prettyPath,
 } from "@react-native-node-api/cli-utils";
-import { packageDirectorySync } from "pkg-dir";
+import { packageDirectory } from "pkg-dir";
+import { readPackage } from "read-pkg";
 
-const HOST_PACKAGE_ROOT = path.resolve(__dirname, "../../..");
 // FIXME: make this configurable with reasonable fallback before public release
 const HERMES_GIT_URL = "https://github.com/kraenhansen/hermes.git";
+
+const platformOption = new Option(
+  "--react-native-package <package-name>",
+  "The React Native package to vendor Hermes into",
+).default("react-native");
 
 export const command = new Command("vendor-hermes")
   .argument("[from]", "Path to a file inside the app package", process.cwd())
@@ -25,12 +31,20 @@ export const command = new Command("vendor-hermes")
     "Don't check timestamps of input files to skip unnecessary rebuilds",
     false,
   )
+  .addOption(platformOption)
   .action(
-    wrapAction(async (from, { force, silent }) => {
-      const appPackageRoot = packageDirectorySync({ cwd: from });
+    wrapAction(async (from, { force, silent, reactNativePackage }) => {
+      const appPackageRoot = await packageDirectory({ cwd: from });
       assert(appPackageRoot, "Failed to find package root");
+
+      const { dependencies = {} } = await readPackage({ cwd: appPackageRoot });
+      assert(
+        Object.keys(dependencies).includes(reactNativePackage),
+        `Expected app to have a dependency on the '${reactNativePackage}' package`,
+      );
+
       const reactNativePath = path.dirname(
-        require.resolve("react-native/package.json", {
+        require.resolve(reactNativePackage + "/package.json", {
           // Ensures we'll be patching the React Native package actually used by the app
           paths: [appPackageRoot],
         }),
@@ -40,6 +54,11 @@ export const command = new Command("vendor-hermes")
         "sdks",
         ".hermesversion",
       );
+      assert(
+        fs.existsSync(hermesVersionPath),
+        `Expected a file with a Hermes version at ${prettyPath(hermesVersionPath)}`,
+      );
+
       const hermesVersion = fs.readFileSync(hermesVersionPath, "utf8").trim();
       if (!silent) {
         console.log(`Using Hermes version: ${hermesVersion}`);
@@ -50,7 +69,7 @@ export const command = new Command("vendor-hermes")
         "ReactCommon/jsi/jsi/",
       );
 
-      const hermesPath = path.join(HOST_PACKAGE_ROOT, "hermes");
+      const hermesPath = path.join(reactNativePath, "sdks", "node-api-hermes");
       if (force && fs.existsSync(hermesPath)) {
         await oraPromise(
           fs.promises.rm(hermesPath, { recursive: true, force: true }),
