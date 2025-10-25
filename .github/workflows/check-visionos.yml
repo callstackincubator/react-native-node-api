@@ -22,41 +22,45 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/iron
-      # Bootstrap Rust compiler with visionOS targets (tier 3)
-      # visionOS targets are not available as prebuilt targets and need to be built from source
-      - name: Clone Rust repository
-        run: git clone https://github.com/rust-lang/rust.git rust-source
-      - name: Configure Rust build for visionOS targets
+      # Install nightly Rust for -Zbuild-std support (required for tier 3 visionOS targets)
+      - name: Install Rust nightly with visionOS source
         run: |
-          cd rust-source
-          cat > config.toml << 'EOF'
-          [build]
-          target = ["x86_64-apple-darwin", "aarch64-apple-visionos", "aarch64-apple-visionos-sim"]
-          
-          [target.aarch64-apple-visionos]
-          cc = "clang"
-          cxx = "clang++"
-          
-          [target.aarch64-apple-visionos-sim]
-          cc = "clang"  
-          cxx = "clang++"
-          EOF
-      - name: Bootstrap Rust with visionOS support
+          rustup toolchain install nightly --component rust-src
+          rustup default nightly
+      # Set up Xcode and visionOS SDK (required for visionOS compilation)  
+      - name: Setup Xcode and verify visionOS SDK
         run: |
-          cd rust-source
-          ./x.py build --target aarch64-apple-visionos,aarch64-apple-visionos-sim
-        timeout-minutes: 120
-      - name: Install bootstrapped Rust toolchain
-        run: |
-          cd rust-source
-          ./x.py install --target aarch64-apple-visionos,aarch64-apple-visionos-sim
-      # Also install required iOS targets for the bootstrap process
+          sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+          # Verify visionOS SDK is available
+          if xcrun --sdk xros --show-sdk-path; then
+            echo "visionOS SDK found at: $(xcrun --sdk xros --show-sdk-path)"
+          else
+            echo "⚠️  visionOS SDK not found - may need Xcode 15+ with visionOS support"
+          fi
+      # Install required iOS targets for the bootstrap process
       - run: rustup target add aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run build
       # Bootstrap host package to get weak-node-api and ferric-example with visionOS support
       - run: npm run bootstrap --workspace react-native-node-api
-      - run: npm run bootstrap --workspace @react-native-node-api/ferric-example
+      - name: Configure Cargo for visionOS tier 3 targets
+        run: |
+          # Create cargo config to enable -Zbuild-std for tier 3 targets
+          mkdir -p packages/ferric-example/.cargo
+          cat > packages/ferric-example/.cargo/config.toml << 'EOF'
+          [unstable]
+          build-std = ["std", "panic_abort"]
+          
+          [target.aarch64-apple-visionos]
+          linker = "clang"
+          
+          [target.aarch64-apple-visionos-sim] 
+          linker = "clang"
+          EOF
+      - name: Bootstrap ferric-example with visionOS targets
+        run: npm run bootstrap --workspace @react-native-node-api/ferric-example
         env:
           CMAKE_RN_TRIPLETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
           FERRIC_TARGETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
+          # Set visionOS SDK environment variables
+          XROS_DEPLOYMENT_TARGET: "1.0"
