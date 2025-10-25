@@ -13,7 +13,7 @@
   "types": "ferric_example.d.ts",
   "scripts": {
     "build": "ferric build",
-    "bootstrap": "node --run build"
+    "bootstrap": "npm run build"
   },
   "devDependencies": {
     "ferric-cli": "*"

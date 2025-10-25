@@ -16,7 +16,7 @@
     "build-tests": "tsx scripts/build-tests.mts",
     "bundle": "rolldown -c rolldown.config.mts",
     "generate-entrypoint": "tsx scripts/generate-entrypoint.mts",
-    "bootstrap": "node --run copy-tests && node --run gyp-to-cmake && node --run build-tests && node --run bundle && node --run generate-entrypoint"
+    "bootstrap": "npm run copy-tests && npm run gyp-to-cmake && npm run build-tests && npm run bundle && npm run generate-entrypoint"
   },
   "devDependencies": {
     "cmake-rn": "*",

@@ -26,9 +26,9 @@ export const APPLE_TARGETS = [
   /*
   "aarch64-apple-tvos",
   "aarch64-apple-tvos-sim",
-  */
   "aarch64-apple-visionos",
   "aarch64-apple-visionos-sim",
+  */
 
   // "aarch64-apple-watchos",
   // "aarch64-apple-watchos-sim",
