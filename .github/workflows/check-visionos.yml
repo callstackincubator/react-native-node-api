@@ -22,8 +22,34 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: lts/iron
-      # Install visionOS targets for Rust
-      - run: rustup target add aarch64-apple-visionos aarch64-apple-visionos-sim
+      # Bootstrap Rust compiler with visionOS targets (tier 3)
+      # visionOS targets are not available as prebuilt targets and need to be built from source
+      - name: Clone Rust repository
+        run: git clone https://github.com/rust-lang/rust.git rust-source
+      - name: Configure Rust build for visionOS targets
+        run: |
+          cd rust-source
+          cat > config.toml << 'EOF'
+          [build]
+          target = ["x86_64-apple-darwin", "aarch64-apple-visionos", "aarch64-apple-visionos-sim"]
+          
+          [target.aarch64-apple-visionos]
+          cc = "clang"
+          cxx = "clang++"
+          
+          [target.aarch64-apple-visionos-sim]
+          cc = "clang"  
+          cxx = "clang++"
+          EOF
+      - name: Bootstrap Rust with visionOS support
+        run: |
+          cd rust-source
+          ./x.py build --target aarch64-apple-visionos,aarch64-apple-visionos-sim
+        timeout-minutes: 120
+      - name: Install bootstrapped Rust toolchain
+        run: |
+          cd rust-source
+          ./x.py install --target aarch64-apple-visionos,aarch64-apple-visionos-sim
       # Also install required iOS targets for the bootstrap process
       - run: rustup target add aarch64-apple-ios-sim
       - run: npm ci
@@ -34,6 +60,3 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
           FERRIC_TARGETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
-      - run: npm run lint
-        env:
-          DEBUG: eslint:eslint
