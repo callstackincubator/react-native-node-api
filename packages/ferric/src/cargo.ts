@@ -28,8 +28,8 @@ const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   // "x86_64-apple-ios-macabi": "ios-x86_64-simulator",
   // "aarch64-apple-tvos": "tvos-arm64",
   // "aarch64-apple-tvos-sim": "tvos-arm64-simulator",
-  // "aarch64-apple-visionos": "xros-arm64",
-  // "aarch64-apple-visionos-sim": "xros-arm64-simulator",
+  "aarch64-apple-visionos": "xros-arm64",
+  "aarch64-apple-visionos-sim": "xros-arm64-simulator",
 };
 
 const ANDROID_ARCH_PR_TARGET: Record<AndroidTargetName, string> = {
