@@ -43,24 +43,49 @@ jobs:
       - run: npm run build
       # Bootstrap host package to get weak-node-api and ferric-example with visionOS support
       - run: npm run bootstrap --workspace react-native-node-api
-      - name: Configure Cargo for visionOS tier 3 targets
+      - name: Configure Cargo for visionOS tier 3 targets with build-std
         run: |
-          # Create cargo config to enable -Zbuild-std for tier 3 targets
+          # Create cargo config for build-std support (tier 3 visionOS targets)
+          # Per official docs: build-std requires nightly Cargo + rustc + rust-src component
           mkdir -p packages/ferric-example/.cargo
           cat > packages/ferric-example/.cargo/config.toml << 'EOF'
           [unstable]
           build-std = ["std", "panic_abort"]
           
+          [build]
+          target = ["aarch64-apple-visionos", "aarch64-apple-visionos-sim"]
+          
           [target.aarch64-apple-visionos]
           linker = "clang"
           
-          [target.aarch64-apple-visionos-sim] 
+          [target.aarch64-apple-visionos-sim]
           linker = "clang"
           EOF
-      - name: Bootstrap ferric-example with visionOS targets
-        run: npm run bootstrap --workspace @react-native-node-api/ferric-example
+          
+          # Verify cargo config is properly set
+          echo "Cargo config created:"
+          cat packages/ferric-example/.cargo/config.toml
+      - name: Verify build-std setup and bootstrap ferric-example
+        run: |
+          # Verify nightly toolchain and components
+          echo "=== Rust Toolchain Info ==="
+          rustc --version
+          cargo --version
+          rustup component list --installed --toolchain nightly
+          
+          echo "=== Testing visionOS SDK availability ==="
+          xcrun --sdk xros --show-sdk-path || echo "visionOS SDK not available - continuing anyway"
+          
+          echo "=== Bootstrapping ferric-example with visionOS targets ==="
+          cd packages/ferric-example
+          ls -la .cargo/ || echo "No .cargo dir found"
+          cat .cargo/config.toml || echo "No config found" 
+          cd ../..
+          
+          # Bootstrap ferric-example with visionOS targets  
+          npm run bootstrap --workspace @react-native-node-api/ferric-example
         env:
           CMAKE_RN_TRIPLETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
           FERRIC_TARGETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
-          # Set visionOS SDK environment variables
+          # visionOS SDK configuration
           XROS_DEPLOYMENT_TARGET: "1.0"
