@@ -311,34 +311,54 @@ export const buildCommand = new Command("build")
     ),
   );
 
+async function createUniversalAppleLibraries(libraryPathGroups: string[][]) {
+  const result = await oraPromise(
+    Promise.all(
+      libraryPathGroups.map(async (libraryPaths) => {
+        if (libraryPaths.length === 0) {
+          return [];
+        } else if (libraryPaths.length === 1) {
+          return libraryPaths;
+        } else {
+          return [await createUniversalAppleLibrary(libraryPaths)];
+        }
+      }),
+    ),
+    {
+      text: "Combining arch-specific libraries into universal libraries",
+      successText: "Combined arch-specific libraries into universal libraries",
+      failText: (error) =>
+        `Failed to combine arch-specific libraries: ${error.message}`,
+    },
+  );
+  return result.flat();
+}
+
 async function combineLibraries(
   libraries: Readonly<[AppleTargetName, string]>[],
 ): Promise<string[]> {
   const result = [];
   const darwinLibraries = [];
+  const iosSimulatorLibraries = [];
   for (const [target, libraryPath] of libraries) {
     if (target.endsWith("-darwin")) {
       darwinLibraries.push(libraryPath);
+    } else if (
+      target === "aarch64-apple-ios-sim" ||
+      target === "x86_64-apple-ios" // Simulator despite name missing -sim suffix
+    ) {
+      iosSimulatorLibraries.push(libraryPath);
     } else {
       result.push(libraryPath);
     }
   }
-  if (darwinLibraries.length === 0) {
-    return result;
-  } else if (darwinLibraries.length === 1) {
-    return [...result, darwinLibraries[0]];
-  } else {
-    const universalPath = await oraPromise(
-      createUniversalAppleLibrary(darwinLibraries),
-      {
-        text: "Combining Darwin libraries into a universal library",
-        successText: "Combined Darwin libraries into a universal library",
-        failText: (error) =>
-          `Failed to combine Darwin libraries: ${error.message}`,
-      },
-    );
-    return [...result, universalPath];
-  }
+
+  const combinedLibraryPaths = await createUniversalAppleLibraries([
+    darwinLibraries,
+    iosSimulatorLibraries,
+  ]);
+
+  return [...result, ...combinedLibraryPaths];
 }
 
 export function isAndroidSupported() {

@@ -131,11 +131,17 @@ export function determineXCFrameworkFilename(
 }
 
 export async function createUniversalAppleLibrary(libraryPaths: string[]) {
+  assert(
+    libraryPaths.length > 0,
+    "Expected at least one library to create a universal library",
+  );
   // Determine the output path
   const filenames = new Set(libraryPaths.map((p) => path.basename(p)));
   assert(
     filenames.size === 1,
-    "Expected all darwin libraries to have the same name",
+    `Expected libraries to have the same name, but got: ${[...filenames].join(
+      ", ",
+    )}`,
   );
   const [filename] = filenames;
   const lipoParentPath = fs.realpathSync(

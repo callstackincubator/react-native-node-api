@@ -16,10 +16,12 @@ export type AndroidTargetName = (typeof ANDROID_TARGETS)[number];
 export const APPLE_TARGETS = [
   "aarch64-apple-darwin",
   "x86_64-apple-darwin",
+
   "aarch64-apple-ios",
   "aarch64-apple-ios-sim",
+  "x86_64-apple-ios", // Simulator (despite the missing -sim suffix)
+
   // "aarch64-apple-ios-macabi", // Catalyst
-  // "x86_64-apple-ios",
   // "x86_64-apple-ios-macabi", // Catalyst
 
   // TODO: Re-enabled these when we know how to install them 🙈
