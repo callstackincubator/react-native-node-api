@@ -37,7 +37,7 @@ jobs:
           else
             echo "⚠️  visionOS SDK not found - may need Xcode 15+ with visionOS support"
           fi
-      # Install required iOS targets for the bootstrap process
+      # Install required iOS target for the bootstrap process
       - run: rustup target add aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run build
@@ -67,6 +67,14 @@ jobs:
           # Verify cargo config is properly set
           echo "Cargo config created:"
           cat packages/ferric-example/.cargo/config.toml
+      # Install visionOS targets after cargo configuration (tier 3 targets with build-std)
+      - name: Install visionOS Rust targets
+        run: |
+          echo "Attempting to install visionOS targets..."
+          rustup target add aarch64-apple-visionos aarch64-apple-visionos-sim || {
+            echo "⚠️ visionOS targets not available as prebuilt - relying on build-std"
+            echo "This is expected for tier 3 targets"
+          }
       - name: Verify build-std setup and bootstrap ferric-example
         run: |
           # Verify nightly toolchain and components
@@ -74,6 +82,9 @@ jobs:
           rustc --version
           cargo --version
           rustup component list --installed --toolchain nightly
+          
+          echo "=== Installed Rust Targets ==="
+          rustup target list --installed --toolchain nightly
           
           echo "=== Testing visionOS SDK availability ==="
           xcrun --sdk xros --show-sdk-path || echo "visionOS SDK not available - continuing anyway"
