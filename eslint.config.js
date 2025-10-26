@@ -1,6 +1,6 @@
 // @ts-check
 
-import { globalIgnores } from "eslint/config";
+// import { globalIgnores } from "eslint/config";
 import globals from "globals";
 import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
@@ -10,7 +10,8 @@ import nodePlugin from "eslint-plugin-n";
 import unusedImports from "eslint-plugin-unused-imports";
 
 export default tseslint.config(
-  globalIgnores([
+  {
+    ignores: [
     "**/dist/**",
     "**/build/**",
     "apps/test-app/ios/**",
@@ -23,7 +24,8 @@ export default tseslint.config(
     "packages/node-tests/tests/**",
     "packages/node-tests/*.generated.js",
     "packages/node-tests/*.generated.d.ts",
-  ]),
+  ],
+  },
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
   {
@@ -138,6 +140,13 @@ export default tseslint.config(
       globals: {
         ...globals.node,
       },
+    },
+  },
+  {
+    // Exception for test files: allow regular functions in describe() and it() callbacks
+    files: ["**/*.test.ts", "**/*.spec.ts"],
+    rules: {
+      "prefer-arrow-callback": "off",
     },
   },
 );

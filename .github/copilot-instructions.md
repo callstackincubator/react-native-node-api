@@ -61,7 +61,7 @@ npm run bootstrap           # Build native components (weak-node-api, examples)
 **Function Style**:
 - Prefer `export function` over `export const fn =`
 - Use async/await consistently for asynchronous operations
-- Prefer arrow functions for callbacks and inline functions
+- Prefer arrow functions for callbacks and inline functions (except in tests where `describe` and `it` use regular functions)
 
 **Error Handling**:
 - Prefer `assert()` from `node:assert/strict` over throwing errors directly
