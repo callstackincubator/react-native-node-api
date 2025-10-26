@@ -44,7 +44,7 @@ jobs:
       # Bootstrap host package to get weak-node-api and ferric-example with visionOS support
       - run: npm run bootstrap --workspace react-native-node-api
         env:
-          CMAKE_RN_TRIPLETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
+          CMAKE_RN_TRIPLETS: arm64-apple-visionos,arm64-apple-visionos-sim
       - name: Configure Cargo for visionOS tier 3 targets with build-std
         run: |
           # Create cargo config for build-std support (tier 3 visionOS targets)
@@ -87,7 +87,7 @@ jobs:
           # Bootstrap ferric-example with visionOS targets  
           npm run bootstrap --workspace @react-native-node-api/ferric-example
         env:
-          CMAKE_RN_TRIPLETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
+          CMAKE_RN_TRIPLETS: arm64-apple-visionos,arm64-apple-visionos-sim
           FERRIC_TARGETS: aarch64-apple-visionos,aarch64-apple-visionos-sim
           # visionOS SDK configuration
           XROS_DEPLOYMENT_TARGET: "1.0"
