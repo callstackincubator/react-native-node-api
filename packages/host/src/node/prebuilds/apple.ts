@@ -6,23 +6,7 @@ import os from "node:os";
 import plist from "@expo/plist";
 import { spawn } from "@react-native-node-api/cli-utils";
 
-import { AppleTriplet } from "./triplets.js";
 import { determineLibraryBasename } from "../path-utils.js";
-
-type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
-
-export const APPLE_ARCHITECTURES = {
-  "x86_64-apple-darwin": "x86_64",
-  "arm64-apple-darwin": "arm64",
-  "arm64;x86_64-apple-darwin": "arm64;x86_64",
-  "arm64-apple-ios": "arm64",
-  "arm64-apple-ios-sim": "arm64",
-  "arm64-apple-tvos": "arm64",
-  // "x86_64-apple-tvos": "x86_64",
-  "arm64-apple-tvos-sim": "arm64",
-  "arm64-apple-visionos": "arm64",
-  "arm64-apple-visionos-sim": "arm64",
-} satisfies Record<AppleTriplet, AppleArchitecture>;
 
 type XCframeworkOptions = {
   frameworkPaths: string[];

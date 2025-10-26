@@ -62,13 +62,22 @@ const XCODE_SDK_NAMES = {
   "x86_64-apple-darwin": "macosx",
   "arm64-apple-darwin": "macosx",
   "arm64;x86_64-apple-darwin": "macosx",
+
   "arm64-apple-ios": "iphoneos",
   "arm64-apple-ios-sim": "iphonesimulator",
-  "arm64-apple-tvos": "appletvos",
+  "x86_64-apple-ios-sim": "iphonesimulator",
+  "arm64;x86_64-apple-ios-sim": "iphonesimulator",
+
   // "x86_64-apple-tvos": "appletvos",
+  "arm64-apple-tvos": "appletvos",
+  "x86_64-apple-tvos-sim": "appletvsimulator",
   "arm64-apple-tvos-sim": "appletvsimulator",
+  "arm64;x86_64-apple-tvos-sim": "appletvsimulator",
+
   "arm64-apple-visionos": "xros",
   "arm64-apple-visionos-sim": "xrsimulator",
+  "x86_64-apple-visionos-sim": "xrsimulator",
+  "arm64;x86_64-apple-visionos-sim": "xrsimulator",
 } satisfies Record<Triplet, XcodeSDKName>;
 
 type CMakeSystemName = "Darwin" | "iOS" | "tvOS" | "watchOS" | "visionOS";
@@ -77,27 +86,44 @@ const CMAKE_SYSTEM_NAMES = {
   "x86_64-apple-darwin": "Darwin",
   "arm64-apple-darwin": "Darwin",
   "arm64;x86_64-apple-darwin": "Darwin",
+
   "arm64-apple-ios": "iOS",
   "arm64-apple-ios-sim": "iOS",
-  "arm64-apple-tvos": "tvOS",
+  "x86_64-apple-ios-sim": "iOS",
+  "arm64;x86_64-apple-ios-sim": "iOS",
+
   // "x86_64-apple-tvos": "appletvos",
+  "arm64-apple-tvos": "tvOS",
   "arm64-apple-tvos-sim": "tvOS",
+  "x86_64-apple-tvos-sim": "tvOS",
+  "arm64;x86_64-apple-tvos-sim": "tvOS",
+
   "arm64-apple-visionos": "visionOS",
+  "x86_64-apple-visionos-sim": "visionOS",
   "arm64-apple-visionos-sim": "visionOS",
+  "arm64;x86_64-apple-visionos-sim": "visionOS",
 } satisfies Record<Triplet, CMakeSystemName>;
 
 const DESTINATION_BY_TRIPLET = {
+  "x86_64-apple-darwin": "generic/platform=macOS",
+  "arm64-apple-darwin": "generic/platform=macOS",
+  "arm64;x86_64-apple-darwin": "generic/platform=macOS",
+
   "arm64-apple-ios": "generic/platform=iOS",
   "arm64-apple-ios-sim": "generic/platform=iOS Simulator",
+  "x86_64-apple-ios-sim": "generic/platform=iOS Simulator",
+  "arm64;x86_64-apple-ios-sim": "generic/platform=iOS Simulator",
+
   "arm64-apple-tvos": "generic/platform=tvOS",
   // "x86_64-apple-tvos": "generic/platform=tvOS",
+  "x86_64-apple-tvos-sim": "generic/platform=tvOS Simulator",
   "arm64-apple-tvos-sim": "generic/platform=tvOS Simulator",
+  "arm64;x86_64-apple-tvos-sim": "generic/platform=tvOS Simulator",
+
   "arm64-apple-visionos": "generic/platform=visionOS",
   "arm64-apple-visionos-sim": "generic/platform=visionOS Simulator",
-  // TODO: Verify that the three following destinations are correct and actually work
-  "x86_64-apple-darwin": "generic/platform=macOS,arch=x86_64",
-  "arm64-apple-darwin": "generic/platform=macOS,arch=arm64",
-  "arm64;x86_64-apple-darwin": "generic/platform=macOS",
+  "x86_64-apple-visionos-sim": "generic/platform=visionOS Simulator",
+  "arm64;x86_64-apple-visionos-sim": "generic/platform=visionOS Simulator",
 } satisfies Record<Triplet, string>;
 
 type AppleArchitecture = "arm64" | "x86_64" | "arm64;x86_64";
@@ -106,29 +132,23 @@ export const APPLE_ARCHITECTURES = {
   "x86_64-apple-darwin": "x86_64",
   "arm64-apple-darwin": "arm64",
   "arm64;x86_64-apple-darwin": "arm64;x86_64",
+
   "arm64-apple-ios": "arm64",
   "arm64-apple-ios-sim": "arm64",
-  "arm64-apple-tvos": "arm64",
-  // "x86_64-apple-tvos": "x86_64",
-  "arm64-apple-tvos-sim": "arm64",
-  "arm64-apple-visionos": "arm64",
-  "arm64-apple-visionos-sim": "arm64",
-} satisfies Record<Triplet, AppleArchitecture>;
+  "x86_64-apple-ios-sim": "x86_64",
+  "arm64;x86_64-apple-ios-sim": "arm64;x86_64",
 
-export function createPlistContent(values: Record<string, string>) {
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
-    '<plist version="1.0">',
-    "<dict>",
-    ...Object.entries(values).flatMap(([key, value]) => [
-      `<key>${key}</key>`,
-      `<string>${value}</string>`,
-    ]),
-    "</dict>",
-    "</plist>",
-  ].join("\n");
-}
+  // "x86_64-apple-tvos": "x86_64",
+  "arm64-apple-tvos": "arm64",
+  "arm64-apple-tvos-sim": "arm64",
+  "x86_64-apple-tvos-sim": "x86_64",
+  "arm64;x86_64-apple-tvos-sim": "arm64;x86_64",
+
+  "arm64-apple-visionos": "arm64",
+  "x86_64-apple-visionos-sim": "x86_64",
+  "arm64-apple-visionos-sim": "arm64",
+  "arm64;x86_64-apple-visionos-sim": "arm64;x86_64",
+} satisfies Record<Triplet, AppleArchitecture>;
 
 const xcframeworkExtensionOption = new Option(
   "--xcframework-extension",
@@ -171,16 +191,46 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   id: "apple",
   name: "Apple",
   triplets: [
+    "arm64-apple-darwin",
+    "x86_64-apple-darwin",
     "arm64;x86_64-apple-darwin",
+
     "arm64-apple-ios",
     "arm64-apple-ios-sim",
+    "x86_64-apple-ios-sim",
+    "arm64;x86_64-apple-ios-sim",
+
     "arm64-apple-tvos",
+    "x86_64-apple-tvos-sim",
     "arm64-apple-tvos-sim",
+    "arm64;x86_64-apple-tvos-sim",
+
     "arm64-apple-visionos",
+    "x86_64-apple-visionos-sim",
     "arm64-apple-visionos-sim",
+    "arm64;x86_64-apple-visionos-sim",
   ],
-  defaultTriplets() {
-    return process.arch === "arm64" ? ["arm64-apple-ios-sim"] : [];
+  defaultTriplets(mode) {
+    if (mode === "all") {
+      return [
+        "arm64;x86_64-apple-darwin",
+
+        "arm64-apple-ios",
+        "arm64;x86_64-apple-ios-sim",
+
+        "arm64-apple-tvos",
+        "arm64;x86_64-apple-tvos-sim",
+
+        "arm64-apple-visionos",
+        "arm64;x86_64-apple-visionos-sim",
+      ];
+    } else if (mode === "current-development") {
+      // We're applying a heuristic to determine the current simulators
+      // TODO: Run a command to probe the currently running simulators instead
+      return ["arm64;x86_64-apple-ios-sim"];
+    } else {
+      throw new Error(`Unexpected mode: ${mode as string}`);
+    }
   },
   amendCommand(command) {
     return command.addOption(xcframeworkExtensionOption);
