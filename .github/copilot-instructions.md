@@ -68,7 +68,6 @@ npm run bootstrap           # Build native components (weak-node-api, examples)
 - Use structured error handling with custom error types when needed
 
 **Immutable Data Patterns**:
-- Use `as const satisfies Record<string, z.ZodType>` for Zod schemas
 - Prefer readonly data structures where applicable
 - Use `const` assertions for compile-time immutability
 
