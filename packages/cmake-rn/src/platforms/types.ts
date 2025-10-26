@@ -49,10 +49,9 @@ export type Platform<
   triplets: Readonly<Triplets>;
   /**
    * Get the limited subset of triplets that should be built by default for this platform.
-   *
    */
   defaultTriplets(
-    purpose: "development" | "release",
+    mode: "current-development" | "all",
   ): Triplet[] | Promise<Triplet[]>;
   /**
    * Implement this to add any platform specific options to the command.

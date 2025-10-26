@@ -100,15 +100,21 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     "i686-linux-android",
     "x86_64-linux-android",
   ],
-  defaultTriplets(purpose) {
-    if (purpose === "release") {
+  defaultTriplets(mode) {
+    if (mode === "all") {
       return [...this.triplets];
-    } else if (process.arch === "arm64") {
-      return ["aarch64-linux-android"];
-    } else if (process.arch === "x64") {
-      return ["x86_64-linux-android"];
+    } else if (mode === "current-development") {
+      // We're applying a heuristic to determine the current simulators
+      // TODO: Run a command to probe the currently running emulators instead
+      if (process.arch === "arm64") {
+        return ["aarch64-linux-android"];
+      } else if (process.arch === "x64") {
+        return ["x86_64-linux-android"];
+      } else {
+        return [];
+      }
     } else {
-      return [];
+      throw new Error(`Unexpected mode: ${mode as string}`);
     }
   },
   amendCommand(command) {

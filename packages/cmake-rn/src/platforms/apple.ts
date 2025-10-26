@@ -210,8 +210,8 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     "arm64-apple-visionos-sim",
     "arm64;x86_64-apple-visionos-sim",
   ],
-  defaultTriplets(purpose) {
-    if (purpose === "release") {
+  defaultTriplets(mode) {
+    if (mode === "all") {
       return [
         "arm64;x86_64-apple-darwin",
 
@@ -224,8 +224,12 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         "arm64-apple-visionos",
         "arm64;x86_64-apple-visionos-sim",
       ];
-    } else {
+    } else if (mode === "current-development") {
+      // We're applying a heuristic to determine the current simulators
+      // TODO: Run a command to probe the currently running simulators instead
       return ["arm64;x86_64-apple-ios-sim"];
+    } else {
+      throw new Error(`Unexpected mode: ${mode as string}`);
     }
   },
   amendCommand(command) {
