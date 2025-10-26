@@ -1,5 +1,5 @@
 import { chalk, UsageError, assertFixable } from "@react-native-node-api/cli-utils";
-import { getInstalledTargets } from "./rustup.js";
+import { getInstalledTargets, isBuildStdAvailable } from "./rustup.js";
 
 export const ANDROID_TARGETS = [
   "aarch64-linux-android",
@@ -69,7 +69,7 @@ export function isTier3Target(target: TargetName): boolean {
 }
 
 /**
- * Ensure the targets are installed into the Rust toolchain
+ * Ensure the targets are available for building
  * We do this up-front because the error message and fix is very unclear from the failure when missing.
  */
 export function ensureInstalledTargets(expectedTargets: Set<TargetName>) {
@@ -93,29 +93,27 @@ export function ensureInstalledTargets(expectedTargets: Set<TargetName>) {
   );
 
   // Handle tier 3 targets that require build-std setup
-  // Check if tier 3 targets are properly configured (included in installedTargets means they're available)
-  const missingTier3Targets = new Set([
-    ...[...tier3Targets].filter((target) => !installedTargets.has(target)),
-  ]);
-
-  assertFixable(
-    missingTier3Targets.size === 0,
-    `You're using tier 3 targets (${[...missingTier3Targets].join(", ")}) that require building the standard library from source`,
-    {
-      instructions:
-        `To set up support for these targets:\n\n` +
-        `1. Install nightly Rust with the rust-src component:\n` +
-        `   ${chalk.italic("rustup toolchain install nightly --component rust-src")}\n\n` +
-        `2. Configure Cargo to use build-std by creating a .cargo/config.toml file:\n` +
-        `   ${chalk.italic("[unstable]")}\n` +
-        `   ${chalk.italic('build-std = ["std", "panic_abort"]')}\n\n` +
-        `3. Set your default toolchain to nightly:\n` +
-        `   ${chalk.italic("rustup default nightly")}\n\n` +
-        `For more information, see:\n` +
-        `- Rust Platform Support: ${chalk.italic("https://doc.rust-lang.org/rustc/platform-support.html")}\n` +
-        `- Cargo build-std: ${chalk.italic("https://doc.rust-lang.org/cargo/reference/unstable.html#build-std")}`,
-    },
-  );
+  if (tier3Targets.size > 0) {
+    // For tier 3 targets, check if build-std prerequisites are met
+    assertFixable(
+      isBuildStdAvailable(),
+      `You're using tier 3 targets (${[...tier3Targets].join(", ")}) that require building the standard library from source`,
+      {
+        instructions:
+          `To set up support for these targets:\n\n` +
+          `1. Install nightly Rust with the rust-src component:\n` +
+          `   ${chalk.italic("rustup toolchain install nightly --component rust-src")}\n\n` +
+          `2. Configure Cargo to use build-std by creating a .cargo/config.toml file:\n` +
+          `   ${chalk.italic("[unstable]")}\n` +
+          `   ${chalk.italic('build-std = ["std", "panic_abort"]')}\n\n` +
+          `3. Set your default toolchain to nightly:\n` +
+          `   ${chalk.italic("rustup default nightly")}\n\n` +
+          `For more information, see:\n` +
+          `- Rust Platform Support: ${chalk.italic("https://doc.rust-lang.org/rustc/platform-support.html")}\n` +
+          `- Cargo build-std: ${chalk.italic("https://doc.rust-lang.org/cargo/reference/unstable.html#build-std")}`,
+      },
+    );
+  }
 }
 
 export function isAndroidTarget(
