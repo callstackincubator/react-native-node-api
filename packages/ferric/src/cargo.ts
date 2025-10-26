@@ -216,6 +216,10 @@ export function getTargetEnvironmentVariables({
     };
   } else if (isAppleTarget(target)) {
     const weakNodeApiFrameworkPath = getWeakNodeApiFrameworkPath(target);
+    assert(
+      fs.existsSync(weakNodeApiFrameworkPath),
+      `Expected weak-node-api framework at ${weakNodeApiFrameworkPath}`,
+    );
     return {
       CARGO_ENCODED_RUSTFLAGS: [
         "-L",
