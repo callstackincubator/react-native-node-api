@@ -6,4 +6,4 @@ import { buildCommand } from "./build.js";
 export const program = new Command("ferric")
   .hook("preAction", () => printBanner())
   .description("Rust Node-API Modules for React Native")
-  .addCommand(buildCommand);
+  .addCommand(buildCommand, { isDefault: true });
