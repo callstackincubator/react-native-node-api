@@ -21,10 +21,12 @@ import {
 const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   "aarch64-apple-darwin": "macos-arm64_x86_64", // Universal
   "x86_64-apple-darwin": "macos-arm64_x86_64", // Universal
+
   "aarch64-apple-ios": "ios-arm64",
   "aarch64-apple-ios-sim": "ios-arm64_x86_64-simulator", // Universal
+  "x86_64-apple-ios": "ios-arm64_x86_64-simulator", // Universal
+
   // "aarch64-apple-ios-macabi": "", // Catalyst
-  // "x86_64-apple-ios": "ios-x86_64",
   // "x86_64-apple-ios-macabi": "ios-x86_64-simulator",
   // "aarch64-apple-tvos": "tvos-arm64",
   // "aarch64-apple-tvos-sim": "tvos-arm64-simulator",
