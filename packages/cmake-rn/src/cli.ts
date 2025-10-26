@@ -219,6 +219,11 @@ program = program.action(
     const tripletContexts = [...triplets].map((triplet) => {
       const platform = findPlatformForTriplet(triplet);
 
+      assert(
+        platform.isSupportedByHost(),
+        `Triplet '${triplet}' cannot be built, as the '${platform.name}' platform is not supported on a '${process.platform}' host.`,
+      );
+
       return {
         triplet,
         platform,
