@@ -46,6 +46,32 @@ npm run bootstrap           # Build native components (weak-node-api, examples)
 
 ## Key Patterns
 
+### Code Style and Conventions
+
+**Import Organization**:
+- Use Node.js built-in prefix: `import assert from "node:assert/strict"`
+- Group imports: builtin → external → internal → local
+- Prefer type-only imports: `import type { NodePath } from "@babel/core"`
+
+**Type Definitions**:
+- Prefer `type` over `interface` for simple types and unions
+- Use `as const` for readonly arrays and objects: `const PLATFORMS = ["android", "apple"] as const`
+- Common pattern: `type PlatformName = (typeof PLATFORMS)[number]`
+
+**Function Style**:
+- Prefer `export function` over `export const fn =`
+- Use async/await consistently for asynchronous operations
+- Prefer arrow functions for callbacks and inline functions
+
+**Error Handling**:
+- Prefer `assert()` from `node:assert/strict` over throwing errors directly
+- Use structured error handling with custom error types when needed
+
+**Immutable Data Patterns**:
+- Use `as const satisfies Record<string, z.ZodType>` for Zod schemas
+- Prefer readonly data structures where applicable
+- Use `const` assertions for compile-time immutability
+
 ### Babel Transformation
 
 The core magic happens in `packages/host/src/node/babel-plugin/plugin.ts`:
