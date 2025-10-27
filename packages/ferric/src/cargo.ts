@@ -16,6 +16,7 @@ import {
   AppleTargetName,
   isAndroidTarget,
   isAppleTarget,
+  isThirdTierTarget,
 } from "./targets.js";
 
 const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
@@ -26,12 +27,15 @@ const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   "aarch64-apple-ios-sim": "ios-arm64_x86_64-simulator", // Universal
   "x86_64-apple-ios": "ios-arm64_x86_64-simulator", // Universal
 
+  "aarch64-apple-visionos": "xros-arm64",
+  "aarch64-apple-visionos-sim": "xros-arm64_x86_64-simulator", // Universal
+  // The x86_64 target for vision simulator isn't supported
+  // see https://doc.rust-lang.org/rustc/platform-support.html
+
   // "aarch64-apple-ios-macabi": "", // Catalyst
   // "x86_64-apple-ios-macabi": "ios-x86_64-simulator",
   // "aarch64-apple-tvos": "tvos-arm64",
   // "aarch64-apple-tvos-sim": "tvos-arm64-simulator",
-  // "aarch64-apple-visionos": "xros-arm64",
-  // "aarch64-apple-visionos-sim": "xros-arm64-simulator",
 };
 
 const ANDROID_ARCH_PR_TARGET: Record<AndroidTargetName, string> = {
@@ -83,6 +87,14 @@ export async function build(options: BuildOptions) {
   const args = ["build", "--target", target];
   if (configuration.toLowerCase() === "release") {
     args.push("--release");
+  }
+  if (isThirdTierTarget(target)) {
+    // Use the nightly toolchain for third tier targets
+    args.splice(0, 0, "+nightly");
+    // Passing the nightly "build-std" to
+    // > Enable Cargo to compile the standard library itself as part of a crate graph compilation
+    // See https://doc.rust-lang.org/rustc/platform-support/apple-visionos.html#building-the-target
+    args.push("-Z", "build-std=std,panic_abort");
   }
   await spawn("cargo", args, {
     outputMode: "buffered",
