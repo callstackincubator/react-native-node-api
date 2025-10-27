@@ -1,5 +1,5 @@
-import { chalk, UsageError, assertFixable } from "@react-native-node-api/cli-utils";
-import { getInstalledTargets, isBuildStdAvailable } from "./rustup.js";
+import { chalk, UsageError } from "@react-native-node-api/cli-utils";
+import { getInstalledTargets } from "./rustup.js";
 
 export const ANDROID_TARGETS = [
   "aarch64-linux-android",
@@ -26,9 +26,9 @@ export const APPLE_TARGETS = [
   /*
   "aarch64-apple-tvos",
   "aarch64-apple-tvos-sim",
-  */
   "aarch64-apple-visionos",
   "aarch64-apple-visionos-sim",
+  */
 
   // "aarch64-apple-watchos",
   // "aarch64-apple-watchos-sim",
@@ -50,68 +50,22 @@ export const ALL_TARGETS = [...ANDROID_TARGETS, ...APPLE_TARGETS] as const;
 export type TargetName = (typeof ALL_TARGETS)[number];
 
 /**
- * Tier 3 Rust targets that are not available via `rustup target add` 
- * and require building the standard library from source using `-Zbuild-std`.
- * 
- * @see https://doc.rust-lang.org/rustc/platform-support.html
- * @see https://doc.rust-lang.org/cargo/reference/unstable.html#build-std
- */
-export const TIER_3_TARGETS: readonly TargetName[] = [
-  "aarch64-apple-visionos",
-  "aarch64-apple-visionos-sim",
-] as const;
-
-/**
- * Check if a target is a tier 3 target that requires build-std
- */
-export function isTier3Target(target: TargetName): boolean {
-  return (TIER_3_TARGETS as readonly string[]).includes(target);
-}
-
-/**
- * Ensure the targets are available for building
+ * Ensure the targets are installed into the Rust toolchain
  * We do this up-front because the error message and fix is very unclear from the failure when missing.
  */
 export function ensureInstalledTargets(expectedTargets: Set<TargetName>) {
   const installedTargets = getInstalledTargets();
-  const missingStandardTargets = new Set([
-    ...[...expectedTargets].filter(
-      (target) => !installedTargets.has(target) && !isTier3Target(target),
-    ),
+  const missingTargets = new Set([
+    ...[...expectedTargets].filter((target) => !installedTargets.has(target)),
   ]);
-  const tier3Targets = new Set([
-    ...[...expectedTargets].filter((target) => isTier3Target(target)),
-  ]);
-
-  // Handle standard targets that can be installed via rustup
-  assertFixable(
-    missingStandardTargets.size === 0,
-    `You're missing ${missingStandardTargets.size} targets`,
-    {
-      command: `rustup target add ${[...missingStandardTargets].join(" ")}`,
-    },
-  );
-
-  // Handle tier 3 targets that require build-std setup
-  if (tier3Targets.size > 0) {
-    // For tier 3 targets, check if build-std prerequisites are met
-    assertFixable(
-      isBuildStdAvailable(),
-      `You're using tier 3 targets (${[...tier3Targets].join(", ")}) that require building the standard library from source`,
-      {
-        instructions:
-          `To set up support for these targets:\n\n` +
-          `1. Install nightly Rust with the rust-src component:\n` +
-          `   ${chalk.italic("rustup toolchain install nightly --component rust-src")}\n\n` +
-          `2. Configure Cargo to use build-std by creating a .cargo/config.toml file:\n` +
-          `   ${chalk.italic("[unstable]")}\n` +
-          `   ${chalk.italic('build-std = ["std", "panic_abort"]')}\n\n` +
-          `3. Set your default toolchain to nightly:\n` +
-          `   ${chalk.italic("rustup default nightly")}\n\n` +
-          `For more information, see:\n` +
-          `- Rust Platform Support: ${chalk.italic("https://doc.rust-lang.org/rustc/platform-support.html")}\n` +
-          `- Cargo build-std: ${chalk.italic("https://doc.rust-lang.org/cargo/reference/unstable.html#build-std")}`,
-      },
+  if (missingTargets.size > 0) {
+    // TODO: Ask the user if they want to run this
+    throw new UsageError(
+      `You're missing ${
+        missingTargets.size
+      } targets - to fix this, run:\n\n${chalk.italic(
+        `rustup target add ${[...missingTargets].join(" ")}`,
+      )}`,
     );
   }
 }
