@@ -74,4 +74,16 @@ Library names use double-dash separation: `package-name--path-component--addon-n
 - **Cross-package**: Use root-level `npm test` for cross-package testing once individual package tests pass
 - **Mobile integration**: Available but not the primary AI development focus - ask the developer to run those tests as needed
 
+## Rust/Ferric Integration Patterns
+
+### Target Management
+- Use `Set<TargetName>` for target collections, leverage `Set.intersection()` and `Set.has()`
+- Rename functions when responsibilities change: `ensureInstalledTargets` → `ensureAvailableTargets`
+- Separate tier 3 target validation into dedicated functions like `assertNightlyToolchain()`
+
+### Workflow Development
+- Add jobs to existing `.github/workflows/check.yml` instead of creating new workflow files
+- Use conditional execution: `if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Ferric 🦀')`
+- Keep workflow steps minimal: install targets, install nightly, build and test
+
 **Documentation**: Integration details, platform setup, and toolchain configuration are covered in existing repo documentation files.
