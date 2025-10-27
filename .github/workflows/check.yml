@@ -202,7 +202,7 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
-      - run: rustup target add aarch64-apple-ios aarch64-apple-ios-sim
+      - run: rustup target add x86_64-apple-darwin x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim
       - run: rustup toolchain install nightly --component rust-src
       - run: npm ci
       - run: npm run build
