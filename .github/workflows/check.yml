@@ -152,7 +152,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all architectures
-        run: npm run build-weak-node-api -- --android
+        run: npm run build-weak-node-api:android
         working-directory: packages/host
       - name: Build ferric-example for all architectures
         run: npm run build -- --android
@@ -188,3 +188,52 @@ jobs:
         with:
           name: emulator-logcat
           path: apps/test-app/emulator-logcat.txt
+  test-ferric-apple-triplets:
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Ferric 🦀')
+    name: Test ferric Apple triplets
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/jod
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      - run: rustup target add x86_64-apple-darwin x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim
+      - run: rustup toolchain install nightly --component rust-src
+      - run: npm ci
+      - run: npm run build
+      # Build weak-node-api for all Apple architectures
+      - run: |
+          npm run prepare-weak-node-api
+          npm run build-weak-node-api:apple
+        working-directory: packages/host
+      # Build Ferric example for all Apple architectures
+      - run: npx ferric --apple
+        working-directory: packages/ferric-example
+      - name: Inspect the structure of the prebuilt binary
+        run: lipo -info ferric_example.apple.node/*/libferric_example.framework/libferric_example > lipo-info.txt
+        working-directory: packages/ferric-example
+      - name: Upload lipo info
+        uses: actions/upload-artifact@v4
+        with:
+          name: lipo-info
+          path: packages/ferric-example/lipo-info.txt
+      - name: Verify Apple triplet builds
+        run: |
+          # Create expected fixture content
+          cat > expected-lipo-info.txt << 'EOF'
+          Architectures in the fat file: ferric_example.apple.node/ios-arm64_x86_64-simulator/libferric_example.framework/libferric_example are: x86_64 arm64 
+          Architectures in the fat file: ferric_example.apple.node/macos-arm64_x86_64/libferric_example.framework/libferric_example are: x86_64 arm64 
+          Architectures in the fat file: ferric_example.apple.node/tvos-arm64_x86_64-simulator/libferric_example.framework/libferric_example are: x86_64 arm64 
+          Non-fat file: ferric_example.apple.node/ios-arm64/libferric_example.framework/libferric_example is architecture: arm64
+          Non-fat file: ferric_example.apple.node/tvos-arm64/libferric_example.framework/libferric_example is architecture: arm64
+          Non-fat file: ferric_example.apple.node/xros-arm64-simulator/libferric_example.framework/libferric_example is architecture: arm64
+          Non-fat file: ferric_example.apple.node/xros-arm64/libferric_example.framework/libferric_example is architecture: arm64
+          EOF
+          # Compare with expected fixture (will fail if files differ)
+          diff expected-lipo-info.txt lipo-info.txt
+        working-directory: packages/ferric-example
