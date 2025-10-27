@@ -32,10 +32,12 @@ const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
   // The x86_64 target for vision simulator isn't supported
   // see https://doc.rust-lang.org/rustc/platform-support.html
 
+  "aarch64-apple-tvos": "tvos-arm64",
+  "aarch64-apple-tvos-sim": "tvos-arm64_x86_64-simulator",
+  "x86_64-apple-tvos": "tvos-arm64_x86_64-simulator",
+
   // "aarch64-apple-ios-macabi": "", // Catalyst
   // "x86_64-apple-ios-macabi": "ios-x86_64-simulator",
-  // "aarch64-apple-tvos": "tvos-arm64",
-  // "aarch64-apple-tvos-sim": "tvos-arm64-simulator",
 };
 
 const ANDROID_ARCH_PR_TARGET: Record<AndroidTargetName, string> = {

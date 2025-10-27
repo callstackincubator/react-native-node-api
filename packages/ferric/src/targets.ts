@@ -29,23 +29,20 @@ export const APPLE_TARGETS = [
   "aarch64-apple-visionos",
   "aarch64-apple-visionos-sim",
 
-  // TODO: Re-enabled these when we know how to install them 🙈
-  /*
   "aarch64-apple-tvos",
+  // "arm64e-apple-tvos",
   "aarch64-apple-tvos-sim",
-  */
+  "x86_64-apple-tvos", // Simulator (despite the missing -sim suffix)
 
   // "aarch64-apple-watchos",
   // "aarch64-apple-watchos-sim",
   // "arm64_32-apple-watchos",
   // "arm64e-apple-darwin",
   // "arm64e-apple-ios",
-  // "arm64e-apple-tvos",
   // "armv7k-apple-watchos",
   // "armv7s-apple-ios",
   // "i386-apple-ios",
   // "i686-apple-darwin",
-  // "x86_64-apple-tvos",
   // "x86_64-apple-watchos-sim",
   // "x86_64h-apple-darwin",
 ] as const;
@@ -57,6 +54,10 @@ export type TargetName = (typeof ALL_TARGETS)[number];
 const THIRD_TIER_TARGETS: Set<TargetName> = new Set([
   "aarch64-apple-visionos",
   "aarch64-apple-visionos-sim",
+
+  "aarch64-apple-tvos",
+  "aarch64-apple-tvos-sim",
+  "x86_64-apple-tvos",
 ]);
 
 export function assertNightlyToolchain() {

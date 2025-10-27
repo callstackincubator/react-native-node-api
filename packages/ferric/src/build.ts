@@ -340,6 +340,7 @@ async function combineLibraries(
   const result = [];
   const darwinLibraries = [];
   const iosSimulatorLibraries = [];
+  const tvosSimulatorLibraries = [];
   for (const [target, libraryPath] of libraries) {
     if (target.endsWith("-darwin")) {
       darwinLibraries.push(libraryPath);
@@ -348,6 +349,11 @@ async function combineLibraries(
       target === "x86_64-apple-ios" // Simulator despite name missing -sim suffix
     ) {
       iosSimulatorLibraries.push(libraryPath);
+    } else if (
+      target === "aarch64-apple-tvos-sim" ||
+      target === "x86_64-apple-tvos" // Simulator despite name missing -sim suffix
+    ) {
+      tvosSimulatorLibraries.push(libraryPath);
     } else {
       result.push(libraryPath);
     }
@@ -356,6 +362,7 @@ async function combineLibraries(
   const combinedLibraryPaths = await createUniversalAppleLibraries([
     darwinLibraries,
     iosSimulatorLibraries,
+    tvosSimulatorLibraries,
   ]);
 
   return [...result, ...combinedLibraryPaths];
