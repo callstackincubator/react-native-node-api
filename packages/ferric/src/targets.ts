@@ -1,4 +1,6 @@
-import { chalk, UsageError } from "@react-native-node-api/cli-utils";
+import cp from "node:child_process";
+
+import { assertFixable } from "@react-native-node-api/cli-utils";
 import { getInstalledTargets } from "./rustup.js";
 
 export const ANDROID_TARGETS = [
@@ -24,12 +26,13 @@ export const APPLE_TARGETS = [
   // "aarch64-apple-ios-macabi", // Catalyst
   // "x86_64-apple-ios-macabi", // Catalyst
 
+  "aarch64-apple-visionos",
+  "aarch64-apple-visionos-sim",
+
   // TODO: Re-enabled these when we know how to install them 🙈
   /*
   "aarch64-apple-tvos",
   "aarch64-apple-tvos-sim",
-  "aarch64-apple-visionos",
-  "aarch64-apple-visionos-sim",
   */
 
   // "aarch64-apple-watchos",
@@ -51,25 +54,30 @@ export type AppleTargetName = (typeof APPLE_TARGETS)[number];
 export const ALL_TARGETS = [...ANDROID_TARGETS, ...APPLE_TARGETS] as const;
 export type TargetName = (typeof ALL_TARGETS)[number];
 
+const THIRD_TIER_TARGETS: Set<TargetName> = new Set([
+  "aarch64-apple-visionos",
+  "aarch64-apple-visionos-sim",
+]);
 /**
- * Ensure the targets are installed into the Rust toolchain
+ * Ensure the targets are either installed into the Rust toolchain or available via nightly Rust toolchain.
  * We do this up-front because the error message and fix is very unclear from the failure when missing.
  */
-export function ensureInstalledTargets(expectedTargets: Set<TargetName>) {
+export function ensureAvailableTargets(expectedTargets: Set<TargetName>) {
   const installedTargets = getInstalledTargets();
-  const missingTargets = new Set([
-    ...[...expectedTargets].filter((target) => !installedTargets.has(target)),
-  ]);
-  if (missingTargets.size > 0) {
-    // TODO: Ask the user if they want to run this
-    throw new UsageError(
-      `You're missing ${
-        missingTargets.size
-      } targets - to fix this, run:\n\n${chalk.italic(
-        `rustup target add ${[...missingTargets].join(" ")}`,
-      )}`,
-    );
-  }
+
+  const missingInstallableTargets = expectedTargets
+    .difference(installedTargets)
+    .difference(THIRD_TIER_TARGETS);
+
+  assertFixable(
+    missingInstallableTargets.size === 0,
+    `You need to add these targets to your toolchain: ${[
+      ...missingInstallableTargets,
+    ].join(", ")}`,
+    {
+      command: `rustup target add ${[...missingInstallableTargets].join(" ")}`,
+    },
+  );
 }
 
 export function isAndroidTarget(
@@ -80,6 +88,10 @@ export function isAndroidTarget(
 
 export function isAppleTarget(target: TargetName): target is AppleTargetName {
   return APPLE_TARGETS.includes(target as (typeof APPLE_TARGETS)[number]);
+}
+
+export function isThirdTierTarget(target: TargetName): boolean {
+  return THIRD_TIER_TARGETS.has(target);
 }
 
 export function filterTargetsByPlatform(

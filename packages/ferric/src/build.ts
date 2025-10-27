@@ -29,7 +29,7 @@ import {
   AndroidTargetName,
   APPLE_TARGETS,
   AppleTargetName,
-  ensureInstalledTargets,
+  ensureAvailableTargets,
   filterTargetsByPlatform,
 } from "./targets.js";
 import { generateTypeScriptDeclarations } from "./napi-rs.js";
@@ -164,7 +164,7 @@ export const buildCommand = new Command("build")
           );
         }
         ensureCargo();
-        ensureInstalledTargets(targets);
+        ensureAvailableTargets(targets);
 
         const appleTargets = filterTargetsByPlatform(targets, "apple");
         const androidTargets = filterTargetsByPlatform(targets, "android");
