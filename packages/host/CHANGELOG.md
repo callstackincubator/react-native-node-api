@@ -1,5 +1,13 @@
 # react-native-node-api
 
+## 0.6.2
+
+### Patch Changes
+
+- 07ea9dc: Add x86_64 and universal simulator triplets
+- 7536c6c: Add --react-native-package option to "vendor-hermes" command, allowing caller to choose the package to download hermes into
+- bdc172e: Add explicit support for React Native v0.79.7
+
 ## 0.6.1
 
 ### Patch Changes
