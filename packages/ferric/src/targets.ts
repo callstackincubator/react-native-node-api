@@ -58,6 +58,39 @@ const THIRD_TIER_TARGETS: Set<TargetName> = new Set([
   "aarch64-apple-visionos",
   "aarch64-apple-visionos-sim",
 ]);
+
+export function assertNightlyToolchain() {
+  const toolchainLines = cp
+    .execFileSync("rustup", ["toolchain", "list"], {
+      encoding: "utf-8",
+    })
+    .split("\n");
+
+  const nightlyLines = toolchainLines.filter((line) =>
+    line.startsWith("nightly-"),
+  );
+  assertFixable(
+    nightlyLines.length > 0,
+    "You need to use a nightly Rust toolchain",
+    {
+      command: "rustup toolchain install nightly --component rust-src",
+    },
+  );
+
+  const componentLines = cp
+    .execFileSync("rustup", ["component", "list", "--toolchain", "nightly"], {
+      encoding: "utf-8",
+    })
+    .split("\n");
+  assertFixable(
+    componentLines.some((line) => line === "rust-src (installed)"),
+    "You need to install the rust-src component for the nightly Rust toolchain",
+    {
+      command: "rustup toolchain install nightly --component rust-src",
+    },
+  );
+}
+
 /**
  * Ensure the targets are either installed into the Rust toolchain or available via nightly Rust toolchain.
  * We do this up-front because the error message and fix is very unclear from the failure when missing.
@@ -78,6 +111,12 @@ export function ensureAvailableTargets(expectedTargets: Set<TargetName>) {
       command: `rustup target add ${[...missingInstallableTargets].join(" ")}`,
     },
   );
+
+  const expectedThirdTierTargets =
+    expectedTargets.intersection(THIRD_TIER_TARGETS);
+  if (expectedThirdTierTargets.size > 0) {
+    assertNightlyToolchain();
+  }
 }
 
 export function isAndroidTarget(
