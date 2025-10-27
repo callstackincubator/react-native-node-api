@@ -19,22 +19,46 @@ import {
   isThirdTierTarget,
 } from "./targets.js";
 
-const APPLE_XCFRAMEWORK_CHILDS_PER_TARGET: Record<AppleTargetName, string> = {
-  "aarch64-apple-darwin": "macos-arm64_x86_64", // Universal
-  "x86_64-apple-darwin": "macos-arm64_x86_64", // Universal
+/**
+ * A per apple target mapping to a list of xcframework slices in order of priority
+ */
+const APPLE_XCFRAMEWORK_SLICES_PER_TARGET: Record<AppleTargetName, string[]> = {
+  "aarch64-apple-darwin": [
+    "macos-arm64_x86_64", // Universal
+    "macos-arm64",
+  ],
+  "x86_64-apple-darwin": [
+    "macos-arm64_x86_64", // Universal
+    "macos-x86_64",
+  ],
 
-  "aarch64-apple-ios": "ios-arm64",
-  "aarch64-apple-ios-sim": "ios-arm64_x86_64-simulator", // Universal
-  "x86_64-apple-ios": "ios-arm64_x86_64-simulator", // Universal
+  "aarch64-apple-ios": ["ios-arm64"],
+  "aarch64-apple-ios-sim": [
+    "ios-arm64_x86_64-simulator", // Universal
+    "ios-arm64-simulator",
+  ],
+  "x86_64-apple-ios": [
+    "ios-arm64_x86_64-simulator", // Universal
+    "ios-x86_64-simulator",
+  ],
 
-  "aarch64-apple-visionos": "xros-arm64",
-  "aarch64-apple-visionos-sim": "xros-arm64_x86_64-simulator", // Universal
+  "aarch64-apple-visionos": ["xros-arm64"],
+  "aarch64-apple-visionos-sim": [
+    "xros-arm64_x86_64-simulator", // Universal
+    "xros-arm64-simulator",
+  ],
   // The x86_64 target for vision simulator isn't supported
   // see https://doc.rust-lang.org/rustc/platform-support.html
 
-  "aarch64-apple-tvos": "tvos-arm64",
-  "aarch64-apple-tvos-sim": "tvos-arm64_x86_64-simulator",
-  "x86_64-apple-tvos": "tvos-arm64_x86_64-simulator",
+  "aarch64-apple-tvos": ["tvos-arm64"],
+  "aarch64-apple-tvos-sim": [
+    "tvos-arm64_x86_64-simulator", // Universal
+    "tvos-arm64-simulator",
+  ],
+  "x86_64-apple-tvos": [
+    "tvos-arm64_x86_64-simulator", // Universal
+    "tvos-x86_64-simulator",
+  ],
 
   // "aarch64-apple-ios-macabi": "", // Catalyst
   // "x86_64-apple-ios-macabi": "ios-x86_64-simulator",
@@ -145,11 +169,19 @@ export function getTargetAndroidPlatform(target: AndroidTargetName) {
 }
 
 export function getWeakNodeApiFrameworkPath(target: AppleTargetName) {
-  return joinPathAndAssertExistence(
+  const xcframeworkPath = joinPathAndAssertExistence(
     weakNodeApiPath,
     "weak-node-api.xcframework",
-    APPLE_XCFRAMEWORK_CHILDS_PER_TARGET[target],
   );
+  const result = APPLE_XCFRAMEWORK_SLICES_PER_TARGET[target].find((slice) => {
+    const candidatePath = path.join(xcframeworkPath, slice);
+    return fs.existsSync(candidatePath);
+  });
+  assert(
+    result,
+    `No matching slice found in weak-node-api.xcframework for target ${target}`,
+  );
+  return joinPathAndAssertExistence(xcframeworkPath, result);
 }
 
 export function getWeakNodeApiAndroidLibraryPath(target: AndroidTargetName) {
