@@ -107,6 +107,39 @@ jobs:
         # TODO: Enable release mode when it works
         # run: npm run test:ios -- --mode Release
         working-directory: apps/test-app
+  test-macos:
+    # Disabling this on main for now, as initializing the template takes a long time and
+    # we don't have macOS-specific code yet
+    if: contains(github.event.pull_request.labels.*.name, 'MacOS 💻')
+    name: Test app (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/jod
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: "17"
+          distribution: "temurin"
+      # Install CMake 3 since 4.x may have compatibility issues with Hermes build system
+      - name: Install compatible CMake version
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: "3.31.2"
+      - run: rustup target add x86_64-apple-darwin
+      - run: npm ci
+      - run: npm run bootstrap
+        env:
+          CMAKE_RN_TRIPLETS: arm64;x86_64-apple-darwin
+          FERRIC_TARGETS: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: npm run init-macos-test-app
+      - run: pod install --project-directory=macos
+        working-directory: apps/macos-test-app
+      - name: Run MacOS test app
+        run: npm run test:allTests -- --mode Release
+        working-directory: apps/macos-test-app
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
