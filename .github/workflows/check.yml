@@ -152,7 +152,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all architectures
-        run: npm run build-weak-node-api -- --android
+        run: npm run build-weak-node-api:android
         working-directory: packages/host
       - name: Build ferric-example for all architectures
         run: npm run build -- --android
@@ -207,7 +207,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       # Build weak-node-api for all Apple architectures
-      - run: npm run build-weak-node-api -- --apple
+      - run: |
+          npm run prepare-weak-node-api
+          npm run build-weak-node-api:apple
         working-directory: packages/host
       # Build Ferric example for all Apple architectures
       - run: npx ferric --apple
