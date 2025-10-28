@@ -77,22 +77,25 @@ function initializeReactNativeMacOSTemplate() {
 
 async function patchPodfile() {
   console.log("Patching Podfile");
-  // Patch Podfile as per https://github.com/microsoft/react-native-macos/issues/2723#issuecomment-3392930688
-  const podfilePath = path.join(APP_PATH, "macos", "Podfile");
-  const podfileContents = await fs.promises.readFile(podfilePath, "utf8");
-  const unwantedLines = [
-    "require_relative '../node_modules/react-native-macos/scripts/react_native_pods'",
-    "require_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'",
-    "require_relative '../node_modules/react-native-macos/scripts/cocoapods/autolinking'",
-  ];
-  const podfilePatched = [
-    "require_relative '../node_modules/react-native-macos/scripts/cocoapods/autolinking'",
-    ...podfileContents
-      .split("\n")
-      .filter((line) => !unwantedLines.includes(line)),
+  const replacements = [
+    [
+      // As per https://github.com/microsoft/react-native-macos/issues/2723#issuecomment-3392930688
+      "require_relative '../node_modules/react-native-macos/scripts/react_native_pods'\nrequire_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'",
+      "require_relative '../node_modules/react-native-macos/scripts/cocoapods/autolinking'",
+    ],
+    [":hermes_enabled => false,", ":hermes_enabled => true,"],
+    [
+      ":fabric_enabled => ENV['RCT_NEW_ARCH_ENABLED'] == '1',",
+      ":fabric_enabled => true,",
+    ],
   ];
 
-  await fs.promises.writeFile(podfilePath, podfilePatched.join("\n"), "utf8");
+  const podfilePath = path.join(APP_PATH, "macos", "Podfile");
+  let podfileContents = await fs.promises.readFile(podfilePath, "utf8");
+  for (const [searchValue, replaceValue] of replacements) {
+    podfileContents = podfileContents.replace(searchValue, replaceValue);
+  }
+  await fs.promises.writeFile(podfilePath, podfileContents, "utf8");
 }
 
 function installCocoapods() {
