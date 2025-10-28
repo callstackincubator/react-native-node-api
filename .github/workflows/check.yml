@@ -128,20 +128,6 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: "3.31.2"
-      - name: Debug environment before build
-        run: |
-          echo "=== Xcode and build tools ==="
-          xcode-select -p
-          which clang || echo "clang not found"
-          which clang++ || echo "clang++ not found"
-          which make || echo "make not found"
-          which cmake || echo "cmake not found"
-          echo "=== Environment variables ==="
-          echo "PATH=$PATH"
-          echo "SDKROOT=$SDKROOT"
-          echo "CMAKE_BINARY=$CMAKE_BINARY"
-          echo "=== CMake version ==="
-          cmake --version || echo "cmake command failed"
       - run: npm ci
       - run: npm run bootstrap
         env:
