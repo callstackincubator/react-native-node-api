@@ -123,6 +123,25 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
+      - name: Debug environment before build
+        run: |
+          echo "=== Xcode and build tools ==="
+          xcode-select -p
+          which clang || echo "clang not found"
+          which clang++ || echo "clang++ not found"
+          which make || echo "make not found"
+          which cmake || echo "cmake not found"
+          echo "=== Environment variables ==="
+          echo "PATH=$PATH"
+          echo "SDKROOT=$SDKROOT"
+          echo "CMAKE_BINARY=$CMAKE_BINARY"
+          echo "=== CMake version ==="
+          cmake --version || echo "cmake command failed"
+      - name: Set required environment variables for Hermes build
+        run: |
+          # React Native's Hermes build script expects CMAKE_BINARY to be set
+          # Without it, the PATH preservation in env -i fails
+          echo "CMAKE_BINARY=$(which cmake)" >> $GITHUB_ENV
       - run: npm ci
       - run: npm run bootstrap
         env:
