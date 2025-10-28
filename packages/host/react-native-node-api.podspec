@@ -28,7 +28,7 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => min_ios_version_supported }
   s.source       = { :git => "https://github.com/callstackincubator/react-native-node-api.git", :tag => "#{s.version}" }
 
-  s.source_files = "ios/**/*.{h,m,mm}", "cpp/**/*.{hpp,cpp,c,h}", "weak-node-api/include/*.h", "weak-node-api/*.hpp"
+  s.source_files = "apple/**/*.{h,m,mm}", "cpp/**/*.{hpp,cpp,c,h}", "weak-node-api/include/*.h", "weak-node-api/*.hpp"
   s.public_header_files = "weak-node-api/include/*.h"
 
   s.vendored_frameworks = "auto-linked/apple/*.xcframework", "weak-node-api/weak-node-api.xcframework"
