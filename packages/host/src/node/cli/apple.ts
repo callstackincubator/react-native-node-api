@@ -192,15 +192,11 @@ export async function linkFlatFramework({
   }
 }
 
-export async function linkVersionedFramework({
-  frameworkPath,
-  newLibraryName,
-}: LinkFrameworkOptions) {
-  assert.equal(
-    process.platform,
-    "darwin",
-    "Linking Apple addons are only supported on macOS",
-  );
+/**
+ * NPM packages aren't preserving internal symlinks inside versioned frameworks.
+ * This function attempts to restore those.
+ */
+export async function restoreFrameworkLinks(frameworkPath: string) {
   // Reconstruct missing symbolic links if needed
   const versionAPath = path.join(frameworkPath, "Versions", "A");
   const versionCurrentPath = path.join(frameworkPath, "Versions", "Current");
@@ -210,6 +206,39 @@ export async function linkVersionedFramework({
       versionCurrentPath,
     );
   }
+
+  const { CFBundleExecutable } = await readFrameworkInfo(
+    path.join(frameworkPath, "Versions", "Current", "Resources", "Info.plist"),
+  );
+
+  const libraryRealPath = path.join(
+    frameworkPath,
+    "Versions",
+    "Current",
+    CFBundleExecutable,
+  );
+  const libraryLinkPath = path.join(frameworkPath, CFBundleExecutable);
+  // Reconstruct missing symbolic links if needed
+  if (fs.existsSync(libraryRealPath) && !fs.existsSync(libraryLinkPath)) {
+    await fs.promises.symlink(
+      path.relative(path.dirname(libraryLinkPath), libraryRealPath),
+      libraryLinkPath,
+    );
+  }
+}
+
+export async function linkVersionedFramework({
+  frameworkPath,
+  newLibraryName,
+}: LinkFrameworkOptions) {
+  assert.equal(
+    process.platform,
+    "darwin",
+    "Linking Apple addons are only supported on macOS",
+  );
+
+  await restoreFrameworkLinks(frameworkPath);
+
   const frameworkInfoPath = path.join(
     frameworkPath,
     "Versions",
@@ -218,23 +247,6 @@ export async function linkVersionedFramework({
     "Info.plist",
   );
   const frameworkInfo = await readFrameworkInfo(frameworkInfoPath);
-  const libraryRealPath = path.join(
-    frameworkPath,
-    "Versions",
-    "Current",
-    frameworkInfo.CFBundleExecutable,
-  );
-  const libraryLinkPath = path.join(
-    frameworkPath,
-    frameworkInfo.CFBundleExecutable,
-  );
-  // Reconstruct missing symbolic links if needed
-  if (fs.existsSync(libraryRealPath) && !fs.existsSync(libraryLinkPath)) {
-    await fs.promises.symlink(
-      path.relative(path.dirname(libraryLinkPath), libraryRealPath),
-      libraryLinkPath,
-    );
-  }
   // Update install name
   await spawn(
     "install_name_tool",
