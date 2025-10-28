@@ -123,10 +123,6 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: npm ci
       - run: npm run bootstrap
         env:
