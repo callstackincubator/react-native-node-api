@@ -98,16 +98,8 @@ async function patchPodfile() {
   await fs.promises.writeFile(podfilePath, podfileContents, "utf8");
 }
 
-function installCocoapods() {
-  console.log("Installing cocoapods");
-  exec("pod", ["install", "--project-directory=macos"], {
-    cwd: APP_PATH,
-  });
-}
-
 await deletePreviousApp();
 await initializeReactNativeTemplate();
 installDependencies();
 initializeReactNativeMacOSTemplate();
 await patchPodfile();
-installCocoapods();
