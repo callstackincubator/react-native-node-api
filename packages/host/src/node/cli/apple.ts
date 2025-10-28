@@ -201,6 +201,15 @@ export async function linkVersionedFramework({
     "darwin",
     "Linking Apple addons are only supported on macOS",
   );
+  // Reconstruct missing symbolic links if needed
+  const versionAPath = path.join(frameworkPath, "Versions", "A");
+  const versionCurrentPath = path.join(frameworkPath, "Versions", "Current");
+  if (fs.existsSync(versionAPath) && !fs.existsSync(versionCurrentPath)) {
+    await fs.promises.symlink(
+      path.relative(path.dirname(versionCurrentPath), versionAPath),
+      versionCurrentPath,
+    );
+  }
   const frameworkInfoPath = path.join(
     frameworkPath,
     "Versions",
@@ -209,6 +218,23 @@ export async function linkVersionedFramework({
     "Info.plist",
   );
   const frameworkInfo = await readFrameworkInfo(frameworkInfoPath);
+  const libraryRealPath = path.join(
+    frameworkPath,
+    "Versions",
+    "Current",
+    frameworkInfo.CFBundleExecutable,
+  );
+  const libraryLinkPath = path.join(
+    frameworkPath,
+    frameworkInfo.CFBundleExecutable,
+  );
+  // Reconstruct missing symbolic links if needed
+  if (fs.existsSync(libraryRealPath) && !fs.existsSync(libraryLinkPath)) {
+    await fs.promises.symlink(
+      path.relative(path.dirname(libraryLinkPath), libraryRealPath),
+      libraryLinkPath,
+    );
+  }
   // Update install name
   await spawn(
     "install_name_tool",
