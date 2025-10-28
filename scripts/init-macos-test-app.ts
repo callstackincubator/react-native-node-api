@@ -171,10 +171,10 @@ async function copySourceFiles() {
   }
 }
 
-// await deletePreviousApp();
-// await initializeReactNativeTemplate();
+await deletePreviousApp();
+await initializeReactNativeTemplate();
 await patchPackageJson();
 installDependencies();
-// initializeReactNativeMacOSTemplate();
-// await patchPodfile();
+initializeReactNativeMacOSTemplate();
+await patchPodfile();
 await copySourceFiles();
