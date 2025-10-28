@@ -128,7 +128,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: "3.31.2"
-      - run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+      - run: rustup target add x86_64-apple-darwin
       - run: npm ci
       - run: npm run bootstrap
         env:
