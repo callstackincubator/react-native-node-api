@@ -1,7 +1,17 @@
 {
   "name": "@react-native-node-api/node-addon-examples",
+  "version": "0.1.0",
   "type": "commonjs",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "examples/**/package.json",
+    "examples/**/*.js",
+    "tests/**/package.json",
+    "tests/**/*.js",
+    "**/*.apple.node/**",
+    "**/*.android.node/**"
+  ],
   "private": true,
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
