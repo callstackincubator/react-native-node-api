@@ -88,6 +88,10 @@ async function patchPodfile() {
       ":fabric_enabled => ENV['RCT_NEW_ARCH_ENABLED'] == '1',",
       ":fabric_enabled => true,",
     ],
+    [
+      "react_native_post_install(installer)",
+      "react_native_post_install(installer, '../node_modules/react-native-macos')",
+    ],
   ];
 
   const podfilePath = path.join(APP_PATH, "macos", "Podfile");
