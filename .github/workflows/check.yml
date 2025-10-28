@@ -123,11 +123,11 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
-      # Install CMake 3.22.1 since 4.x may have compatibility issues with Hermes build system
+      # Install CMake 3 since 4.x may have compatibility issues with Hermes build system
       - name: Install compatible CMake version
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: "3.22.1"
+          cmake-version: "3.31.2"
       - name: Debug environment before build
         run: |
           echo "=== Xcode and build tools ==="
@@ -147,11 +147,6 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: arm64-apple-darwin
           FERRIC_TARGETS: aarch64-apple-darwin
-          # Set explicit compiler paths for CMake 3.22.1 compatibility
-          CC: /usr/bin/clang
-          CXX: /usr/bin/clang++
-          CMAKE_C_COMPILER: /usr/bin/clang
-          CMAKE_CXX_COMPILER: /usr/bin/clang++
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
