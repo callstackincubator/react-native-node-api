@@ -131,8 +131,8 @@ jobs:
       - run: npm ci
       - run: npm run bootstrap
         env:
-          CMAKE_RN_TRIPLETS: arm64-apple-darwin
-          FERRIC_TARGETS: aarch64-apple-darwin
+          CMAKE_RN_TRIPLETS: arm64;x86_64-apple-darwin
+          FERRIC_TARGETS: aarch64-apple-darwin,x86_64-apple-darwin
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
