@@ -151,7 +151,7 @@ jobs:
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
       - name: Build MacOS test app
-        run: npx react-native build-macos
+        run: npx react-native build-macos --mode Release
         working-directory: apps/macos-test-app
       # TODO: Run the app eventually
   test-android:
