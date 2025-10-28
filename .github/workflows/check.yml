@@ -147,6 +147,11 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: arm64-apple-darwin
           FERRIC_TARGETS: aarch64-apple-darwin
+          # Set explicit compiler paths for CMake 3.22.1 compatibility
+          CC: /usr/bin/clang
+          CXX: /usr/bin/clang++
+          CMAKE_C_COMPILER: /usr/bin/clang
+          CMAKE_CXX_COMPILER: /usr/bin/clang++
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
