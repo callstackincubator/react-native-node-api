@@ -1,5 +1,6 @@
 const { makeMetroConfig } = require("@rnx-kit/metro-config");
-module.exports = makeMetroConfig({
+
+const config = makeMetroConfig({
   transformer: {
     getTransformOptions: async () => ({
       transform: {
@@ -9,3 +10,13 @@ module.exports = makeMetroConfig({
     }),
   },
 });
+
+if (config.watchFolders.length === 0) {
+  // This patch is needed to locate packages in the monorepo from the MacOS app
+  // which is intentionally kept outside of the workspaces configuration to prevent
+  // duplicate react-native version and pollution of the package lock.
+  const path = require("node:path");
+  config.watchFolders.push(path.resolve(__dirname, "../.."));
+}
+
+module.exports = config;
