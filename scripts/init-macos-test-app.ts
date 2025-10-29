@@ -41,7 +41,13 @@ async function initializeReactNativeTemplate() {
   ]);
 
   // Clean up
-  const CLEANUP_PATHS = ["ios", "android", "__tests__"];
+  const CLEANUP_PATHS = [
+    "ios",
+    "android",
+    "__tests__",
+    ".prettierrc.js",
+    ".gitignore",
+  ];
 
   for (const cleanupPath of CLEANUP_PATHS) {
     await fs.promises.rm(path.join(APP_PATH, cleanupPath), {
@@ -71,18 +77,37 @@ async function patchPackageJson() {
       "MOCHA_REMOTE_CONTEXT=ferricExample node --run test -- ",
   };
 
-  const {
-    "mocha-remote-cli": mochaRemoteCliSpec,
-    "mocha-remote-react-native": mochaRemoteReactNativeSpec,
-  } = otherPackageJson.dependencies || {};
+  const transferredDependencies = new Set([
+    "@rnx-kit/metro-config",
+    "mocha-remote-cli",
+    "mocha-remote-react-native",
+  ]);
 
-  assert(typeof mochaRemoteCliSpec === "string");
-  assert(typeof mochaRemoteReactNativeSpec === "string");
+  const { dependencies: otherDependencies = {} } = otherPackageJson;
 
   packageJson.dependencies = {
-    ["mocha-remote-cli"]: mochaRemoteCliSpec,
-    ["mocha-remote-react-native"]: mochaRemoteReactNativeSpec,
-    ...packageJson.dependencies,
+    "react-native-macos-init": "^2.1.3",
+    "@react-native-node-api/node-addon-examples": path.relative(
+      APP_PATH,
+      path.join(ROOT_PATH, "packages", "node-addon-examples"),
+    ),
+    "@react-native-node-api/node-tests": path.relative(
+      APP_PATH,
+      path.join(ROOT_PATH, "packages", "node-tests"),
+    ),
+    "@react-native-node-api/ferric-example": path.relative(
+      APP_PATH,
+      path.join(ROOT_PATH, "packages", "ferric-example"),
+    ),
+    "react-native-node-api": path.relative(
+      APP_PATH,
+      path.join(ROOT_PATH, "packages", "host"),
+    ),
+    ...Object.fromEntries(
+      Object.entries(otherDependencies).filter(([name]) =>
+        transferredDependencies.has(name),
+      ),
+    ),
   };
 
   await fs.promises.writeFile(
@@ -94,29 +119,9 @@ async function patchPackageJson() {
 
 function installDependencies() {
   console.log("Installing dependencies");
-  exec(
-    "npm",
-    [
-      "install",
-      "--save",
-      "--prefer-offline",
-      "--install-links",
-      "react-native-macos-init",
-      path.relative(
-        APP_PATH,
-        path.join(ROOT_PATH, "packages", "node-addon-examples"),
-      ),
-      path.relative(APP_PATH, path.join(ROOT_PATH, "packages", "node-tests")),
-      path.relative(
-        APP_PATH,
-        path.join(ROOT_PATH, "packages", "ferric-example"),
-      ),
-      path.relative(APP_PATH, path.join(ROOT_PATH, "packages", "host")),
-    ],
-    {
-      cwd: APP_PATH,
-    },
-  );
+  exec("npm", ["install", "--prefer-offline"], {
+    cwd: APP_PATH,
+  });
 }
 
 function initializeReactNativeMacOSTemplate() {
@@ -155,7 +160,13 @@ async function patchPodfile() {
 
 async function copySourceFiles() {
   console.log("Copying source files from test-app into macos-test-app:");
-  const FILE_NAMES = ["App.tsx", "babel.config.js"];
+  const FILE_NAMES = [
+    "App.tsx",
+    // Adds the babel plugin needed to transform require calls
+    "babel.config.js",
+    // Adds the ability to reference symlinked packages
+    "metro.config.js",
+  ];
   for (const fileName of FILE_NAMES) {
     console.log(`↳ ${fileName}`);
     await fs.promises.copyFile(
