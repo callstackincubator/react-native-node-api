@@ -80,22 +80,6 @@ async function patchPackageJson() {
   assert(typeof mochaRemoteReactNativeSpec === "string");
 
   packageJson.dependencies = {
-    "@react-native-node-api/node-addon-examples": path.relative(
-      APP_PATH,
-      path.join(ROOT_PATH, "packages", "node-addon-examples"),
-    ),
-    "@react-native-node-api/node-tests": path.relative(
-      APP_PATH,
-      path.join(ROOT_PATH, "packages", "node-tests"),
-    ),
-    "@react-native-node-api/ferric-example": path.relative(
-      APP_PATH,
-      path.join(ROOT_PATH, "packages", "ferric-example"),
-    ),
-    "react-native-node-api": path.relative(
-      APP_PATH,
-      path.join(ROOT_PATH, "packages", "host"),
-    ),
     ["mocha-remote-cli"]: mochaRemoteCliSpec,
     ["mocha-remote-react-native"]: mochaRemoteReactNativeSpec,
     ...packageJson.dependencies,
@@ -114,10 +98,20 @@ function installDependencies() {
     "npm",
     [
       "install",
-      "--save-dev",
+      "--save",
       "--prefer-offline",
       "--install-links",
       "react-native-macos-init",
+      path.relative(
+        APP_PATH,
+        path.join(ROOT_PATH, "packages", "node-addon-examples"),
+      ),
+      path.relative(APP_PATH, path.join(ROOT_PATH, "packages", "node-tests")),
+      path.relative(
+        APP_PATH,
+        path.join(ROOT_PATH, "packages", "ferric-example"),
+      ),
+      path.relative(APP_PATH, path.join(ROOT_PATH, "packages", "host")),
     ],
     {
       cwd: APP_PATH,
