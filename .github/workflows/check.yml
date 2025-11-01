@@ -138,10 +138,8 @@ jobs:
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
       - name: Run MacOS test app
-        run: mocha-remote --exit-on-error -- concurrently --passthrough-arguments --kill-others-on-fail npm:metro 'react-native run-macos --mode Release'
+        run: npm run test:allTests -- --mode Release
         working-directory: apps/macos-test-app
-        env:
-          MOCHA_REMOTE_CONTEXT: allTests
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
