@@ -140,7 +140,11 @@ async function patchPodfile() {
       "require_relative '../node_modules/react-native-macos/scripts/react_native_pods'\nrequire_relative '../node_modules/@react-native-community/cli-platform-ios/native_modules'",
       "require_relative '../node_modules/react-native-macos/scripts/cocoapods/autolinking'",
     ],
-    [":hermes_enabled => false,", ":hermes_enabled => true,"],
+    [
+      ":hermes_enabled => false,",
+      // Adding the new_arch_enabled here as it's not a part of the template
+      ":hermes_enabled => true,\n    :new_arch_enabled => true,",
+    ],
     [
       ":fabric_enabled => ENV['RCT_NEW_ARCH_ENABLED'] == '1',",
       ":fabric_enabled => true,",
