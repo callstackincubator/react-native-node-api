@@ -69,7 +69,7 @@ async function patchPackageJson() {
     premacos: "killall 'MacOSTestApp' || true",
     macos: "react-native run-macos --no-packager",
     test: "mocha-remote --exit-on-error -- concurrently --passthrough-arguments --kill-others-on-fail npm:metro 'npm:macos -- {@}' --",
-    "test:allTests": "MOCHA_REMOTE_CONTEXT=allTests node --run test:ios -- ",
+    "test:allTests": "MOCHA_REMOTE_CONTEXT=allTests node --run test -- ",
     "test:nodeAddonExamples":
       "MOCHA_REMOTE_CONTEXT=nodeAddonExamples node --run test -- ",
     "test:nodeTests": "MOCHA_REMOTE_CONTEXT=nodeTests node --run test -- ",
