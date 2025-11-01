@@ -86,6 +86,7 @@ async function patchPackageJson() {
   const { dependencies: otherDependencies = {} } = otherPackageJson;
 
   packageJson.dependencies = {
+    ...packageJson.dependencies,
     "react-native-macos-init": "^2.1.3",
     "@react-native-node-api/node-addon-examples": path.relative(
       APP_PATH,
