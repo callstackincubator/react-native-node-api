@@ -198,25 +198,38 @@ export async function linkFlatFramework({
  */
 export async function restoreFrameworkLinks(frameworkPath: string) {
   // Reconstruct missing symbolic links if needed
-  const versionAPath = path.join(frameworkPath, "Versions", "A");
-  const versionCurrentPath = path.join(frameworkPath, "Versions", "Current");
-  if (fs.existsSync(versionAPath) && !fs.existsSync(versionCurrentPath)) {
+  const versionsPath = path.join(frameworkPath, "Versions");
+  const versionCurrentPath = path.join(versionsPath, "Current");
+
+  assert(
+    fs.existsSync(versionsPath),
+    `Expected "Versions" directory inside versioned framework '${frameworkPath}'`,
+  );
+
+  if (!fs.existsSync(versionCurrentPath)) {
+    const versionDirectoryEntries = await fs.promises.readdir(versionsPath, {
+      withFileTypes: true,
+    });
+    const versionDirectoryPaths = versionDirectoryEntries
+      .filter((dirent) => dirent.isDirectory())
+      .map((dirent) => path.join(dirent.parentPath, dirent.name));
+    assert.equal(
+      versionDirectoryPaths.length,
+      1,
+      `Expected a single directory in ${versionsPath}, found ${JSON.stringify(versionDirectoryPaths)}`,
+    );
+    const [versionDirectoryPath] = versionDirectoryPaths;
     await fs.promises.symlink(
-      path.relative(path.dirname(versionCurrentPath), versionAPath),
+      path.relative(path.dirname(versionCurrentPath), versionDirectoryPath),
       versionCurrentPath,
     );
   }
 
   const { CFBundleExecutable } = await readFrameworkInfo(
-    path.join(frameworkPath, "Versions", "Current", "Resources", "Info.plist"),
+    path.join(versionCurrentPath, "Resources", "Info.plist"),
   );
 
-  const libraryRealPath = path.join(
-    frameworkPath,
-    "Versions",
-    "Current",
-    CFBundleExecutable,
-  );
+  const libraryRealPath = path.join(versionCurrentPath, CFBundleExecutable);
   const libraryLinkPath = path.join(frameworkPath, CFBundleExecutable);
   // Reconstruct missing symbolic links if needed
   if (fs.existsSync(libraryRealPath) && !fs.existsSync(libraryLinkPath)) {
