@@ -1,0 +1,10 @@
+{
+  "extends": "./configs/tsconfig.node.json",
+  "compilerOptions": {
+    "composite": true,
+    "emitDeclarationOnly": true,
+    "declarationMap": false,
+    "rootDir": "scripts"
+  },
+  "include": ["scripts"]
+}

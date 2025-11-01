@@ -26,7 +26,8 @@
     "test": "npm test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
     "bootstrap": "node --run build && npm run bootstrap --workspaces --if-present",
     "prerelease": "node --run build && npm run prerelease --workspaces --if-present",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "init-macos-test-app": "node scripts/init-macos-test-app.ts"
   },
   "author": {
     "name": "Callstack",
@@ -64,6 +65,7 @@
     "globals": "^16.0.0",
     "prettier": "^3.6.2",
     "react-native": "0.81.4",
+    "read-pkg": "^9.0.1",
     "tsx": "^4.20.5",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.38.0"

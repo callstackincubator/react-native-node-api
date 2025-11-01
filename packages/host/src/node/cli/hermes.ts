@@ -23,6 +23,32 @@ const platformOption = new Option(
   "The React Native package to vendor Hermes into",
 ).default("react-native");
 
+type PatchJSIHeadersOptions = {
+  reactNativePath: string;
+  hermesJsiPath: string;
+  silent: boolean;
+};
+
+async function patchJsiHeaders({
+  reactNativePath,
+  hermesJsiPath,
+  silent,
+}: PatchJSIHeadersOptions) {
+  const reactNativeJsiPath = path.join(reactNativePath, "ReactCommon/jsi/jsi/");
+  await oraPromise(
+    fs.promises.cp(hermesJsiPath, reactNativeJsiPath, {
+      recursive: true,
+    }),
+    {
+      text: `Copying JSI from patched Hermes to React Native`,
+      successText: "Copied JSI from patched Hermes to React Native",
+      failText: (err) =>
+        `Failed to copy JSI from Hermes to React Native: ${err.message}`,
+      isEnabled: !silent,
+    },
+  );
+}
+
 export const command = new Command("vendor-hermes")
   .argument("[from]", "Path to a file inside the app package", process.cwd())
   .option("--silent", "Don't print anything except the final path", false)
@@ -63,11 +89,6 @@ export const command = new Command("vendor-hermes")
       if (!silent) {
         console.log(`Using Hermes version: ${hermesVersion}`);
       }
-
-      const reactNativeJsiPath = path.join(
-        reactNativePath,
-        "ReactCommon/jsi/jsi/",
-      );
 
       const hermesPath = path.join(reactNativePath, "sdks", "node-api-hermes");
       if (force && fs.existsSync(hermesPath)) {
@@ -125,19 +146,11 @@ export const command = new Command("vendor-hermes")
         fs.existsSync(hermesJsiPath),
         `Hermes JSI path does not exist: ${hermesJsiPath}`,
       );
-
-      await oraPromise(
-        fs.promises.cp(hermesJsiPath, reactNativeJsiPath, {
-          recursive: true,
-        }),
-        {
-          text: `Copying JSI from patched Hermes to React Native`,
-          successText: "Copied JSI from patched Hermes to React Native",
-          failText: (err) =>
-            `Failed to copy JSI from Hermes to React Native: ${err.message}`,
-          isEnabled: !silent,
-        },
-      );
+      await patchJsiHeaders({
+        reactNativePath,
+        hermesJsiPath,
+        silent,
+      });
       console.log(hermesPath);
     }),
   );

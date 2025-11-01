@@ -1,8 +1,15 @@
 {
   "name": "@react-native-node-api/node-tests",
+  "version": "0.1.0",
   "description": "Harness for running the Node.js tests from https://github.com/nodejs/node/tree/main/test",
   "type": "commonjs",
   "main": "tests.generated.js",
+  "files": [
+    "dist",
+    "tests/**/*.js",
+    "**/*.apple.node/**",
+    "**/*.android.node/**"
+  ],
   "private": true,
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { EventEmitter } from "node:stream";
+import fs from "node:fs";
 
 import {
   Command,
@@ -26,8 +27,9 @@ import {
 import { command as vendorHermes } from "./hermes";
 import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
-import { linkXcframework } from "./apple";
+import { linkXcframework, restoreFrameworkLinks } from "./apple";
 import { linkAndroidDir } from "./android";
+import { weakNodeApiPath } from "../weak-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -168,6 +170,38 @@ program
           if (prune) {
             await pruneLinkedModules(platform, modules);
           }
+        }
+
+        if (apple) {
+          await oraPromise(
+            async () => {
+              const xcframeworkPath = path.join(
+                weakNodeApiPath,
+                "weak-node-api.xcframework",
+              );
+              await Promise.all(
+                [
+                  path.join(xcframeworkPath, "macos-x86_64"),
+                  path.join(xcframeworkPath, "macos-arm64"),
+                  path.join(xcframeworkPath, "macos-arm64_x86_64"),
+                ].map(async (slicePath) => {
+                  const frameworkPath = path.join(
+                    slicePath,
+                    "weak-node-api.framework",
+                  );
+                  if (fs.existsSync(frameworkPath)) {
+                    await restoreFrameworkLinks(frameworkPath);
+                  }
+                }),
+              );
+            },
+            {
+              text: "Restoring weak-node-api symlinks",
+              successText: "Restored weak-node-api symlinks",
+              failText: (error) =>
+                `Failed to restore weak-node-api symlinks: ${error.message}`,
+            },
+          );
         }
       },
     ),

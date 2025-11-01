@@ -4,3 +4,6 @@ node_modules/
 dist/
 
 *.tsbuildinfo
+
+# Treading the MacOS app as ephemeral
+apps/macos-test-app
