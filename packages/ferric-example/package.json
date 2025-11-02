@@ -1,8 +1,8 @@
 {
   "name": "@react-native-node-api/ferric-example",
+  "version": "0.1.1",
   "private": true,
   "type": "commonjs",
-  "version": "0.1.1",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
@@ -11,6 +11,12 @@
   },
   "main": "ferric_example.js",
   "types": "ferric_example.d.ts",
+  "files": [
+    "ferric_example.js",
+    "ferric_example.d.ts",
+    "ferric_example.apple.node",
+    "ferric_example.android.node"
+  ],
   "scripts": {
     "build": "ferric build",
     "bootstrap": "node --run build"
