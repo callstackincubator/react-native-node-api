@@ -17,6 +17,10 @@ unless defined?(@xcframeworks_copied)
   @xcframeworks_copied = true
 end
 
+if ENV['RCT_NEW_ARCH_ENABLED'] == '0'
+  Pod::UI.warn "React Native Node-API doesn't support the legacy architecture (but RCT_NEW_ARCH_ENABLED == '0')"
+end
+
 Pod::Spec.new do |s|
   s.name         = package["name"]
   s.version      = package["version"]
