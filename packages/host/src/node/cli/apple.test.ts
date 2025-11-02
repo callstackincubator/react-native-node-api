@@ -9,6 +9,7 @@ import {
   readAndParsePlist,
   readFrameworkInfo,
   readXcframeworkInfo,
+  restoreFrameworkLinks,
 } from "./apple";
 import { setupTempDirectory } from "../test-utils";
 
@@ -264,6 +265,109 @@ describe("apple", { skip: process.platform !== "darwin" }, () => {
       assert.match(
         contents,
         /<key>CFBundleExecutable<\/key>\s*<string>new-addon-name<\/string>/,
+      );
+    });
+  });
+
+  describe("restoreFrameworkLinks", () => {
+    it("restores a versioned framework", async (context) => {
+      const infoPlistContents = `
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+          <dict>
+            <key>CFBundlePackageType</key>
+            <string>FMWK</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
+            <key>CFBundleExecutable</key>
+            <string>example-addon</string>
+          </dict>
+        </plist>
+      `;
+
+      const tempDirectoryPath = setupTempDirectory(context, {
+        "foo.framework": {
+          Versions: {
+            A: {
+              Resources: {
+                "Info.plist": infoPlistContents,
+              },
+              "example-addon": "",
+            },
+          },
+        },
+      });
+
+      const frameworkPath = path.join(tempDirectoryPath, "foo.framework");
+      const currentVersionPath = path.join(
+        frameworkPath,
+        "Versions",
+        "Current",
+      );
+      const binaryLinkPath = path.join(frameworkPath, "example-addon");
+      const realBinaryPath = path.join(
+        frameworkPath,
+        "Versions",
+        "A",
+        "example-addon",
+      );
+
+      async function assertVersionedFramework() {
+        const currentStat = await fs.promises.lstat(currentVersionPath);
+        assert(
+          currentStat.isSymbolicLink(),
+          "Expected Current symlink to be restored",
+        );
+        assert.equal(
+          await fs.promises.realpath(currentVersionPath),
+          path.join(frameworkPath, "Versions", "A"),
+        );
+
+        const binaryStat = await fs.promises.lstat(binaryLinkPath);
+        assert(
+          binaryStat.isSymbolicLink(),
+          "Expected binary symlink to be restored",
+        );
+        assert.equal(
+          await fs.promises.realpath(binaryLinkPath),
+          realBinaryPath,
+        );
+      }
+
+      await restoreFrameworkLinks(frameworkPath);
+      await assertVersionedFramework();
+
+      // Calling again to expect a no-op
+      await restoreFrameworkLinks(frameworkPath);
+      await assertVersionedFramework();
+    });
+
+    it("throws on a flat framework", async (context) => {
+      const tempDirectoryPath = setupTempDirectory(context, {
+        "foo.framework": {
+          "Info.plist": `
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+              <dict>
+                <key>CFBundlePackageType</key>
+                <string>FMWK</string>
+                <key>CFBundleInfoDictionaryVersion</key>
+                <string>6.0</string>
+                <key>CFBundleExecutable</key>
+                <string>example-addon</string>
+              </dict>
+            </plist>
+          `,
+        },
+      });
+
+      const frameworkPath = path.join(tempDirectoryPath, "foo.framework");
+
+      await assert.rejects(
+        () => restoreFrameworkLinks(frameworkPath),
+        /Expected "Versions" directory inside versioned framework/,
       );
     });
   });
