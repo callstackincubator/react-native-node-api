@@ -28,6 +28,15 @@ See the [README.md](../README.md#packages) for detailed descriptions of each pac
   - Android: `*.android.node/` with jniLibs structure + `react-native-node-api-module` marker file
   - iOS: `*.apple.node` (XCFramework renamed) + marker file
 
+## Node.js Version
+
+This project uses **Node.js v22.x LTS "Jod"** (became LTS on October 29, 2024). The previous LTS was v20.x "Iron".
+
+**Important**: When reviewing CI workflows or suggesting Node.js version changes:
+- The current active LTS codename is "Jod" (v22.x), not "Iron" (v20.x)
+- Use `lts/jod` (lowercase) in GitHub Actions workflow files
+- Check https://nodejs.org/en/about/previous-releases for the latest LTS information
+
 ## Essential Workflows
 
 ### Development Setup

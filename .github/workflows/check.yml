@@ -5,9 +5,6 @@ env:
   NDK_VERSION: 27.1.12297006
   # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
   ENABLE_GRADLE_TESTS: true
-  # Node.js LTS version: Using v22.x "Jod" (became LTS on October 29, 2024)
-  # Previous LTS was v20.x "Iron". See: https://nodejs.org/en/about/previous-releases
-  NODE_VERSION: lts/jod
 
 on:
   push:
@@ -28,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: lts/jod
       # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
       # TODO: Remove this once we have a way to run linting without building the native code
       - name: Set up JDK 17
@@ -65,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: lts/jod
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -87,7 +84,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: lts/jod
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -120,7 +117,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: lts/jod
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -151,7 +148,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: lts/jod
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -232,7 +229,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: lts/jod
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
