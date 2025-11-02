@@ -1,5 +1,20 @@
 # ferric-cli
 
+## 0.3.7
+
+### Patch Changes
+
+- 9411a8c: Add x86_64 ios simulator target and output universal libraries for iOS simulators.
+- 9411a8c: It's no longer required to pass "build" to ferric, as this is default now
+- b661176: Add support for visionOS and tvOS targets
+- Updated dependencies [07ea9dc]
+- Updated dependencies [7536c6c]
+- Updated dependencies [c698698]
+- Updated dependencies [a2fd422]
+- Updated dependencies [bdc172e]
+- Updated dependencies [4672e01]
+  - react-native-node-api@0.6.2
+
 ## 0.3.6
 
 ### Patch Changes
