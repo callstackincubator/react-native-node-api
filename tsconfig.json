@@ -6,6 +6,7 @@
   },
   "files": ["prettier.config.js", "eslint.config.js"],
   "references": [
+    { "path": "./tsconfig.scripts.json" },
     { "path": "./packages/cli-utils/tsconfig.json" },
     { "path": "./packages/cmake-file-api/tsconfig.json" },
     { "path": "./packages/cmake-file-api/tsconfig.tests.json" },

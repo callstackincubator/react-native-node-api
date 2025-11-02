@@ -47,6 +47,7 @@ export default tseslint.config(
   {
     files: [
       "apps/test-app/*.js",
+      "apps/macos-test-app/*.js",
       "packages/node-addon-examples/**/*.js",
       "packages/host/babel-plugin.js",
       "packages/host/react-native.config.js",
@@ -68,6 +69,7 @@ export default tseslint.config(
   },
   {
     files: [
+      "**/metro.config.js",
       "packages/gyp-to-cmake/bin/*.js",
       "packages/host/bin/*.mjs",
       "packages/host/scripts/*.mjs",
