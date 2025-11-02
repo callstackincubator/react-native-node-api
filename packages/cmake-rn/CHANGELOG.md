@@ -1,5 +1,18 @@
 # cmake-rn
 
+## 0.5.2
+
+### Patch Changes
+
+- 07ea9dc: Add x86_64 and universal simulator triplets
+- Updated dependencies [07ea9dc]
+- Updated dependencies [7536c6c]
+- Updated dependencies [c698698]
+- Updated dependencies [a2fd422]
+- Updated dependencies [bdc172e]
+- Updated dependencies [4672e01]
+  - react-native-node-api@0.6.2
+
 ## 0.5.1
 
 ### Patch Changes
