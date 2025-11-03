@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/cli-utils",
     "packages/cmake-file-api",
+    "packages/weak-node-api",
     "packages/cmake-rn",
     "packages/ferric",
     "packages/gyp-to-cmake",
@@ -66,7 +67,7 @@
     "prettier": "^3.6.2",
     "react-native": "0.81.4",
     "read-pkg": "^9.0.1",
-    "tsx": "^4.20.5",
+    "tsx": "^4.20.6",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.38.0"
   }

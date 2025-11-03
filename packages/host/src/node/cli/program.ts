@@ -29,7 +29,7 @@ import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
 import { linkXcframework, restoreFrameworkLinks } from "./apple";
 import { linkAndroidDir } from "./android";
-import { weakNodeApiPath } from "../weak-node-api";
+import { applePrebuildPath } from "weak-node-api";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -175,15 +175,11 @@ program
         if (apple) {
           await oraPromise(
             async () => {
-              const xcframeworkPath = path.join(
-                weakNodeApiPath,
-                "weak-node-api.xcframework",
-              );
               await Promise.all(
                 [
-                  path.join(xcframeworkPath, "macos-x86_64"),
-                  path.join(xcframeworkPath, "macos-arm64"),
-                  path.join(xcframeworkPath, "macos-arm64_x86_64"),
+                  path.join(applePrebuildPath, "macos-x86_64"),
+                  path.join(applePrebuildPath, "macos-arm64"),
+                  path.join(applePrebuildPath, "macos-arm64_x86_64"),
                 ].map(async (slicePath) => {
                   const frameworkPath = path.join(
                     slicePath,

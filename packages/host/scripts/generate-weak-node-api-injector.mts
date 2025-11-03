@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-import { FunctionDecl, getNodeApiFunctions } from "./node-api-functions";
+import { type FunctionDecl, getNodeApiFunctions } from "weak-node-api";
 
-export const CPP_SOURCE_PATH = path.join(__dirname, "../cpp");
+export const CPP_SOURCE_PATH = path.join(import.meta.dirname, "../cpp");
 
 // TODO: Remove when all runtime Node API functions are implemented
 const IMPLEMENTED_RUNTIME_FUNCTIONS = [

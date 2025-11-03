@@ -9,7 +9,7 @@ import {
   UsageError,
   spawn,
 } from "@react-native-node-api/cli-utils";
-import { weakNodeApiPath } from "react-native-node-api";
+import { applePrebuildPath, androidPrebuildPath } from "weak-node-api";
 
 import {
   AndroidTargetName,
@@ -169,25 +169,20 @@ export function getTargetAndroidPlatform(target: AndroidTargetName) {
 }
 
 export function getWeakNodeApiFrameworkPath(target: AppleTargetName) {
-  const xcframeworkPath = joinPathAndAssertExistence(
-    weakNodeApiPath,
-    "weak-node-api.xcframework",
-  );
   const result = APPLE_XCFRAMEWORK_SLICES_PER_TARGET[target].find((slice) => {
-    const candidatePath = path.join(xcframeworkPath, slice);
+    const candidatePath = path.join(applePrebuildPath, slice);
     return fs.existsSync(candidatePath);
   });
   assert(
     result,
     `No matching slice found in weak-node-api.xcframework for target ${target}`,
   );
-  return joinPathAndAssertExistence(xcframeworkPath, result);
+  return joinPathAndAssertExistence(applePrebuildPath, result);
 }
 
 export function getWeakNodeApiAndroidLibraryPath(target: AndroidTargetName) {
   return joinPathAndAssertExistence(
-    weakNodeApiPath,
-    "weak-node-api.android.node",
+    androidPrebuildPath,
     ANDROID_ARCH_PR_TARGET[target],
   );
 }

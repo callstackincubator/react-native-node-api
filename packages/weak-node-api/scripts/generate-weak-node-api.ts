@@ -2,9 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-import { FunctionDecl, getNodeApiFunctions } from "./node-api-functions";
+import {
+  FunctionDecl,
+  getNodeApiFunctions,
+} from "../src/node-api-functions.js";
 
-export const WEAK_NODE_API_PATH = path.join(__dirname, "../weak-node-api");
+export const OUTPUT_PATH = path.join(import.meta.dirname, "../generated");
 
 /**
  * Generates source code for a version script for the given Node API version.
@@ -67,17 +70,17 @@ export function generateSource(functions: FunctionDecl[]) {
 }
 
 async function run() {
-  await fs.promises.mkdir(WEAK_NODE_API_PATH, { recursive: true });
+  await fs.promises.mkdir(OUTPUT_PATH, { recursive: true });
 
   const nodeApiFunctions = getNodeApiFunctions();
 
   const header = generateHeader(nodeApiFunctions);
-  const headerPath = path.join(WEAK_NODE_API_PATH, "weak_node_api.hpp");
+  const headerPath = path.join(OUTPUT_PATH, "weak_node_api.hpp");
   await fs.promises.writeFile(headerPath, header, "utf-8");
   cp.spawnSync("clang-format", ["-i", headerPath], { stdio: "inherit" });
 
   const source = generateSource(nodeApiFunctions);
-  const sourcePath = path.join(WEAK_NODE_API_PATH, "weak_node_api.cpp");
+  const sourcePath = path.join(OUTPUT_PATH, "weak_node_api.cpp");
   await fs.promises.writeFile(sourcePath, source, "utf-8");
   cp.spawnSync("clang-format", ["-i", sourcePath], { stdio: "inherit" });
 }

@@ -6,8 +6,13 @@ import {
   isAndroidTriplet,
   isAppleTriplet,
   SupportedTriplet,
-  weakNodeApiPath,
 } from "react-native-node-api";
+
+import {
+  applePrebuildPath,
+  androidPrebuildPath,
+  weakNodeApiCmakePath,
+} from "weak-node-api";
 
 import { ANDROID_ARCHITECTURES } from "./platforms/android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
@@ -20,19 +25,14 @@ export function getWeakNodeApiPath(
   triplet: SupportedTriplet | "apple",
 ): string {
   if (triplet === "apple" || isAppleTriplet(triplet)) {
-    const xcframeworkPath = path.join(
-      weakNodeApiPath,
-      "weak-node-api.xcframework",
-    );
     assert(
-      fs.existsSync(xcframeworkPath),
-      `Expected an XCFramework at ${xcframeworkPath}`,
+      fs.existsSync(applePrebuildPath),
+      `Expected an XCFramework at ${applePrebuildPath}`,
     );
-    return xcframeworkPath;
+    return applePrebuildPath;
   } else if (isAndroidTriplet(triplet)) {
     const libraryPath = path.join(
-      weakNodeApiPath,
-      "weak-node-api.android.node",
+      androidPrebuildPath,
       ANDROID_ARCHITECTURES[triplet],
       "libweak-node-api.so",
     );
@@ -59,7 +59,7 @@ export function getWeakNodeApiVariables(
 ): Record<string, string> {
   return {
     // Expose an includable CMake config file declaring the weak-node-api target
-    WEAK_NODE_API_CONFIG: path.join(weakNodeApiPath, "weak-node-api.cmake"),
+    WEAK_NODE_API_CONFIG: weakNodeApiCmakePath,
     WEAK_NODE_API_INC: getNodeApiIncludePaths().join(";"),
     WEAK_NODE_API_LIB: getWeakNodeApiPath(triplet),
   };

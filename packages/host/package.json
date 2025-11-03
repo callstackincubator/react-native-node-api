@@ -43,33 +43,18 @@
   ],
   "scripts": {
     "build": "tsc --build",
-    "copy-node-api-headers": "tsx scripts/copy-node-api-headers.ts",
-    "generate-weak-node-api": "tsx scripts/generate-weak-node-api.ts",
-    "generate-weak-node-api-injector": "tsx scripts/generate-weak-node-api-injector.ts",
-    "prepare-weak-node-api": "node --run copy-node-api-headers && node --run generate-weak-node-api-injector && node --run generate-weak-node-api",
-    "build-weak-node-api": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension --source ./weak-node-api --out ./weak-node-api",
-    "build-weak-node-api:android": "node --run build-weak-node-api -- --android",
-    "build-weak-node-api:apple": "node --run build-weak-node-api -- --apple",
-    "build-weak-node-api:all": "node --run build-weak-node-api -- --android --apple",
+    "generate-weak-node-api-injector": "node scripts/generate-weak-node-api-injector.mts",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
     "test:gradle": "ENABLE_GRADLE_TESTS=true node --run test",
-    "bootstrap": "node --run prepare-weak-node-api && node --run build-weak-node-api",
-    "prerelease": "node --run prepare-weak-node-api && node --run build-weak-node-api:all"
+    "bootstrap": "node --run generate-weak-node-api-injector",
+    "prerelease": "node --run generate-weak-node-api-injector"
   },
   "keywords": [
-    "react-native",
     "node-api",
     "napi",
-    "node-api",
     "node-addon-api",
     "native",
-    "addon",
-    "module",
-    "c",
-    "c++",
-    "bindings",
-    "buildtools",
-    "cmake"
+    "addon"
   ],
   "author": {
     "name": "Callstack",
@@ -87,6 +72,7 @@
     "@react-native-node-api/cli-utils": "0.1.1",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1",
+    "weak-node-api": "0.1.0",
     "zod": "^4.1.11"
   },
   "devDependencies": {
