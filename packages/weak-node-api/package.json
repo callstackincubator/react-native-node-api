@@ -15,8 +15,9 @@
     "!dist/**/*.test.d.ts",
     "!dist/**/*.test.d.ts.map",
     "include",
-    "weak-node-api/**",
-    "!weak-node-api/build/"
+    "build/Release",
+    "*.podspec",
+    "*.cmake"
   ],
   "scripts": {
     "build": "tsc --build",
@@ -45,6 +46,17 @@
     "buildtools",
     "cmake"
   ],
+  "author": {
+    "name": "Callstack",
+    "url": "https://github.com/callstackincubator"
+  },
+  "contributors": [
+    {
+      "name": "Kræn Hansen",
+      "url": "https://github.com/kraenhansen"
+    }
+  ],
+  "license": "MIT",
   "devDependencies": {
     "node-api-headers": "^1.5.0",
     "zod": "^4.1.11"
