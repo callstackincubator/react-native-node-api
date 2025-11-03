@@ -73,14 +73,34 @@ program
   )
   .option("--android", "Link Android modules")
   .option("--apple", "Link Apple modules")
+  .option(
+    "--prefix-logs",
+    "Add a prefix to ever line being logged, to more easily identify the output",
+  )
   .addOption(packageNameOption)
   .addOption(pathSuffixOption)
   .action(
     wrapAction(
       async (
         pathArg,
-        { force, prune, pathSuffix, android, apple, packageName },
+        { force, prune, pathSuffix, android, apple, packageName, prefixLogs },
       ) => {
+        const logPrefix = prefixLogs ? chalk.cyan("[Node-API]") : undefined;
+        // Patch a prefix onto all console.logs
+        if (prefixLogs) {
+          const log = console.log.bind(console);
+          const error = console.error.bind(console);
+          const warn = console.warn.bind(console);
+          Object.assign(console, {
+            log: (msg: unknown, ...parts: unknown[]) =>
+              log(`${logPrefix} ${String(msg)}`, ...parts),
+            error: (msg: unknown, ...parts: unknown[]) =>
+              error(`${logPrefix} ${String(msg)}`, ...parts),
+            warn: (msg: unknown, ...parts: unknown[]) =>
+              warn(`${logPrefix} ${String(msg)}`, ...parts),
+          });
+        }
+
         console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
         const platforms: PlatformName[] = [];
         if (android) {
@@ -112,6 +132,7 @@ program
                 linker: getLinker(platform),
               }),
             {
+              prefixText: logPrefix,
               text: `Linking ${platformDisplayName} Node-API modules into ${prettyPath(
                 platformOutputPath,
               )}`,

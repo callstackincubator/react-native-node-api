@@ -12,7 +12,7 @@ COPY_FRAMEWORKS_COMMAND ||= "#{CLI_COMMAND} link --apple '#{Pod::Config.instance
 XCFRAMEWORKS_DIR ||= File.join(__dir__, "xcframeworks")
 unless defined?(@xcframeworks_copied)
   puts "Executing #{COPY_FRAMEWORKS_COMMAND}"
-  system(COPY_FRAMEWORKS_COMMAND) or raise "Failed to copy xcframeworks"
+  system(COPY_FRAMEWORKS_COMMAND + " --prefix-logs") or raise "Failed to copy xcframeworks"
   # Setting a flag to avoid running this command on every require
   @xcframeworks_copied = true
 end
