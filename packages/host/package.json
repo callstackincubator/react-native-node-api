@@ -32,7 +32,7 @@
     "android",
     "!android/.cxx",
     "!android/build",
-    "ios",
+    "apple",
     "include",
     "babel-plugin.js",
     "scripts/patch-hermes.rb",
