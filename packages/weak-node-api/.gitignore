@@ -1,0 +1,11 @@
+
+# Everything in weak-node-api is generated, except for the configurations
+# Generated and built bia `npm run build-weak-node-api-injector`
+/build/
+/*.xcframework
+/*.android.node
+/generated/weak_node_api.cpp
+/generated/weak_node_api.hpp
+
+# Copied from node-api-headers by scripts/copy-node-api-headers.ts
+/include/

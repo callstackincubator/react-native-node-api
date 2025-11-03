@@ -7,3 +7,6 @@ dist/
 
 # Treading the MacOS app as ephemeral
 apps/macos-test-app
+
+# Cache used by the rust analyzer
+target/rust-analyzer/
