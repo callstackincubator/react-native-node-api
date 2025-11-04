@@ -38,7 +38,7 @@ describe(
         );
         assert.match(
           stderr,
-          /export REACT_NATIVE_OVERRIDE_HERMES_DIR=\$\(npx react-native-node-api vendor-hermes --silent --force\)/,
+          /export REACT_NATIVE_OVERRIDE_HERMES_DIR=\$\(npx react-native-node-api vendor-hermes --silent\)/,
         );
         assert.match(
           stderr,
