@@ -155,8 +155,14 @@ const xcframeworkExtensionOption = new Option(
   "Don't rename the xcframework to .apple.node",
 ).default(false);
 
+const appleBundleIdentifierOption = new Option(
+  "--apple-bundle-identifier <id>",
+  "Unique CFBundleIdentifier used for Apple framework artifacts",
+).default(undefined, "com.callstackincubator.node-api.{libraryName}");
+
 type AppleOpts = {
   xcframeworkExtension: boolean;
+  appleBundleIdentifier?: string;
 };
 
 function getBuildPath(baseBuildPath: string, triplet: Triplet) {
@@ -233,7 +239,9 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     }
   },
   amendCommand(command) {
-    return command.addOption(xcframeworkExtensionOption);
+    return command
+      .addOption(xcframeworkExtensionOption)
+      .addOption(appleBundleIdentifierOption);
   },
   async configure(
     triplets,
@@ -284,7 +292,10 @@ export const platform: Platform<Triplet[], AppleOpts> = {
       }),
     );
   },
-  async build({ spawn, triplet }, { build, target, configuration }) {
+  async build(
+    { spawn, triplet },
+    { build, target, configuration, appleBundleIdentifier },
+  ) {
     // We expect the final application to sign these binaries
     if (target.length > 1) {
       throw new Error("Building for multiple targets is not supported yet");
@@ -368,10 +379,11 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         "Expected exactly one artifact",
       );
       const [artifact] = artifacts;
-      await createAppleFramework(
-        path.join(buildPath, artifact.path),
-        triplet.endsWith("-darwin"),
-      );
+      await createAppleFramework({
+        libraryPath: path.join(buildPath, artifact.path),
+        versioned: triplet.endsWith("-darwin"),
+        bundleIdentifier: appleBundleIdentifier,
+      });
     }
   },
   isSupportedByHost: function (): boolean | Promise<boolean> {
