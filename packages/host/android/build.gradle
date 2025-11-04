@@ -71,7 +71,8 @@ android {
   compileSdkVersion getExtOrIntegerDefault("compileSdkVersion")
 
   buildFeatures {
-    prefab = true
+    buildConfig true
+    prefab true
   }
 
   defaultConfig {
@@ -101,10 +102,6 @@ android {
     cmake {
       path "CMakeLists.txt"
     }
-  }
-
-  buildFeatures {
-    buildConfig true
   }
 
   buildTypes {
