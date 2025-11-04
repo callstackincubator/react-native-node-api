@@ -8,8 +8,8 @@ find_package(hermes-engine REQUIRED CONFIG)
 
 add_library(weak-node-api INTERFACE)
 target_include_directories(weak-node-api INTERFACE
-  ../weak-node-api
-  ../weak-node-api/include
+  ../../weak-node-api/generated
+  ../../weak-node-api/include
 )
 
 add_library(node-api-host SHARED
