@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
+import { applePrebuildPath } from "./weak-node-api.js";
+
 async function restoreVersionedFrameworkSymlinks(frameworkPath: string) {
   const currentLinkPath = path.join(frameworkPath, "Versions", "Current");
 
@@ -23,21 +25,13 @@ async function restoreVersionedFrameworkSymlinks(frameworkPath: string) {
 }
 
 if (process.platform === "darwin") {
-  const xcframeworkPath = path.join(
-    import.meta.dirname,
-    "..",
-    "build",
-    "Release",
-    "weak-node-api.xcframework",
-  );
-
   assert(
-    fs.existsSync(xcframeworkPath),
-    `Expected an Xcframework at ${xcframeworkPath}`,
+    fs.existsSync(applePrebuildPath),
+    `Expected an Xcframework at ${applePrebuildPath}`,
   );
 
   const macosFrameworkPath = path.join(
-    xcframeworkPath,
+    applePrebuildPath,
     "macos-arm64_x86_64",
     "weak-node-api.framework",
   );
