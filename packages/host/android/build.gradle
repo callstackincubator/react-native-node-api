@@ -61,8 +61,11 @@ android {
     sourceSets {
       main {
         manifest.srcFile "src/main/AndroidManifestNew.xml"
-        // Include the weak-node-api to enable a dynamic load
-        jniLibs.srcDirs += ["../weak-node-api/weak-node-api.android.node"]
+        // Include the weak-node-api native libraries directly
+        jniLibs.srcDirs += [
+          "../../weak-node-api/build/Debug/weak-node-api.android.node",
+          "../../weak-node-api/build/Release/weak-node-api.android.node"
+        ]
       }
     }
   }
