@@ -1,6 +1,6 @@
 {
   "name": "weak-node-api",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Node-API for React Native",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
@@ -15,6 +15,7 @@
     "!dist/**/*.test.d.ts",
     "!dist/**/*.test.d.ts.map",
     "include",
+    "build/Debug",
     "build/Release",
     "*.podspec",
     "*.cmake"
