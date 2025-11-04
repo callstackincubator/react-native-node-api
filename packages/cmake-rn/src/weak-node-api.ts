@@ -58,7 +58,9 @@ export function getWeakNodeApiVariables(
   triplet: SupportedTriplet | "apple",
 ): Record<string, string> {
   return {
-    // Expose an includable CMake config file declaring the weak-node-api target
+    // Enable use of `find_package(weak-node-api REQUIRED CONFIG)`
+    "weak-node-api_DIR": path.dirname(weakNodeApiCmakePath),
+    // Enable use of `include(${WEAK_NODE_API_CONFIG})`
     WEAK_NODE_API_CONFIG: weakNodeApiCmakePath,
     WEAK_NODE_API_INC: getNodeApiIncludePaths().join(";"),
     WEAK_NODE_API_LIB: getWeakNodeApiPath(triplet),

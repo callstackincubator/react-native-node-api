@@ -22,5 +22,5 @@ export const androidPrebuildPath = path.resolve(
 
 export const weakNodeApiCmakePath = path.resolve(
   weakNodeApiPath,
-  "weak-node-api.cmake",
+  "weak-node-api-config.cmake",
 );
