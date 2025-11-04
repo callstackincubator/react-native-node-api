@@ -107,6 +107,11 @@ const configurationOption = new Option(
   .choices(["debug", "release"])
   .default("debug");
 
+const appleBundleIdentifierOption = new Option(
+  "--apple-bundle-identifier <id>",
+  "Unique CFBundleIdentifier used for Apple framework artifacts",
+).default(undefined, "com.callstackincubator.node-api.{libraryName}");
+
 export const buildCommand = new Command("build")
   .description("Build Rust Node-API module")
   .addOption(targetOption)
@@ -116,6 +121,7 @@ export const buildCommand = new Command("build")
   .addOption(outputPathOption)
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
+  .addOption(appleBundleIdentifierOption)
   .action(
     wrapAction(
       async ({
@@ -126,6 +132,7 @@ export const buildCommand = new Command("build")
         output: outputPath,
         configuration,
         xcframeworkExtension,
+        appleBundleIdentifier,
       }) => {
         const targets = new Set([...targetArg]);
         if (apple) {
@@ -239,7 +246,10 @@ export const buildCommand = new Command("build")
           const frameworkPaths = await Promise.all(
             libraryPaths.map((libraryPath) =>
               // TODO: Pass true as `versioned` argument for -darwin targets
-              createAppleFramework(libraryPath),
+              createAppleFramework({
+                libraryPath,
+                bundleIdentifier: appleBundleIdentifier,
+              }),
             ),
           );
           const xcframeworkFilename = determineXCFrameworkFilename(

@@ -22,10 +22,17 @@ export function escapeBundleIdentifier(input: string) {
   return input.replace(/[^A-Za-z0-9-.]/g, "-");
 }
 
-export async function createAppleFramework(
-  libraryPath: string,
+type CreateAppleFrameworkOptions = {
+  libraryPath: string;
+  versioned?: boolean;
+  bundleIdentifier?: string;
+};
+
+export async function createAppleFramework({
+  libraryPath,
   versioned = false,
-) {
+  bundleIdentifier,
+}: CreateAppleFrameworkOptions) {
   if (versioned) {
     // TODO: Add support for generating a Versions/Current/Resources/Info.plist convention framework
     throw new Error("Creating versioned frameworks is not supported yet");
@@ -47,7 +54,9 @@ export async function createAppleFramework(
     plist.build({
       CFBundleDevelopmentRegion: "en",
       CFBundleExecutable: libraryName,
-      CFBundleIdentifier: `com.callstackincubator.node-api.${escapeBundleIdentifier(libraryName)}`,
+      CFBundleIdentifier: escapeBundleIdentifier(
+        bundleIdentifier ?? `com.callstackincubator.node-api.${libraryName}`,
+      ),
       CFBundleInfoDictionaryVersion: "6.0",
       CFBundleName: libraryName,
       CFBundlePackageType: "FMWK",
