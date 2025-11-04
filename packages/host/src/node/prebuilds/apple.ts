@@ -14,6 +14,14 @@ type XCframeworkOptions = {
   autoLink: boolean;
 };
 
+/**
+ * Escapes any input to match a CFBundleIdentifier
+ * See https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleidentifier
+ */
+export function escapeBundleIdentifier(input: string) {
+  return input.replace(/[^A-Za-z0-9-.]/g, "-");
+}
+
 export async function createAppleFramework(
   libraryPath: string,
   versioned = false,
@@ -39,7 +47,7 @@ export async function createAppleFramework(
     plist.build({
       CFBundleDevelopmentRegion: "en",
       CFBundleExecutable: libraryName,
-      CFBundleIdentifier: `com.callstackincubator.node-api.${libraryName}`,
+      CFBundleIdentifier: `com.callstackincubator.node-api.${escapeBundleIdentifier(libraryName)}`,
       CFBundleInfoDictionaryVersion: "6.0",
       CFBundleName: libraryName,
       CFBundlePackageType: "FMWK",
