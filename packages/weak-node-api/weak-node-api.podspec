@@ -27,7 +27,7 @@ Pod::Spec.new do |s|
   s.source_files = "generated/*.hpp", "include/*.h"
   s.public_header_files = "generated/*.hpp", "include/*.h"
 
-  s.vendored_frameworks = "build/Release/weak-node-api.xcframework"
+  s.vendored_frameworks = "build/*/weak-node-api.xcframework"
   
   # Avoiding the header dir to allow for idiomatic Node-API includes
   s.header_dir = nil
