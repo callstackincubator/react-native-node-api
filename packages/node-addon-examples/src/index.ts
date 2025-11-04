@@ -85,5 +85,8 @@ export const suites: Record<
       require("../tests/buffers/addon.js");
     },
     async: () => require("../tests/async/addon.js") as () => Promise<void>,
+    make_callback: () => {
+      require("../tests/make_callback/addon.js");
+    },
   },
 };
