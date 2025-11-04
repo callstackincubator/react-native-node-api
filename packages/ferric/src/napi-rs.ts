@@ -3,12 +3,41 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { NapiCli } from "@napi-rs/cli";
+import * as toml from "@ltd/j-toml";
 
 const napiCli = new NapiCli();
 
 import { getBlockComment } from "./banner.js";
 
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..");
+
+/**
+ * Reads the `Cargo.toml` file at the given path, extracts the crate name,
+ * and sanitizes it to comply with Apple's CFBundleIdentifier naming conventions.
+ * Specifically, it replaces underscores with hyphens.
+ * @param createPath Path to the directory containing the Cargo.toml file.
+ * @returns The sanitized crate name suitable for a CFBundleIdentifier.
+ */
+async function getSanitizedCrateName(createPath: string): Promise<string> {
+  const cargoTomlPath = path.join(createPath, "Cargo.toml");
+  const cargoTomlContent = await fs.promises.readFile(cargoTomlPath, "utf8");
+  const parsedToml = toml.parse(cargoTomlContent);
+  // Asserting 'package' and 'name' properties for type safety.
+  assert(
+    typeof parsedToml.package === "object" && parsedToml.package !== null,
+    `Expected 'package' section in ${cargoTomlPath}`,
+  );
+  assert(
+    "name" in parsedToml.package && typeof parsedToml.package.name === "string",
+    `Expected 'package.name' string in ${cargoTomlPath}`,
+  );
+  const rawCrateName = parsedToml.package.name;
+
+  // CFBundleIdentifier cannot contain underscores. Replace them with hyphens
+  // to comply with Apple's naming conventions for iOS/macOS frameworks.
+  const sanitizedName = rawCrateName.replaceAll("_", "-");
+  return sanitizedName;
+}
 
 type TypeScriptDeclarationsOptions = {
   /**
@@ -43,13 +72,21 @@ export async function generateTypeScriptDeclarations({
       "utf8",
     );
     const tempOutputPath = path.join(tempPath, outputFilename);
-    // Call into napi.rs to generate TypeScript declarations
+
+    // Get the sanitized crate name for framework generation.
+    const frameworkName = await getSanitizedCrateName(createPath);
+
+    // Call into napi.rs to generate TypeScript declarations and build the framework.
     const { task } = await napiCli.build({
       verbose: false,
       dts: outputFilename,
       outputDir: tempPath,
       cwd: createPath,
       cargoOptions: ["--quiet"],
+      // Pass the sanitized crate name as the framework name to comply with CFBundleIdentifier rules.
+      // This ensures that generated frameworks (e.g., for iOS/macOS) have valid bundle identifiers
+      // which disallow underscores and prefer hyphens.
+      frameworkName: frameworkName,
     });
     await task;
     // Override the banner
