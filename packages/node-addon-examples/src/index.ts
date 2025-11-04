@@ -85,5 +85,7 @@ export const suites: Record<
       require("../tests/buffers/addon.js");
     },
     async: () => require("../tests/async/addon.js") as () => Promise<void>,
+    threadsafe_function: () =>
+      require("../tests/threadsafe_function/addon.js") as () => Promise<void>,
   },
 };
