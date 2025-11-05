@@ -18,13 +18,21 @@ export function generateHeader(functions: FunctionDecl[]) {
     "#include <node_api.h>", // Node-API
     "#include <stdio.h>", // fprintf()
     "#include <stdlib.h>", // abort()
+    "",
+    // Ideally we would have just used NAPI_NO_RETURN, but
+    // __declspec(noreturn) (when building with Microsoft Visual C++) cannot be used on members of a struct
+    // TODO: If we targeted C++23 we could use std::unreachable()
+    "#if defined(__GNUC__)",
+    "#define WEAK_NODE_API_UNREACHABLE __builtin_unreachable();",
+    "#else",
+    "#define WEAK_NODE_API_UNREACHABLE __assume(0);",
+    "#endif",
+    "",
     // Generate the struct of function pointers
     "struct WeakNodeApiHost {",
-    ...functions.map(({ returnType, noReturn, name, argumentTypes }) =>
+    ...functions.map(({ returnType, name, argumentTypes }) =>
       [
         returnType,
-        // Using a define from node_api.h
-        noReturn ? "NAPI_NO_RETURN" : "",
         // Signature
         `(*${name})(${argumentTypes.join(", ")});`,
       ].join(" "),
@@ -49,11 +57,10 @@ export function generateSource(functions: FunctionDecl[]) {
     "};",
     ``,
     // Generate function calling into the host
-    ...functions.flatMap(({ returnType, noReturn, name, argumentTypes }) => {
+    ...functions.flatMap(({ returnType, name, argumentTypes, noReturn }) => {
       return [
         'extern "C"',
         returnType,
-        noReturn ? "NAPI_NO_RETURN" : "",
         name,
         "(",
         argumentTypes.map((type, index) => `${type} arg${index}`).join(", "),
@@ -67,6 +74,7 @@ export function generateSource(functions: FunctionDecl[]) {
         "(",
         argumentTypes.map((_, index) => `arg${index}`).join(", "),
         ");",
+        noReturn ? "WEAK_NODE_API_UNREACHABLE" : "",
         "};",
       ].join(" ");
     }),
