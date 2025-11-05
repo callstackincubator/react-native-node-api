@@ -192,52 +192,62 @@ export async function linkFlatFramework({
   }
 }
 
+async function restoreSymlink(target: string, linkPath: string) {
+  if (
+    !fs.existsSync(linkPath) &&
+    fs.existsSync(path.resolve(path.dirname(linkPath), target))
+  ) {
+    await fs.promises.symlink(target, linkPath);
+  }
+}
+
+async function guessCurrentFrameworkVersion(frameworkPath: string) {
+  const versionsPath = path.join(frameworkPath, "Versions");
+  assert(
+    fs.existsSync(versionsPath),
+    "Expected 'Versions' directory inside versioned framework",
+  );
+
+  const versionDirectoryEntries = await fs.promises.readdir(versionsPath, {
+    withFileTypes: true,
+  });
+  const versions = versionDirectoryEntries
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+  assert.equal(
+    versions.length,
+    1,
+    `Expected exactly one directory in ${versionsPath}, found ${JSON.stringify(versions)}`,
+  );
+  const [version] = versions;
+  return version;
+}
+
 /**
  * NPM packages aren't preserving internal symlinks inside versioned frameworks.
  * This function attempts to restore those.
  */
-export async function restoreFrameworkLinks(frameworkPath: string) {
-  // Reconstruct missing symbolic links if needed
-  const versionsPath = path.join(frameworkPath, "Versions");
-  const versionCurrentPath = path.join(versionsPath, "Current");
-
-  assert(
-    fs.existsSync(versionsPath),
-    `Expected "Versions" directory inside versioned framework '${frameworkPath}'`,
+export async function restoreVersionedFrameworkSymlinks(frameworkPath: string) {
+  const currentVersionName = await guessCurrentFrameworkVersion(frameworkPath);
+  const currentVersionPath = path.join(frameworkPath, "Versions", "Current");
+  await restoreSymlink(currentVersionName, currentVersionPath);
+  await restoreSymlink(
+    "Versions/Current/Resources",
+    path.join(frameworkPath, "Resources"),
+  );
+  await restoreSymlink(
+    "Versions/Current/Headers",
+    path.join(frameworkPath, "Headers"),
   );
 
-  if (!fs.existsSync(versionCurrentPath)) {
-    const versionDirectoryEntries = await fs.promises.readdir(versionsPath, {
-      withFileTypes: true,
-    });
-    const versionDirectoryPaths = versionDirectoryEntries
-      .filter((dirent) => dirent.isDirectory())
-      .map((dirent) => path.join(dirent.parentPath, dirent.name));
-    assert.equal(
-      versionDirectoryPaths.length,
-      1,
-      `Expected a single directory in ${versionsPath}, found ${JSON.stringify(versionDirectoryPaths)}`,
-    );
-    const [versionDirectoryPath] = versionDirectoryPaths;
-    await fs.promises.symlink(
-      path.relative(path.dirname(versionCurrentPath), versionDirectoryPath),
-      versionCurrentPath,
-    );
-  }
-
-  const { CFBundleExecutable } = await readFrameworkInfo(
-    path.join(versionCurrentPath, "Resources", "Info.plist"),
+  const { CFBundleExecutable: executableName } = await readFrameworkInfo(
+    path.join(currentVersionPath, "Resources", "Info.plist"),
   );
 
-  const libraryRealPath = path.join(versionCurrentPath, CFBundleExecutable);
-  const libraryLinkPath = path.join(frameworkPath, CFBundleExecutable);
-  // Reconstruct missing symbolic links if needed
-  if (fs.existsSync(libraryRealPath) && !fs.existsSync(libraryLinkPath)) {
-    await fs.promises.symlink(
-      path.relative(path.dirname(libraryLinkPath), libraryRealPath),
-      libraryLinkPath,
-    );
-  }
+  await restoreSymlink(
+    path.join("Versions", "Current", executableName),
+    path.join(frameworkPath, executableName),
+  );
 }
 
 export async function linkVersionedFramework({
@@ -250,7 +260,7 @@ export async function linkVersionedFramework({
     "Linking Apple addons are only supported on macOS",
   );
 
-  await restoreFrameworkLinks(frameworkPath);
+  await restoreVersionedFrameworkSymlinks(frameworkPath);
 
   const frameworkInfoPath = path.join(
     frameworkPath,

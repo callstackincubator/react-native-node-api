@@ -9,7 +9,7 @@ import {
   readAndParsePlist,
   readFrameworkInfo,
   readXcframeworkInfo,
-  restoreFrameworkLinks,
+  restoreVersionedFrameworkSymlinks,
 } from "./apple";
 import { setupTempDirectory } from "../test-utils";
 
@@ -269,7 +269,7 @@ describe("apple", { skip: process.platform !== "darwin" }, () => {
     });
   });
 
-  describe("restoreFrameworkLinks", () => {
+  describe("restoreVersionedFrameworkSymlinks", () => {
     it("restores a versioned framework", async (context) => {
       const infoPlistContents = `
         <?xml version="1.0" encoding="UTF-8"?>
@@ -335,11 +335,11 @@ describe("apple", { skip: process.platform !== "darwin" }, () => {
         );
       }
 
-      await restoreFrameworkLinks(frameworkPath);
+      await restoreVersionedFrameworkSymlinks(frameworkPath);
       await assertVersionedFramework();
 
       // Calling again to expect a no-op
-      await restoreFrameworkLinks(frameworkPath);
+      await restoreVersionedFrameworkSymlinks(frameworkPath);
       await assertVersionedFramework();
     });
 
@@ -366,8 +366,8 @@ describe("apple", { skip: process.platform !== "darwin" }, () => {
       const frameworkPath = path.join(tempDirectoryPath, "foo.framework");
 
       await assert.rejects(
-        () => restoreFrameworkLinks(frameworkPath),
-        /Expected "Versions" directory inside versioned framework/,
+        () => restoreVersionedFrameworkSymlinks(frameworkPath),
+        /Expected 'Versions' directory inside versioned framework/,
       );
     });
   });

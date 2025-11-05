@@ -43,6 +43,10 @@ async function restoreVersionedFrameworkSymlinks(frameworkPath: string) {
     "Versions/Current/Resources",
     path.join(frameworkPath, "Resources"),
   );
+  await restoreSymlink(
+    "Versions/Current/Headers",
+    path.join(frameworkPath, "Headers"),
+  );
 }
 
 if (process.platform === "darwin") {
