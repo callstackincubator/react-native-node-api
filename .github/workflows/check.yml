@@ -76,6 +76,32 @@ jobs:
       - run: npm ci
       - run: npm run bootstrap
       - run: npm test
+  weak-node-api-tests:
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'weak-node-api')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    runs-on: ${{ matrix.runner }}
+    name: Weak Node-API tests (${{ matrix.runner }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/jod
+      - run: npm ci
+      - run: npm run build
+      - name: Prepare weak-node-api
+        run: npm run prepare-weak-node-api --workspace weak-node-api
+      - name: Build and run weak-node-api C++ tests
+        run: |
+          cmake -S . -B build -DBUILD_TESTS=ON
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+        working-directory: packages/weak-node-api
   test-ios:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
