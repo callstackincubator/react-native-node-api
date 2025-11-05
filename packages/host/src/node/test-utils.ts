@@ -25,7 +25,9 @@ export function setupTempDirectory(context: TestContext, files: FileMap) {
   );
 
   context.after(() => {
-    fs.rmSync(tempDirectoryPath, { recursive: true, force: true });
+    if (!process.env.KEEP_TEMP_DIRS) {
+      fs.rmSync(tempDirectoryPath, { recursive: true, force: true });
+    }
   });
 
   writeFiles(tempDirectoryPath, files);
