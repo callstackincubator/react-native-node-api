@@ -1,7 +1,7 @@
 {
   "name": "weak-node-api",
   "version": "0.0.1",
-  "description": "Node-API for React Native",
+  "description": "A linkable and runtime-injectable Node-API",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
     "type": "git",
