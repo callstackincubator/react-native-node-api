@@ -38,7 +38,8 @@ if(APPLE)
   )
 endif()
 
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+# C++20 is needed to use designated initializers
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_20)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NAPI_VERSION=8)
 
 target_compile_options(${PROJECT_NAME} PRIVATE
