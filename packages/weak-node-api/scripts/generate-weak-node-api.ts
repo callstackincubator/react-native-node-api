@@ -20,11 +20,14 @@ export function generateHeader(functions: FunctionDecl[]) {
     "#include <stdlib.h>", // abort()
     // Generate the struct of function pointers
     "struct WeakNodeApiHost {",
-    ...functions.map(
-      ({ returnType, noReturn, name, argumentTypes }) =>
-        `${returnType} ${
-          noReturn ? " __attribute__((noreturn))" : ""
-        }(*${name})(${argumentTypes.join(", ")});`,
+    ...functions.map(({ returnType, noReturn, name, argumentTypes }) =>
+      [
+        returnType,
+        // Using a define from node_api.h
+        noReturn ? "NAPI_NO_RETURN" : "",
+        // Signature
+        `(*${name})(${argumentTypes.join(", ")});`,
+      ].join(" "),
     ),
     "};",
     "typedef void(*InjectHostFunction)(const WeakNodeApiHost&);",
@@ -48,23 +51,24 @@ export function generateSource(functions: FunctionDecl[]) {
     // Generate function calling into the host
     ...functions.flatMap(({ returnType, noReturn, name, argumentTypes }) => {
       return [
-        `extern "C" ${returnType} ${
-          noReturn ? " __attribute__((noreturn))" : ""
-        }${name}(${argumentTypes
-          .map((type, index) => `${type} arg${index}`)
-          .join(", ")}) {`,
+        'extern "C"',
+        returnType,
+        noReturn ? "NAPI_NO_RETURN" : "",
+        name,
+        "(",
+        argumentTypes.map((type, index) => `${type} arg${index}`).join(", "),
+        ") {",
         `if (g_host.${name} == nullptr) {`,
         `  fprintf(stderr, "Node-API function '${name}' called before it was injected!\\n");`,
         "  abort();",
         "}",
-        (returnType === "void" ? "" : "return ") +
-          "g_host." +
-          name +
-          "(" +
-          argumentTypes.map((_, index) => `arg${index}`).join(", ") +
-          ");",
+        returnType === "void" ? "" : "return ",
+        `g_host.${name}`,
+        "(",
+        argumentTypes.map((_, index) => `arg${index}`).join(", "),
+        ");",
         "};",
-      ];
+      ].join(" ");
     }),
   ].join("\n");
 }
