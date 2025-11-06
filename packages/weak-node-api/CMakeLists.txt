@@ -1,9 +1,28 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.19)
 project(weak-node-api)
 
-add_library(${PROJECT_NAME} SHARED
-  generated/weak_node_api.cpp
+# Read version from package.json
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/package.json" PACKAGE_JSON)
+string(JSON PACKAGE_VERSION GET ${PACKAGE_JSON} version)
+
+add_library(${PROJECT_NAME} SHARED)
+
+set(INCLUDE_DIR "include")
+set(GENERATED_SOURCE_DIR "generated")
+
+target_sources(${PROJECT_NAME}
+  PUBLIC
+    ${GENERATED_SOURCE_DIR}/weak_node_api.cpp
+  PUBLIC FILE_SET HEADERS
+  BASE_DIRS ${GENERATED_SOURCE_DIR} ${INCLUDE_DIR} FILES
+    ${GENERATED_SOURCE_DIR}/weak_node_api.hpp
+    ${INCLUDE_DIR}/js_native_api_types.h
+    ${INCLUDE_DIR}/js_native_api.h
+    ${INCLUDE_DIR}/node_api_types.h
+    ${INCLUDE_DIR}/node_api.h
 )
+
+get_target_property(PUBLIC_HEADER_FILES ${PROJECT_NAME} HEADER_SET)
 
 # Stripping the prefix from the library name
 # to make sure the name of the XCFramework will match the name of the library
@@ -11,16 +30,14 @@ if(APPLE)
   set_target_properties(${PROJECT_NAME} PROPERTIES
     FRAMEWORK TRUE
     MACOSX_FRAMEWORK_IDENTIFIER com.callstack.${PROJECT_NAME}
-    MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
-    MACOSX_FRAMEWORK_BUNDLE_VERSION 1.0
+    MACOSX_FRAMEWORK_SHORT_VERSION_STRING ${PACKAGE_VERSION}
+    MACOSX_FRAMEWORK_BUNDLE_VERSION ${PACKAGE_VERSION}
+    VERSION ${PACKAGE_VERSION}
     XCODE_ATTRIBUTE_SKIP_INSTALL NO
+    PUBLIC_HEADER "${PUBLIC_HEADER_FILES}"
   )
 endif()
 
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 target_compile_definitions(${PROJECT_NAME} PRIVATE NAPI_VERSION=8)
 

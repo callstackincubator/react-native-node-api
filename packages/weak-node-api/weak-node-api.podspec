@@ -22,11 +22,8 @@ Pod::Spec.new do |s|
 
   s.source       = { :git => "https://github.com/callstackincubator/react-native-node-api.git", :tag => "#{s.version}" }
 
-  # TODO: These headers could be included in the Xcframework?
-  # (tracked by https://github.com/callstackincubator/react-native-node-api/issues/315)
   s.source_files = "generated/*.hpp", "include/*.h"
   s.public_header_files = "generated/*.hpp", "include/*.h"
-
   s.vendored_frameworks = "build/*/weak-node-api.xcframework"
   
   # Avoiding the header dir to allow for idiomatic Node-API includes
