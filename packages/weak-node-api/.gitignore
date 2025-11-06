@@ -9,3 +9,6 @@
 
 # Copied from node-api-headers by scripts/copy-node-api-headers.ts
 /include/
+
+# Clang cache
+/.cache/

@@ -18,13 +18,24 @@ export function generateHeader(functions: FunctionDecl[]) {
     "#include <node_api.h>", // Node-API
     "#include <stdio.h>", // fprintf()
     "#include <stdlib.h>", // abort()
+    "",
+    // Ideally we would have just used NAPI_NO_RETURN, but
+    // __declspec(noreturn) (when building with Microsoft Visual C++) cannot be used on members of a struct
+    // TODO: If we targeted C++23 we could use std::unreachable()
+    "#if defined(__GNUC__)",
+    "#define WEAK_NODE_API_UNREACHABLE __builtin_unreachable();",
+    "#else",
+    "#define WEAK_NODE_API_UNREACHABLE __assume(0);",
+    "#endif",
+    "",
     // Generate the struct of function pointers
     "struct WeakNodeApiHost {",
-    ...functions.map(
-      ({ returnType, noReturn, name, argumentTypes }) =>
-        `${returnType} ${
-          noReturn ? " __attribute__((noreturn))" : ""
-        }(*${name})(${argumentTypes.join(", ")});`,
+    ...functions.map(({ returnType, name, argumentTypes }) =>
+      [
+        returnType,
+        // Signature
+        `(*${name})(${argumentTypes.join(", ")});`,
+      ].join(" "),
     ),
     "};",
     "typedef void(*InjectHostFunction)(const WeakNodeApiHost&);",
@@ -46,25 +57,26 @@ export function generateSource(functions: FunctionDecl[]) {
     "};",
     ``,
     // Generate function calling into the host
-    ...functions.flatMap(({ returnType, noReturn, name, argumentTypes }) => {
+    ...functions.flatMap(({ returnType, name, argumentTypes, noReturn }) => {
       return [
-        `extern "C" ${returnType} ${
-          noReturn ? " __attribute__((noreturn))" : ""
-        }${name}(${argumentTypes
-          .map((type, index) => `${type} arg${index}`)
-          .join(", ")}) {`,
+        'extern "C"',
+        returnType,
+        name,
+        "(",
+        argumentTypes.map((type, index) => `${type} arg${index}`).join(", "),
+        ") {",
         `if (g_host.${name} == nullptr) {`,
         `  fprintf(stderr, "Node-API function '${name}' called before it was injected!\\n");`,
         "  abort();",
         "}",
-        (returnType === "void" ? "" : "return ") +
-          "g_host." +
-          name +
-          "(" +
-          argumentTypes.map((_, index) => `arg${index}`).join(", ") +
-          ");",
+        returnType === "void" ? "" : "return ",
+        `g_host.${name}`,
+        "(",
+        argumentTypes.map((_, index) => `arg${index}`).join(", "),
+        ");",
+        noReturn ? "WEAK_NODE_API_UNREACHABLE" : "",
         "};",
-      ];
+      ].join(" ");
     }),
   ].join("\n");
 }
