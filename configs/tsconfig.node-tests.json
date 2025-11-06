@@ -7,11 +7,4 @@
   },
   "include": ["${configDir}/src/**/*.test.ts"],
   "exclude": []
-  /*
-  "references": [
-    {
-      "path": "./tsconfig.json"
-    }
-  ]
-  */
 }

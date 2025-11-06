@@ -1,13 +1,38 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import cp from "node:child_process";
-
-import {
-  type NodeApiVersion,
-  symbols,
-  include_dir as nodeApiIncludePath,
-} from "node-api-headers";
 import { z } from "zod";
+
+import * as rawHeaders from "node-api-headers";
+
+const SymbolsPerInterface = z.object({
+  js_native_api_symbols: z.array(z.string()),
+  node_api_symbols: z.array(z.string()),
+});
+
+const NodeApiHeaders = z.object({
+  include_dir: z.string(),
+  def_paths: z.object({
+    js_native_api_def: z.string(),
+    node_api_def: z.string(),
+  }),
+  symbols: z.object({
+    v1: SymbolsPerInterface,
+    v2: SymbolsPerInterface,
+    v3: SymbolsPerInterface,
+    v4: SymbolsPerInterface,
+    v5: SymbolsPerInterface,
+    v6: SymbolsPerInterface,
+    v7: SymbolsPerInterface,
+    v8: SymbolsPerInterface,
+    v9: SymbolsPerInterface,
+    v10: SymbolsPerInterface,
+  }),
+});
+
+type NodeApiVersion = keyof z.infer<typeof NodeApiHeaders>["symbols"];
+
+export const nodeApiHeaders = NodeApiHeaders.parse(rawHeaders);
 
 const clangAstDump = z.object({
   kind: z.literal("TranslationUnitDecl"),
@@ -42,8 +67,8 @@ export function getNodeApiHeaderAST(version: NodeApiVersion) {
       // Parse and analyze the source file but not compile it
       "-fsyntax-only",
       // Include from the node-api-headers package
-      `-I${nodeApiIncludePath}`,
-      path.join(nodeApiIncludePath, "node_api.h"),
+      `-I${nodeApiHeaders.include_dir}`,
+      path.join(nodeApiHeaders.include_dir, "node_api.h"),
     ],
     {
       encoding: "utf-8",
@@ -71,7 +96,7 @@ export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
   assert(Array.isArray(root.inner));
   const foundSymbols = new Set();
 
-  const symbolsPerInterface = symbols[version];
+  const symbolsPerInterface = nodeApiHeaders.symbols[version];
   const engineSymbols = new Set(symbolsPerInterface.js_native_api_symbols);
   const runtimeSymbols = new Set(symbolsPerInterface.node_api_symbols);
   const allSymbols = new Set([...engineSymbols, ...runtimeSymbols]);

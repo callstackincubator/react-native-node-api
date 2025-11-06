@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { include_dir as includeSourcePath } from "node-api-headers";
+
+import { nodeApiHeaders } from "../src/node-api-functions.js";
+const { include_dir: includeSourcePath } = nodeApiHeaders;
 
 const includeDestinationPath = path.join(import.meta.dirname, "../include");
 assert(fs.existsSync(includeSourcePath), `Expected ${includeSourcePath}`);
