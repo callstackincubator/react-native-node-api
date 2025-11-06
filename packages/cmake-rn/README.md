@@ -10,14 +10,14 @@ Android's dynamic linker imposes restrictions on the access to global symbols (s
 
 The implementation of Node-API is split between Hermes and our host package and to avoid addons having to explicitly link against either, we've introduced a `weak-node-api` library (published in `react-native-node-api` package). This library exposes only Node-API and will have its implementation injected by the host.
 
-To link against `weak-node-api` just include the CMake config exposed through `WEAK_NODE_API_CONFIG` and add `weak-node-api` to the `target_link_libraries` of the addon's library target.
+To link against `weak-node-api` just use `find_package` to import the `weak-node-api` target and add it to the `target_link_libraries` of the addon's library target.
 
 ```cmake
 cmake_minimum_required(VERSION 3.15...3.31)
 project(tests-buffers)
 
 # Defines the "weak-node-api" target
-include(${WEAK_NODE_API_CONFIG})
+find_package(weak-node-api REQUIRED CONFIG)
 
 add_library(addon SHARED addon.c)
 target_link_libraries(addon PRIVATE weak-node-api)

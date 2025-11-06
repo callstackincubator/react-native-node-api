@@ -7,11 +7,7 @@
     "rootDir": "scripts",
     "types": ["node"]
   },
-  "include": ["scripts/**/*.mts", "types/**/*.d.ts"],
+  "include": ["scripts/**/*.ts", "types/**/*.d.ts"],
   "exclude": [],
-  "references": [
-    {
-      "path": "../weak-node-api/tsconfig.node.json"
-    }
-  ]
+  "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -85,7 +85,7 @@ export function bindingGypToCmakeLists({
   ];
 
   if (weakNodeApi) {
-    lines.push(`include(\${WEAK_NODE_API_CONFIG})`, "");
+    lines.push(`find_package(weak-node-api REQUIRED CONFIG)`, "");
   }
 
   for (const target of gyp.targets) {

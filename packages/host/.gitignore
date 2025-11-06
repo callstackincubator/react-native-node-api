@@ -16,12 +16,5 @@ include/
 android/.cxx/
 android/build/
 
-# Everything in weak-node-api is generated, except for the configurations
-# Generated and built bia `npm run build-weak-node-api-injector`
-/weak-node-api/build/
-/weak-node-api/*.xcframework
-/weak-node-api/*.android.node
-/weak-node-api/weak_node_api.cpp
-/weak-node-api/weak_node_api.hpp
 # Generated via `npm run generate-weak-node-api-injector`
 /cpp/WeakNodeApiInjector.cpp

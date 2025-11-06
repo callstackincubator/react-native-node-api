@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 project(weak-node-api)
 
 add_library(${PROJECT_NAME} SHARED
-  weak_node_api.cpp
+  generated/weak_node_api.cpp
 )
 
 # Stripping the prefix from the library name

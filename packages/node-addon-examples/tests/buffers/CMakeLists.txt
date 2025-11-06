@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15...3.31)
 project(buffers-test)
 
-include(${WEAK_NODE_API_CONFIG})
+find_package(weak-node-api REQUIRED CONFIG)
 
 add_library(addon SHARED addon.c)
 

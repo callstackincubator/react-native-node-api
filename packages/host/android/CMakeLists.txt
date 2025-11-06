@@ -5,12 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 find_package(ReactAndroid REQUIRED CONFIG)
 find_package(hermes-engine REQUIRED CONFIG)
-
-add_library(weak-node-api INTERFACE)
-target_include_directories(weak-node-api INTERFACE
-  ../weak-node-api
-  ../weak-node-api/include
-)
+find_package(weak-node-api REQUIRED CONFIG)
 
 add_library(node-api-host SHARED
   src/main/cpp/OnLoad.cpp

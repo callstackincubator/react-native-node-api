@@ -26,5 +26,3 @@ export {
   determineLibraryBasename,
   dereferenceDirectory,
 } from "./path-utils.js";
-
-export { weakNodeApiPath } from "./weak-node-api.js";

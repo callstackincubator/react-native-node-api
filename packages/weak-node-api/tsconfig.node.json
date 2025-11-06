@@ -7,11 +7,6 @@
     "rootDir": "src",
     "types": ["node"]
   },
-  "include": ["src/node/**/*.ts", "types/**/*.d.ts"],
-  "exclude": ["**/*.test.ts"],
-  "references": [
-    {
-      "path": "../weak-node-api/tsconfig.node.json"
-    }
-  ]
+  "include": ["src/**/*.ts", "types/**/*.d.ts"],
+  "exclude": ["**/*.test.ts"]
 }
