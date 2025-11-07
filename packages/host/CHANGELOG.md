@@ -1,5 +1,22 @@
 # react-native-node-api
 
+## 0.7.0
+
+### Minor Changes
+
+- 61fff3f: Ensure proper escaping when generating a bundle identifier while creating an Apple framework
+- 60fae96: Use `find_package` instead of `include` to locate "weak-node-api"
+- 60fae96: No longer exporting weakNodeApiPath, import from "weak-node-api" instead
+
+### Patch Changes
+
+- 60fae96: Moved weak-node-api into a separate "weak-node-api" package.
+- 61fff3f: Allow passing --apple-bundle-identifier to specify the bundle identifiers used when creating Apple frameworks.
+- 5dea205: Add "apple" folder into the package (follow-up to #301)
+- eca721e: Don't instruct users to pass --force when vendoring hermes
+- Updated dependencies [60fae96]
+  - weak-node-api@0.0.2
+
 ## 0.6.2
 
 ### Patch Changes

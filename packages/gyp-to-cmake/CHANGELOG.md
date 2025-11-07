@@ -1,5 +1,11 @@
 # gyp-to-cmake
 
+## 0.5.0
+
+### Minor Changes
+
+- 60fae96: Use `find_package` instead of `include` to locate "weak-node-api"
+
 ## 0.4.0
 
 ### Minor Changes

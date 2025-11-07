@@ -1,5 +1,21 @@
 # ferric-cli
 
+## 0.3.8
+
+### Patch Changes
+
+- 61fff3f: Allow passing --apple-bundle-identifier to specify the bundle identifiers used when creating Apple frameworks.
+- Updated dependencies [60fae96]
+- Updated dependencies [61fff3f]
+- Updated dependencies [61fff3f]
+- Updated dependencies [5dea205]
+- Updated dependencies [60fae96]
+- Updated dependencies [60fae96]
+- Updated dependencies [eca721e]
+- Updated dependencies [60fae96]
+  - react-native-node-api@0.7.0
+  - weak-node-api@0.0.2
+
 ## 0.3.7
 
 ### Patch Changes
