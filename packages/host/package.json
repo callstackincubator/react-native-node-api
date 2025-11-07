@@ -1,6 +1,6 @@
 {
   "name": "react-native-node-api",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Node-API for React Native",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
@@ -68,7 +68,7 @@
   "license": "MIT",
   "dependencies": {
     "@expo/plist": "^0.4.7",
-    "@react-native-node-api/cli-utils": "0.1.1",
+    "@react-native-node-api/cli-utils": "0.1.2",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1",
     "zod": "^4.1.11"
@@ -81,6 +81,6 @@
   "peerDependencies": {
     "@babel/core": "^7.26.10",
     "react-native": "0.79.1 || 0.79.2 || 0.79.3 || 0.79.4 || 0.79.5 || 0.79.6 || 0.79.7 || 0.80.0 || 0.80.1 || 0.80.2 || 0.81.0 || 0.81.1 || 0.81.2 || 0.81.3 || 0.81.4 || 0.81.5",
-    "weak-node-api": "0.0.2"
+    "weak-node-api": "0.0.3"
   }
 }

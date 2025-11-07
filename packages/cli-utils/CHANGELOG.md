@@ -1,5 +1,11 @@
 # @react-native-node-api/cli-utils
 
+## 0.1.2
+
+### Patch Changes
+
+- 7ff2c2b: Fix minor package issues.
+
 ## 0.1.1
 
 ### Patch Changes

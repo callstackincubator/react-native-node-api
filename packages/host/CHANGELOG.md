@@ -1,5 +1,15 @@
 # react-native-node-api
 
+## 0.7.1
+
+### Patch Changes
+
+- 7ff2c2b: Fix minor package issues.
+- Updated dependencies [7ff2c2b]
+- Updated dependencies [7ff2c2b]
+  - weak-node-api@0.0.3
+  - @react-native-node-api/cli-utils@0.1.2
+
 ## 0.7.0
 
 ### Minor Changes
