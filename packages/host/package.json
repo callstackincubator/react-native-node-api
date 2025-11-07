@@ -19,8 +19,7 @@
       "react-native": "./dist/react-native/index.js"
     },
     "./babel-plugin": "./dist/node/babel-plugin/index.js",
-    "./cli": "./dist/node/cli/run.js",
-    "./weak-node-api": "./dist/node/weak-node-api.js"
+    "./cli": "./dist/node/cli/run.js"
   },
   "files": [
     "logo.svg",
