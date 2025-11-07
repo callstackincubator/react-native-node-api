@@ -23,7 +23,7 @@
     "dev": "tsc --build --watch",
     "lint": "eslint .",
     "depcheck": "node scripts/depcheck.ts",
-    "publint": "npm exec --workspaces publint",
+    "publint": "node scripts/run-in-published.ts npx publint --strict",
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
     "test": "npm test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
