@@ -33,6 +33,9 @@
     "build-weak-node-api:apple": "node --run build-weak-node-api -- --apple",
     "build-weak-node-api:all": "node --run build-weak-node-api -- --android --apple",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
+    "test:configure": "cmake -S . -B build-tests -DBUILD_TESTS=ON",
+    "test:build": "cmake --build build-tests",
+    "test:run": "ctest --test-dir build-tests --output-on-failure",
     "bootstrap": "node --run prepare-weak-node-api && node --run build-weak-node-api",
     "prerelease": "node --run prepare-weak-node-api && node --run build-weak-node-api:all"
   },
