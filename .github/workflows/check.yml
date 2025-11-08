@@ -3,6 +3,8 @@ name: Check
 env:
   # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
   NDK_VERSION: 27.1.12297006
+  # Building Hermes from source doesn't support CMake v4
+  CMAKE_VERSION: 3.31.6
   # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
   ENABLE_GRADLE_TESTS: true
 
@@ -155,7 +157,7 @@ jobs:
       - name: Install compatible CMake version
         uses: jwlawson/actions-setup-cmake@v2
         with:
-          cmake-version: "3.31.2"
+          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-apple-darwin
       - run: npm ci
       - run: npm run bootstrap
@@ -185,7 +187,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
+          packages: tools platform-tools ndk;${{ env.NDK_VERSION }} cmake;${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
