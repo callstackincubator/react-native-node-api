@@ -10,6 +10,7 @@ import {
 
 import * as weakNodeApiGenerator from "./generators/weak-node-api.js";
 import * as hostGenerator from "./generators/NodeApiHost.js";
+import * as multiHostGenerator from "./generators/NodeApiMultiHost.js";
 
 export const OUTPUT_PATH = path.join(import.meta.dirname, "../generated");
 
@@ -85,6 +86,26 @@ async function run() {
       @brief Weak Node-API host injection implementation.
      
       Provides the implementation for deferring Node-API function calls from addons into a Node-API host.
+    `,
+  });
+  await generateFile({
+    functions,
+    fileName: "NodeApiMultiHost.hpp",
+    generator: multiHostGenerator.generateHeader,
+    headingComment: `
+      @brief Weak Node-API multi-host injection interface.
+     
+      This header provides the struct for deferring Node-API function calls from addons into multiple Node-API host implementations.
+    `,
+  });
+  await generateFile({
+    functions,
+    fileName: "NodeApiMultiHost.cpp",
+    generator: multiHostGenerator.generateSource,
+    headingComment: `
+      @brief Weak Node-API multi-host injection implementation.
+     
+      Provides the implementation for deferring Node-API function calls from addons into multiple Node-API host implementations.
     `,
   });
 }

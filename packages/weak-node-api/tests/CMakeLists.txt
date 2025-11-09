@@ -10,6 +10,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(weak-node-api-tests
   test_inject.cpp
+  test_multi_host.cpp
 )
 target_link_libraries(weak-node-api-tests
   PRIVATE
