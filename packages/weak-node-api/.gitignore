@@ -2,6 +2,7 @@
 # Everything in weak-node-api is generated, except for the configurations
 # Generated and built via `npm run bootstrap`
 /build/
+/build-tests/
 /*.xcframework
 /*.android.node
 /generated/weak_node_api.cpp
