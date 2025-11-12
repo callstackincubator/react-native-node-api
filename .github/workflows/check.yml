@@ -99,7 +99,7 @@ jobs:
       - run: npm ci
       - run: npm run build
       - name: Prepare weak-node-api
-        run: npm run prepare-weak-node-api --workspace weak-node-api
+        run: npm run prebuild:prepare --workspace weak-node-api
       - name: Build and run weak-node-api C++ tests
         run: |
           cmake -S . -B build -DBUILD_TESTS=ON
@@ -215,7 +215,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all Android architectures
-        run: npm run build-weak-node-api:android --workspace weak-node-api
+        run: npm run prebuild:build:android --workspace weak-node-api
       - name: Build ferric-example for all architectures
         run: npm run build -- --android
         working-directory: packages/ferric-example
@@ -270,8 +270,8 @@ jobs:
       - run: npm run build
       - name: Build weak-node-api for all Apple architectures
         run: |
-          npm run prepare-weak-node-api --workspace weak-node-api
-          npm run build-weak-node-api:apple --workspace weak-node-api
+          npm run prebuild:prepare --workspace weak-node-api
+          npm run prebuild:build:apple --workspace weak-node-api
       # Build Ferric example for all Apple architectures
       - run: npx ferric --apple
         working-directory: packages/ferric-example
