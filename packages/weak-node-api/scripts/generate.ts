@@ -9,6 +9,7 @@ import {
 } from "../src/node-api-functions.js";
 
 import * as weakNodeApiGenerator from "./generators/weak-node-api.js";
+import * as hostGenerator from "./generators/NodeApiHost.js";
 
 export const OUTPUT_PATH = path.join(import.meta.dirname, "../generated");
 
@@ -43,6 +44,16 @@ async function run() {
   const functions = getNodeApiFunctions();
   await generateFile({
     functions,
+    fileName: "NodeApiHost.hpp",
+    generator: hostGenerator.generateHeader,
+    headingComment: `
+      @brief NodeApiHost struct.
+     
+      This header provides a struct of Node-API functions implemented by a host to inject its implementations.
+    `,
+  });
+  await generateFile({
+    functions,
     fileName: "weak_node_api.hpp",
     generator: weakNodeApiGenerator.generateHeader,
   });
@@ -50,6 +61,11 @@ async function run() {
     functions,
     fileName: "weak_node_api.cpp",
     generator: weakNodeApiGenerator.generateSource,
+    headingComment: `
+      @brief Weak Node-API host injection implementation.
+     
+      Provides the implementation for deferring Node-API function calls from addons into a Node-API host.
+    `,
   });
 }
 
