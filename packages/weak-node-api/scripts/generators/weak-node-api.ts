@@ -1,9 +1,6 @@
 import type { FunctionDecl } from "../../src/node-api-functions.js";
 import { generateFunction } from "./shared.js";
 
-/**
- * Generates source code for a version script for the given Node API version.
- */
 export function generateHeader() {
   return `
     #pragma once
@@ -36,9 +33,6 @@ function generateFunctionImpl(fn: FunctionDecl) {
   });
 }
 
-/**
- * Generates source code for a version script for the given Node API version.
- */
 export function generateSource(functions: FunctionDecl[]) {
   return `
     #include "weak_node_api.hpp"

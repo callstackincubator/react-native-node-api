@@ -8,9 +8,6 @@ export function generateFunctionDecl({
   return `${returnType} (*${name})(${argumentTypes.join(", ")});`;
 }
 
-/**
- * Generates source code for a version script for the given Node API version.
- */
 export function generateHeader(functions: FunctionDecl[]) {
   return `
     #pragma once
