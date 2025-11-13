@@ -3,7 +3,7 @@
 
 TEST_CASE("inject_weak_node_api_host") {
   SECTION("is callable") {
-    WeakNodeApiHost host{};
+    NodeApiHost host{};
     inject_weak_node_api_host(host);
   }
 
@@ -14,7 +14,7 @@ TEST_CASE("inject_weak_node_api_host") {
       called = true;
       return napi_status::napi_ok;
     };
-    WeakNodeApiHost host{.napi_create_object = my_create_object};
+    NodeApiHost host{.napi_create_object = my_create_object};
     inject_weak_node_api_host(host);
 
     napi_value result;

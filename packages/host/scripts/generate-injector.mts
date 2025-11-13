@@ -59,8 +59,8 @@ export function generateSource(functions: FunctionDecl[]) {
       abort();
     }
 
-    log_debug("Injecting WeakNodeApiHost");
-    inject_weak_node_api_host(WeakNodeApiHost {
+    log_debug("Injecting NodeApiHost");
+    inject_weak_node_api_host(NodeApiHost {
       ${functions
         .filter(
           ({ kind, name }) =>

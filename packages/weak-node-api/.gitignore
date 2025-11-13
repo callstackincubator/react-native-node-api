@@ -5,8 +5,7 @@
 /build-tests/
 /*.xcframework
 /*.android.node
-/generated/weak_node_api.cpp
-/generated/weak_node_api.hpp
+/generated/
 
 # Copied from node-api-headers by scripts/copy-node-api-headers.ts
 /include/
