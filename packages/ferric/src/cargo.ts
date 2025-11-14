@@ -95,6 +95,7 @@ export function ensureCargo() {
 
 type BuildOptions = {
   configuration: "debug" | "release";
+  verbose: boolean;
 } & (
   | {
       target: AndroidTargetName;
@@ -109,7 +110,7 @@ type BuildOptions = {
 );
 
 export async function build(options: BuildOptions) {
-  const { target, configuration } = options;
+  const { target, configuration, verbose } = options;
   const args = ["build", "--target", target];
   if (configuration.toLowerCase() === "release") {
     args.push("--release");
@@ -123,7 +124,8 @@ export async function build(options: BuildOptions) {
     args.push("-Z", "build-std=std,panic_abort");
   }
   await spawn("cargo", args, {
-    outputMode: "buffered",
+    outputMode: verbose ? "inherit" : "buffered",
+    outputPrefix: verbose ? chalk.dim(`[${target}]`) : undefined,
     env: {
       ...process.env,
       ...getTargetEnvironmentVariables(options),
