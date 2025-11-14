@@ -8,7 +8,7 @@ license = "MIT"
 crate-type = ["cdylib"]
 
 [dependencies.napi]
-version = "3.4.0"
+version = "=3.4.0"
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
 default-features = false
 features = ["napi3"]
@@ -16,6 +16,10 @@ features = ["napi3"]
 [dependencies.napi-derive]
 version = "3.3.0"
 features = ["type-def"]
+
+# See https://github.com/callstackincubator/react-native-node-api/issues/331
+[dependencies.napi-sys]
+version = "=3.0.1"
 
 [build-dependencies]
 napi-build = "2.2.4"
