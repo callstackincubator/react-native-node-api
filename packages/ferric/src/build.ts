@@ -1,5 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 
 import {
   chalk,
@@ -9,6 +10,8 @@ import {
   assertFixable,
   wrapAction,
   prettyPath,
+  pLimit,
+  spawn,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -85,6 +88,10 @@ function getDefaultTargets() {
 const targetOption = new Option("--target <target...>", "Target triple")
   .choices(ALL_TARGETS)
   .default(getDefaultTargets());
+const cleanOption = new Option(
+  "--clean",
+  "Delete the target directory before building",
+).default(false);
 const appleTarget = new Option("--apple", "Use all Apple targets");
 const androidTarget = new Option("--android", "Use all Android targets");
 const ndkVersionOption = new Option(
@@ -112,9 +119,29 @@ const appleBundleIdentifierOption = new Option(
   "Unique CFBundleIdentifier used for Apple framework artifacts",
 ).default(undefined, "com.callstackincubator.node-api.{libraryName}");
 
+const concurrencyOption = new Option(
+  "--concurrency <limit>",
+  "Limit the number of concurrent tasks",
+)
+  .argParser((value) => parseInt(value, 10))
+  .default(
+    os.availableParallelism(),
+    `${os.availableParallelism()} or 1 when verbose is enabled`,
+  );
+
+const verboseOption = new Option(
+  "--verbose",
+  "Print more output from underlying compiler & tools",
+).default(process.env.CI ? true : false, `false in general and true on CI`);
+
+function logNotice(message: string, ...params: string[]) {
+  console.log(`${chalk.yellow("ℹ︎")} ${message}`, ...params);
+}
+
 export const buildCommand = new Command("build")
   .description("Build Rust Node-API module")
   .addOption(targetOption)
+  .addOption(cleanOption)
   .addOption(appleTarget)
   .addOption(androidTarget)
   .addOption(ndkVersionOption)
@@ -122,10 +149,13 @@ export const buildCommand = new Command("build")
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
   .addOption(appleBundleIdentifierOption)
+  .addOption(concurrencyOption)
+  .addOption(verboseOption)
   .action(
     wrapAction(
       async ({
         target: targetArg,
+        clean,
         apple,
         android,
         ndkVersion,
@@ -133,7 +163,25 @@ export const buildCommand = new Command("build")
         configuration,
         xcframeworkExtension,
         appleBundleIdentifier,
+        concurrency,
+        verbose,
       }) => {
+        if (clean) {
+          await oraPromise(
+            () => spawn("cargo", ["clean"], { outputMode: "buffered" }),
+            {
+              text: "Cleaning target directory",
+              successText: "Cleaned target directory",
+              failText: (error) => `Failed to clean target directory: ${error}`,
+            },
+          );
+        }
+        if (verbose && concurrency > 1) {
+          logNotice(
+            `Consider passing ${chalk.blue("--concurrency")} 1 when running in verbose mode`,
+          );
+        }
+        const limit = pLimit(concurrency);
         const targets = new Set([...targetArg]);
         if (apple) {
           for (const target of APPLE_TARGETS) {
@@ -159,15 +207,12 @@ export const buildCommand = new Command("build")
               targets.add("aarch64-apple-ios-sim");
             }
           }
-          console.error(
-            chalk.yellowBright("ℹ"),
-            chalk.dim(
-              `Using default targets, pass ${chalk.italic(
-                "--android",
-              )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
-                "--target",
-              )} options, to avoid this.`,
-            ),
+          logNotice(
+            `Using default targets, pass ${chalk.blue(
+              "--android",
+            )}, ${chalk.blue("--apple")} or individual ${chalk.blue(
+              "--target",
+            )} options, choose exactly what to target`,
           );
         }
         ensureCargo();
@@ -180,30 +225,40 @@ export const buildCommand = new Command("build")
           targets.size +
           (targets.size === 1 ? " target" : " targets") +
           chalk.dim(" (" + [...targets].join(", ") + ")");
+
         const [appleLibraries, androidLibraries] = await oraPromise(
           Promise.all([
             Promise.all(
-              appleTargets.map(
-                async (target) =>
-                  [target, await build({ configuration, target })] as const,
+              appleTargets.map((target) =>
+                limit(
+                  async () =>
+                    [
+                      target,
+                      await build({ configuration, target, verbose }),
+                    ] as const,
+                ),
               ),
             ),
             Promise.all(
-              androidTargets.map(
-                async (target) =>
-                  [
-                    target,
-                    await build({
-                      configuration,
+              androidTargets.map((target) =>
+                limit(
+                  async () =>
+                    [
                       target,
-                      ndkVersion,
-                      androidApiLevel: ANDROID_API_LEVEL,
-                    }),
-                  ] as const,
+                      await build({
+                        configuration,
+                        target,
+                        verbose,
+                        ndkVersion,
+                        androidApiLevel: ANDROID_API_LEVEL,
+                      }),
+                    ] as const,
+                ),
               ),
             ),
           ]),
           {
+            isSilent: verbose,
             text: `Building ${targetsDescription}`,
             successText: `Built ${targetsDescription}`,
             failText: (error: Error) => `Failed to build: ${error.message}`,
@@ -225,11 +280,13 @@ export const buildCommand = new Command("build")
           );
 
           await oraPromise(
-            createAndroidLibsDirectory({
-              outputPath: androidLibsOutputPath,
-              libraries,
-              autoLink: true,
-            }),
+            limit(() =>
+              createAndroidLibsDirectory({
+                outputPath: androidLibsOutputPath,
+                libraries,
+                autoLink: true,
+              }),
+            ),
             {
               text: "Assembling Android libs directory",
               successText: `Android libs directory assembled into ${prettyPath(
@@ -243,14 +300,25 @@ export const buildCommand = new Command("build")
 
         if (appleLibraries.length > 0) {
           const libraryPaths = await combineLibraries(appleLibraries);
-          const frameworkPaths = await Promise.all(
-            libraryPaths.map((libraryPath) =>
-              // TODO: Pass true as `versioned` argument for -darwin targets
-              createAppleFramework({
-                libraryPath,
-                bundleIdentifier: appleBundleIdentifier,
-              }),
+
+          const frameworkPaths = await oraPromise(
+            Promise.all(
+              libraryPaths.map((libraryPath) =>
+                limit(() =>
+                  // TODO: Pass true as `versioned` argument for -darwin targets
+                  createAppleFramework({
+                    libraryPath,
+                    bundleIdentifier: appleBundleIdentifier,
+                  }),
+                ),
+              ),
             ),
+            {
+              text: "Creating Apple frameworks",
+              successText: `Created Apple frameworks`,
+              failText: ({ message }) =>
+                `Failed to create Apple frameworks: ${message}`,
+            },
           );
           const xcframeworkFilename = determineXCFrameworkFilename(
             frameworkPaths,
