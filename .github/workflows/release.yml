@@ -30,7 +30,7 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
+      - run: npm install
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
