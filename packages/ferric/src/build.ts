@@ -134,6 +134,10 @@ const verboseOption = new Option(
   "Print more output from underlying compiler & tools",
 ).default(process.env.CI ? true : false, `false in general and true on CI`);
 
+function logNotice(message: string, ...params: string[]) {
+  console.log(`${chalk.yellow("ℹ︎")} ${message}`, ...params);
+}
+
 export const buildCommand = new Command("build")
   .description("Build Rust Node-API module")
   .addOption(targetOption)
@@ -172,8 +176,12 @@ export const buildCommand = new Command("build")
             },
           );
         }
-        // Force a limit of 1 concurrent task to avoid interleaving output
-        const limit = pLimit(verbose ? 1 : concurrency);
+        if (verbose && concurrency > 1) {
+          logNotice(
+            `Consider passing ${chalk.blue("--concurrency")} 1 when running in verbose mode`,
+          );
+        }
+        const limit = pLimit(concurrency);
         const targets = new Set([...targetArg]);
         if (apple) {
           for (const target of APPLE_TARGETS) {
@@ -199,15 +207,12 @@ export const buildCommand = new Command("build")
               targets.add("aarch64-apple-ios-sim");
             }
           }
-          console.error(
-            chalk.yellowBright("ℹ"),
-            chalk.dim(
-              `Using default targets, pass ${chalk.italic(
-                "--android",
-              )}, ${chalk.italic("--apple")} or individual ${chalk.italic(
-                "--target",
-              )} options, to avoid this.`,
-            ),
+          logNotice(
+            `Using default targets, pass ${chalk.blue(
+              "--android",
+            )}, ${chalk.blue("--apple")} or individual ${chalk.blue(
+              "--target",
+            )} options, choose exactly what to target`,
           );
         }
         ensureCargo();
