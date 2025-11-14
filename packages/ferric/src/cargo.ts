@@ -219,8 +219,9 @@ export function getTargetEnvironmentVariables({
       CARGO_ENCODED_RUSTFLAGS: [
         "-L",
         weakNodeApiPath,
-        "-l",
-        "weak-node-api",
+        "-C",
+        // Passing --no-as-needed to prevent weak-node-api from being optimized away
+        "link-arg=-Wl,--push-state,--no-as-needed,-lweak-node-api,--pop-state",
       ].join(String.fromCharCode(0x1f)),
       CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER: joinPathAndAssertExistence(
         toolchainBinPath,
