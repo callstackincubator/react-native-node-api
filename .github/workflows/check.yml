@@ -305,8 +305,8 @@ jobs:
           diff expected-lipo-output.txt lipo-output.txt
           # Verify weak-node-api linking
           WEAK_NODE_API_COUNT=$(grep -c "@rpath/weak-node-api.framework/weak-node-api" otool-output.txt)
-          if [ "$WEAK_NODE_API_COUNT" -ne 4 ]; then
-            echo "Expected 4 occurrences of @rpath/weak-node-api.framework/weak-node-api, found $WEAK_NODE_API_COUNT"
+          if [ "$WEAK_NODE_API_COUNT" -ne 7 ]; then
+            echo "Expected 7 occurrences of @rpath/weak-node-api.framework/weak-node-api, found $WEAK_NODE_API_COUNT"
             cat otool-output.txt
             exit 1
           fi
