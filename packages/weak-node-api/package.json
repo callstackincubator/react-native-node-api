@@ -26,18 +26,17 @@
   "scripts": {
     "build": "tsc --build",
     "copy-node-api-headers": "tsx scripts/copy-node-api-headers.ts",
-    "generate-weak-node-api": "tsx scripts/generate-weak-node-api.ts",
-    "prepare-weak-node-api": "node --run copy-node-api-headers && node --run generate-weak-node-api",
-    "build-weak-node-api": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension",
-    "build-weak-node-api:android": "node --run build-weak-node-api -- --android",
-    "build-weak-node-api:apple": "node --run build-weak-node-api -- --apple",
-    "build-weak-node-api:all": "node --run build-weak-node-api -- --android --apple",
+    "generate": "tsx scripts/generate.ts",
+    "prebuild:prepare": "node --run copy-node-api-headers && node --run generate",
+    "prebuild:build": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension",
+    "prebuild:build:android": "node --run prebuild:build -- --android",
+    "prebuild:build:apple": "node --run prebuild:build -- --apple",
+    "prebuild:build:all": "node --run prebuild:build -- --android --apple",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
     "test:configure": "cmake -S . -B build-tests -DBUILD_TESTS=ON",
     "test:build": "cmake --build build-tests",
     "test:run": "ctest --test-dir build-tests --output-on-failure",
-    "bootstrap": "node --run prepare-weak-node-api && node --run build-weak-node-api",
-    "prerelease": "node --run prepare-weak-node-api && node --run build-weak-node-api:all"
+    "bootstrap": "node --run prebuild:prepare && node --run prebuild:build"
   },
   "keywords": [
     "react-native",

@@ -1,4 +1,4 @@
-package com.callstack.node_api_modules
+package com.callstack.react_native_node_api
 
 import com.facebook.hermes.reactexecutor.HermesExecutor
 import com.facebook.react.BaseReactPackage
@@ -10,7 +10,7 @@ import com.facebook.soloader.SoLoader
 
 import java.util.HashMap
 
-class NodeApiModulesPackage : BaseReactPackage() {
+class NodeApiHostPackage : BaseReactPackage() {
   init {
     SoLoader.loadLibrary("node-api-host")
   }

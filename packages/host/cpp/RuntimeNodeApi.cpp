@@ -1,14 +1,14 @@
 #include "RuntimeNodeApi.hpp"
-#include <string>
 #include "Logger.hpp"
 #include "Versions.hpp"
+#include <string>
 
 auto ArrayType = napi_uint8_array;
 
-namespace callstack::nodeapihost {
+namespace callstack::react_native_node_api {
 
-napi_status napi_create_buffer(
-    napi_env env, size_t length, void** data, napi_value* result) {
+napi_status napi_create_buffer(napi_env env, size_t length, void **data,
+                               napi_value *result) {
   napi_value buffer;
   if (const auto status = napi_create_arraybuffer(env, length, data, &buffer);
       status != napi_ok) {
@@ -22,17 +22,15 @@ napi_status napi_create_buffer(
   return napi_create_typedarray(env, ArrayType, length, buffer, 0, result);
 }
 
-napi_status napi_create_buffer_copy(napi_env env,
-    size_t length,
-    const void* data,
-    void** result_data,
-    napi_value* result) {
+napi_status napi_create_buffer_copy(napi_env env, size_t length,
+                                    const void *data, void **result_data,
+                                    napi_value *result) {
   if (!length || !data || !result) {
     return napi_invalid_arg;
   }
 
   void *buffer = nullptr;
-  if (const auto status = callstack::nodeapihost::napi_create_buffer(
+  if (const auto status = callstack::react_native_node_api::napi_create_buffer(
           env, length, &buffer, result);
       status != napi_ok) {
     return status;
@@ -42,7 +40,7 @@ napi_status napi_create_buffer_copy(napi_env env,
   return napi_ok;
 }
 
-napi_status napi_is_buffer(napi_env env, napi_value value, bool* result) {
+napi_status napi_is_buffer(napi_env env, napi_value value, bool *result) {
   if (!result) {
     return napi_invalid_arg;
   }
@@ -77,8 +75,8 @@ napi_status napi_is_buffer(napi_env env, napi_value value, bool* result) {
   return napi_ok;
 }
 
-napi_status napi_get_buffer_info(
-    napi_env env, napi_value value, void** data, size_t* length) {
+napi_status napi_get_buffer_info(napi_env env, napi_value value, void **data,
+                                 size_t *length) {
   if (!data || !length) {
     return napi_invalid_arg;
   }
@@ -97,19 +95,17 @@ napi_status napi_get_buffer_info(
   auto isTypedArray{false};
   if (const auto status = napi_is_typedarray(env, value, &isTypedArray);
       status == napi_ok && isTypedArray) {
-    return napi_get_typedarray_info(
-        env, value, &ArrayType, length, data, nullptr, nullptr);
+    return napi_get_typedarray_info(env, value, &ArrayType, length, data,
+                                    nullptr, nullptr);
   }
 
   return napi_ok;
 }
 
-napi_status napi_create_external_buffer(napi_env env,
-    size_t length,
-    void* data,
-    node_api_basic_finalize basic_finalize_cb,
-    void* finalize_hint,
-    napi_value* result) {
+napi_status
+napi_create_external_buffer(napi_env env, size_t length, void *data,
+                            node_api_basic_finalize basic_finalize_cb,
+                            void *finalize_hint, napi_value *result) {
   napi_value buffer;
   if (const auto status = napi_create_external_arraybuffer(
           env, data, length, basic_finalize_cb, finalize_hint, &buffer);
@@ -124,25 +120,20 @@ napi_status napi_create_external_buffer(napi_env env,
   return napi_create_typedarray(env, ArrayType, length, buffer, 0, result);
 }
 
-void napi_fatal_error(const char* location,
-    size_t location_len,
-    const char* message,
-    size_t message_len) {
+void napi_fatal_error(const char *location, size_t location_len,
+                      const char *message, size_t message_len) {
   if (location && location_len) {
-    log_error("Fatal Node-API error: %.*s %.*s",
-        static_cast<int>(location_len),
-        location,
-        static_cast<int>(message_len),
-        message);
+    log_error("Fatal Node-API error: %.*s %.*s", static_cast<int>(location_len),
+              location, static_cast<int>(message_len), message);
   } else {
-    log_error(
-        "Fatal Node-API error: %.*s", static_cast<int>(message_len), message);
+    log_error("Fatal Node-API error: %.*s", static_cast<int>(message_len),
+              message);
   }
   abort();
 }
 
-napi_status napi_get_node_version(
-    node_api_basic_env env, const napi_node_version** result) {
+napi_status napi_get_node_version(node_api_basic_env env,
+                                  const napi_node_version **result) {
   if (!result) {
     return napi_invalid_arg;
   }
@@ -151,7 +142,7 @@ napi_status napi_get_node_version(
   return napi_generic_failure;
 }
 
-napi_status napi_get_version(node_api_basic_env env, uint32_t* result) {
+napi_status napi_get_version(node_api_basic_env env, uint32_t *result) {
   if (!result) {
     return napi_invalid_arg;
   }
@@ -160,4 +151,4 @@ napi_status napi_get_version(node_api_basic_env env, uint32_t* result) {
   return napi_ok;
 }
 
-}  // namespace callstack::nodeapihost
+} // namespace callstack::react_native_node_api

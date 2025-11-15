@@ -42,11 +42,10 @@
   ],
   "scripts": {
     "build": "tsc --build",
-    "generate-weak-node-api-injector": "node scripts/generate-weak-node-api-injector.mts",
+    "injector:generate": "node scripts/generate-injector.mts",
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout src/node/**/*.test.ts src/node/*.test.ts",
     "test:gradle": "ENABLE_GRADLE_TESTS=true node --run test",
-    "bootstrap": "node --run generate-weak-node-api-injector",
-    "prerelease": "node --run generate-weak-node-api-injector"
+    "bootstrap": "node --run injector:generate"
   },
   "keywords": [
     "node-api",

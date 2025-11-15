@@ -2,19 +2,19 @@
 #import "WeakNodeApiInjector.hpp"
 
 #import <ReactCommon/CxxTurboModuleUtils.h>
-@interface NodeApiHost : NSObject
+@interface NodeApiHostPackage : NSObject
 
 @end
 
-@implementation NodeApiHost
+@implementation NodeApiHostPackage
 + (void)load {
-  callstack::nodeapihost::injectIntoWeakNodeApi();
+  callstack::react_native_node_api::injectIntoWeakNodeApi();
 
   facebook::react::registerCxxModuleToGlobalModuleMap(
-      callstack::nodeapihost::CxxNodeApiHostModule::kModuleName,
+      callstack::react_native_node_api::CxxNodeApiHostModule::kModuleName,
       [](std::shared_ptr<facebook::react::CallInvoker> jsInvoker) {
-        return std::make_shared<callstack::nodeapihost::CxxNodeApiHostModule>(
-            jsInvoker);
+        return std::make_shared<
+            callstack::react_native_node_api::CxxNodeApiHostModule>(jsInvoker);
       });
 }
 

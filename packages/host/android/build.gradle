@@ -67,7 +67,7 @@ def supportsNamespace() {
 
 android {
   if (supportsNamespace()) {
-    namespace "com.callstack.node_api_modules"
+    namespace "com.callstack.react_native_node_api"
 
     sourceSets {
       main {

@@ -6,7 +6,7 @@
 
 #include "AddonLoaders.hpp"
 
-namespace callstack::nodeapihost {
+namespace callstack::react_native_node_api {
 
 class JSI_EXPORT CxxNodeApiHostModule : public facebook::react::TurboModule {
 public:
@@ -37,4 +37,4 @@ protected:
   bool initializeNodeModule(facebook::jsi::Runtime &rt, NodeAddon &addon);
 };
 
-} // namespace callstack::nodeapihost
+} // namespace callstack::react_native_node_api
