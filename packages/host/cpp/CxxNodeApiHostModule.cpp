@@ -4,7 +4,7 @@
 
 using namespace facebook;
 
-namespace callstack::nodeapihost {
+namespace callstack::react_native_node_api {
 
 CxxNodeApiHostModule::CxxNodeApiHostModule(
     std::shared_ptr<react::CallInvoker> jsInvoker)
@@ -127,8 +127,8 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
       napi_set_named_property(env, global, addon.generatedName.data(), exports);
   assert(status == napi_ok);
 
-  callstack::nodeapihost::setCallInvoker(env, callInvoker_);
+  callstack::react_native_node_api::setCallInvoker(env, callInvoker_);
   return true;
 }
 
-} // namespace callstack::nodeapihost
+} // namespace callstack::react_native_node_api

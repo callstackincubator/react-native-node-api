@@ -43,7 +43,7 @@ export function generateSource(functions: FunctionDecl[]) {
     #error "WEAK_NODE_API_LIBRARY_NAME cannot be defined for this platform"
     #endif
 
-    namespace callstack::nodeapihost {
+    namespace callstack::react_native_node_api {
 
     void injectIntoWeakNodeApi() {
     void *module = dlopen(WEAK_NODE_API_LIBRARY_NAME, RTLD_NOW | RTLD_LOCAL);
@@ -70,7 +70,7 @@ export function generateSource(functions: FunctionDecl[]) {
         .join("\n")}
       });
     }
-    } // namespace callstack::nodeapihost
+    } // namespace callstack::react_native_node_api
   `;
 }
 

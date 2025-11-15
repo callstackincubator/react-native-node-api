@@ -16,33 +16,33 @@ enum class LogLevel { Debug, Warning, Error };
 
 constexpr std::string_view levelToString(LogLevel level) {
   switch (level) {
-    case LogLevel::Debug:
-      return "DEBUG";
-    case LogLevel::Warning:
-      return "WARNING";
-    case LogLevel::Error:
-      return "ERROR";
-    default:
-      return "UNKNOWN";
+  case LogLevel::Debug:
+    return "DEBUG";
+  case LogLevel::Warning:
+    return "WARNING";
+  case LogLevel::Error:
+    return "ERROR";
+  default:
+    return "UNKNOWN";
   }
 }
 
 #if defined(__ANDROID__)
 constexpr int androidLogLevel(LogLevel level) {
   switch (level) {
-    case LogLevel::Debug:
-      return ANDROID_LOG_DEBUG;
-    case LogLevel::Warning:
-      return ANDROID_LOG_WARN;
-    case LogLevel::Error:
-      return ANDROID_LOG_ERROR;
-    default:
-      return ANDROID_LOG_UNKNOWN;
+  case LogLevel::Debug:
+    return ANDROID_LOG_DEBUG;
+  case LogLevel::Warning:
+    return ANDROID_LOG_WARN;
+  case LogLevel::Error:
+    return ANDROID_LOG_ERROR;
+  default:
+    return ANDROID_LOG_UNKNOWN;
   }
 }
 #endif
 
-void log_message_internal(LogLevel level, const char* format, va_list args) {
+void log_message_internal(LogLevel level, const char *format, va_list args) {
 #if defined(__ANDROID__)
   __android_log_vprint(androidLogLevel(level), LOG_TAG, format, args);
 #elif defined(__APPLE__)
@@ -59,27 +59,27 @@ void log_message_internal(LogLevel level, const char* format, va_list args) {
   fprintf(stdout, "\n");
 #endif
 }
-}  // anonymous namespace
+} // anonymous namespace
 
-namespace callstack::nodeapihost {
+namespace callstack::react_native_node_api {
 
-void log_debug(const char* format, ...) {
+void log_debug(const char *format, ...) {
   // TODO: Disable logging in release builds
   va_list args;
   va_start(args, format);
   log_message_internal(LogLevel::Debug, format, args);
   va_end(args);
 }
-void log_warning(const char* format, ...) {
+void log_warning(const char *format, ...) {
   va_list args;
   va_start(args, format);
   log_message_internal(LogLevel::Warning, format, args);
   va_end(args);
 }
-void log_error(const char* format, ...) {
+void log_error(const char *format, ...) {
   va_list args;
   va_start(args, format);
   log_message_internal(LogLevel::Error, format, args);
   va_end(args);
 }
-}  // namespace callstack::nodeapihost
+} // namespace callstack::react_native_node_api
