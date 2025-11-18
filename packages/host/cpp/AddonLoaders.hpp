@@ -7,7 +7,7 @@
 #include <dlfcn.h>
 #include <stdio.h>
 
-using callstack::nodeapihost::log_debug;
+using callstack::react_native_node_api::log_debug;
 
 struct PosixLoader {
   using Module = void *;

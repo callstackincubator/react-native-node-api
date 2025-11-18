@@ -1,5 +1,5 @@
 #include <weak_node_api.hpp>
 
-namespace callstack::nodeapihost {
+namespace callstack::react_native_node_api {
 void injectIntoWeakNodeApi();
 }

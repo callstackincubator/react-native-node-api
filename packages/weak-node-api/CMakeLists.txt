@@ -16,6 +16,7 @@ target_sources(${PROJECT_NAME}
   PUBLIC FILE_SET HEADERS
   BASE_DIRS ${GENERATED_SOURCE_DIR} ${INCLUDE_DIR} FILES
     ${GENERATED_SOURCE_DIR}/weak_node_api.hpp
+    ${GENERATED_SOURCE_DIR}/NodeApiHost.hpp
     ${INCLUDE_DIR}/js_native_api_types.h
     ${INCLUDE_DIR}/js_native_api.h
     ${INCLUDE_DIR}/node_api_types.h

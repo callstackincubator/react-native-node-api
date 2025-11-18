@@ -49,10 +49,6 @@ const clangAstDump = z.object({
   ),
 });
 
-/**
- * Generates source code for a version script for the given Node API version.
- * @param version
- */
 export function getNodeApiHeaderAST(version: NodeApiVersion) {
   const output = cp.execFileSync(
     "clang",

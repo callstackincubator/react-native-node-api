@@ -1,41 +1,18 @@
 import type { FunctionDecl } from "../../src/node-api-functions.js";
 import { generateFunction } from "./shared.js";
 
-export function generateFunctionDecl({
-  returnType,
-  name,
-  argumentTypes,
-}: FunctionDecl) {
-  return `${returnType} (*${name})(${argumentTypes.join(", ")});`;
-}
-
-/**
- * Generates source code for a version script for the given Node API version.
- */
-export function generateHeader(functions: FunctionDecl[]) {
+export function generateHeader() {
   return `
     #pragma once
 
-    #include <node_api.h> // Node-API
+    #include <node_api.h>
     #include <stdio.h> // fprintf()
     #include <stdlib.h> // abort()
-
-    // Ideally we would have just used NAPI_NO_RETURN, but
-    // __declspec(noreturn) (when building with Microsoft Visual C++) cannot be used on members of a struct
-    // TODO: If we targeted C++23 we could use std::unreachable()
-
-    #if defined(__GNUC__)
-    #define WEAK_NODE_API_UNREACHABLE __builtin_unreachable()
-    #else
-    #define WEAK_NODE_API_UNREACHABLE __assume(0)
-    #endif
     
-    // Generate the struct of function pointers
-    struct WeakNodeApiHost {
-      ${functions.map(generateFunctionDecl).join("\n")}
-    };
-    typedef void(*InjectHostFunction)(const WeakNodeApiHost&);
-    extern "C" void inject_weak_node_api_host(const WeakNodeApiHost& host);
+    #include "NodeApiHost.hpp"
+    
+    typedef void(*InjectHostFunction)(const NodeApiHost&);
+    extern "C" void inject_weak_node_api_host(const NodeApiHost& host);
   `;
 }
 
@@ -56,15 +33,19 @@ function generateFunctionImpl(fn: FunctionDecl) {
   });
 }
 
-/**
- * Generates source code for a version script for the given Node API version.
- */
 export function generateSource(functions: FunctionDecl[]) {
   return `
     #include "weak_node_api.hpp"
 
-    WeakNodeApiHost g_host;
-    void inject_weak_node_api_host(const WeakNodeApiHost& host) {
+    /**
+     * @brief Global instance of the injected Node-API host.
+     *
+     * This variable holds the function table for Node-API calls.
+     * It is set via inject_weak_node_api_host() before any Node-API function is dispatched.
+     * All Node-API calls are routed through this host.
+     */
+    NodeApiHost g_host;
+    void inject_weak_node_api_host(const NodeApiHost& host) {
       g_host = host;
     };
     
