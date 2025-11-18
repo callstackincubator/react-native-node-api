@@ -1,6 +1,6 @@
 {
   "name": "@react-native-node-api/cli-utils",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Useful utilities for the CLIs in the React Native Node API mono-repo",
   "type": "module",
   "files": [

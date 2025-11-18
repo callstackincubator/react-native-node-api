@@ -28,7 +28,7 @@
   "devDependencies": {
     "cmake-rn": "*",
     "gyp-to-cmake": "*",
-    "react-native-node-api": "^0.7.0",
+    "react-native-node-api": "^1.0.0",
     "read-pkg": "^9.0.1",
     "rolldown": "1.0.0-beta.29"
   }

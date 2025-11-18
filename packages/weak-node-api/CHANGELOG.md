@@ -1,5 +1,11 @@
 # weak-node-api
 
+## 0.1.0
+
+### Minor Changes
+
+- 3d2e03e: Renamed WeakNodeApiHost to NodeApiHost
+
 ## 0.0.3
 
 ### Patch Changes
