@@ -1,5 +1,15 @@
 # cmake-rn
 
+## 0.6.2
+
+### Patch Changes
+
+- Updated dependencies [441dcc4]
+- Updated dependencies [3d2e03e]
+  - @react-native-node-api/cli-utils@0.1.3
+  - weak-node-api@0.1.0
+  - react-native-node-api@1.0.0
+
 ## 0.6.1
 
 ### Patch Changes

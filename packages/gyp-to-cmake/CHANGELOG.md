@@ -1,5 +1,12 @@
 # gyp-to-cmake
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [441dcc4]
+  - @react-native-node-api/cli-utils@0.1.3
+
 ## 0.5.1
 
 ### Patch Changes
