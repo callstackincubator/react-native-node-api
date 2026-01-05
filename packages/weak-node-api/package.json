@@ -36,7 +36,8 @@
     "test:configure": "cmake -S . -B build-tests -DBUILD_TESTS=ON",
     "test:build": "cmake --build build-tests",
     "test:run": "ctest --test-dir build-tests --output-on-failure",
-    "bootstrap": "node --run prebuild:prepare && node --run prebuild:build"
+    "bootstrap": "node --run prebuild:prepare && node --run prebuild:build",
+    "prerelease": "node --run prebuild:prepare && node --run prebuild:build:all"
   },
   "keywords": [
     "react-native",
