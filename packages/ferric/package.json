@@ -9,6 +9,10 @@
     "directory": "packages/ferric"
   },
   "type": "module",
+  "files": [
+    "bin",
+    "dist"
+  ],
   "bin": {
     "ferric": "./bin/ferric.js"
   },
