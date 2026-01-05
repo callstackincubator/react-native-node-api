@@ -1,5 +1,11 @@
 # @react-native-node-api/cli-utils
 
+## 0.1.4
+
+### Patch Changes
+
+- 1dee80f: Fix missing build artifacts 🙈
+
 ## 0.1.3
 
 ### Patch Changes

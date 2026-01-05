@@ -1,6 +1,6 @@
 {
   "name": "cmake-file-api",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "TypeScript wrapper around the CMake File API",
   "homepage": "https://cmake.org/cmake/help/latest/manual/cmake-file-api.7.html",
