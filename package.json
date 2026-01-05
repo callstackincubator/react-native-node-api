@@ -30,6 +30,7 @@
     "bootstrap": "node --run build && npm run bootstrap --workspaces --if-present",
     "changeset": "changeset",
     "release": "changeset publish",
+    "prerelease": "node --run build && npm run prerelease --workspaces --if-present && node --run publint",
     "init-macos-test-app": "node scripts/init-macos-test-app.ts"
   },
   "author": {
