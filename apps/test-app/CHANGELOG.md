@@ -1,5 +1,17 @@
 # react-native-node-api-test-app
 
+## 0.2.2
+
+### Patch Changes
+
+- 1dee80f: Fix missing build artifacts 🙈
+- Updated dependencies [1dee80f]
+  - @react-native-node-api/ferric-example@0.1.2
+  - react-native-node-api@1.0.1
+  - @react-native-node-api/node-addon-examples@0.1.1
+  - @react-native-node-api/node-tests@0.1.1
+  - weak-node-api@0.1.1
+
 ## 0.2.1
 
 ### Patch Changes

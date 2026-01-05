@@ -1,5 +1,14 @@
 # react-native-node-api
 
+## 1.0.1
+
+### Patch Changes
+
+- 1dee80f: Fix missing build artifacts 🙈
+- Updated dependencies [1dee80f]
+  - @react-native-node-api/cli-utils@0.1.4
+  - weak-node-api@0.1.1
+
 ## 1.0.0
 
 ### Patch Changes

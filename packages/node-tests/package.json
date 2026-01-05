@@ -1,6 +1,6 @@
 {
   "name": "@react-native-node-api/node-tests",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Harness for running the Node.js tests from https://github.com/nodejs/node/tree/main/test",
   "type": "commonjs",
   "main": "tests.generated.js",
@@ -28,7 +28,7 @@
   "devDependencies": {
     "cmake-rn": "*",
     "gyp-to-cmake": "*",
-    "react-native-node-api": "^1.0.0",
+    "react-native-node-api": "^1.0.1",
     "read-pkg": "^9.0.1",
     "rolldown": "1.0.0-beta.29"
   }
