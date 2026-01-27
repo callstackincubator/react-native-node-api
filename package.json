@@ -64,6 +64,7 @@
     "@tsconfig/node22": "^22.0.0",
     "@tsconfig/react-native": "3.0.6",
     "@types/node": "^22",
+    "clang-format": "1.8.0",
     "depcheck": "^1.4.7",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
