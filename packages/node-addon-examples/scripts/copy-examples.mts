@@ -57,9 +57,8 @@ console.log("Copying files to", EXAMPLES_DIR);
 
 const require = createRequire(import.meta.url);
 
-const EXAMPLES_PACKAGE_PATH = require.resolve(
-  "node-addon-examples/package.json",
-);
+const EXAMPLES_PACKAGE_PATH =
+  require.resolve("node-addon-examples/package.json");
 const SRC_DIR = path.join(path.dirname(EXAMPLES_PACKAGE_PATH), "src");
 console.log("Copying files from", SRC_DIR);
 
