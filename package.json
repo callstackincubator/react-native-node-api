@@ -75,8 +75,5 @@
     "tsx": "^4.20.6",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.38.0"
-  },
-  "overrides": {
-    "clang-format": "npm:dry-uninstall"
   }
 }
