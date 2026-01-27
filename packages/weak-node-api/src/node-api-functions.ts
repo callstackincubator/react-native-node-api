@@ -82,7 +82,6 @@ export type FunctionDecl = {
   returnType: string;
   noReturn: boolean;
   argumentTypes: string[];
-  libraryPath: string;
   fallbackReturnStatement: string;
 };
 
@@ -135,10 +134,6 @@ export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
         argumentTypes: argumentTypes
           .split(",")
           .map((arg) => arg.trim().replace("_Bool", "bool")),
-        // Defer to the right library
-        libraryPath: engineSymbols.has(name)
-          ? "libhermes.so"
-          : "libnode-api-host.so",
         fallbackReturnStatement:
           returnType === "void"
             ? "abort();"
