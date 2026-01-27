@@ -15,6 +15,7 @@ jobs:
   release:
     name: Release
     runs-on: macos-latest
+    environment: main
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,11 +33,10 @@ jobs:
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: npm install
 
-      - name: Create Release Pull Request or Publish to npm
+      - name: Create Release Pull Request or Publish to NPM
         id: changesets
         uses: changesets/action@v1
         with:
           publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
