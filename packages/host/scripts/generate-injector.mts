@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
@@ -21,6 +22,32 @@ const IMPLEMENTED_RUNTIME_FUNCTIONS = [
   "napi_get_node_version",
   "napi_get_version",
 ];
+
+const { PATH } = process.env;
+const BREW_BIN_PATH = "/opt/homebrew/bin";
+
+function getBrewPrioritizedPath() {
+  if (process.platform === "darwin" && PATH && fs.existsSync(BREW_BIN_PATH)) {
+    return [BREW_BIN_PATH, ...PATH.split(path.delimiter)].join(path.delimiter);
+  } else {
+    return PATH;
+  }
+}
+
+function clangFormat(filePath: string) {
+  const { status, stderr = "No error output" } = cp.spawnSync(
+    "clang-format",
+    ["-i", filePath],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: getBrewPrioritizedPath(),
+      },
+    },
+  );
+  assert.equal(status, 0, `Failed to format ${filePath}: ${stderr}`);
+}
 
 /**
  * Generates source code which injects the Node API functions from the host.
@@ -80,7 +107,7 @@ async function run() {
   const source = generateSource(nodeApiFunctions);
   const sourcePath = path.join(CPP_SOURCE_PATH, "WeakNodeApiInjector.cpp");
   await fs.promises.writeFile(sourcePath, source, "utf-8");
-  cp.spawnSync("clang-format", ["-i", sourcePath], { stdio: "inherit" });
+  clangFormat(sourcePath);
 }
 
 run().catch((err) => {

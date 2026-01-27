@@ -13,6 +13,32 @@ import * as hostGenerator from "./generators/NodeApiHost.js";
 
 export const OUTPUT_PATH = path.join(import.meta.dirname, "../generated");
 
+const { PATH } = process.env;
+const BREW_BIN_PATH = "/opt/homebrew/bin";
+
+function getBrewPrioritizedPath() {
+  if (process.platform === "darwin" && PATH && fs.existsSync(BREW_BIN_PATH)) {
+    return [BREW_BIN_PATH, ...PATH.split(path.delimiter)].join(path.delimiter);
+  } else {
+    return PATH;
+  }
+}
+
+function clangFormat(filePath: string) {
+  const { status, stderr = "No error output" } = cp.spawnSync(
+    "clang-format",
+    ["-i", filePath],
+    {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        PATH: getBrewPrioritizedPath(),
+      },
+    },
+  );
+  assert.equal(status, 0, `Failed to format ${filePath}: ${stderr}`);
+}
+
 type GenerateFileOptions = {
   functions: FunctionDecl[];
   fileName: string;
@@ -43,14 +69,7 @@ async function generateFile({
   `;
   const outputPath = path.join(OUTPUT_PATH, fileName);
   await fs.promises.writeFile(outputPath, output.trim(), "utf-8");
-  const { status, stderr = "No error output" } = cp.spawnSync(
-    "clang-format",
-    ["-i", outputPath],
-    {
-      encoding: "utf8",
-    },
-  );
-  assert.equal(status, 0, `Failed to format ${fileName}: ${stderr}`);
+  clangFormat(outputPath);
 }
 
 async function run() {
