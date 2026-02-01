@@ -75,5 +75,15 @@
     "tsx": "^4.20.6",
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.38.0"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.0.0"
+    },
+    "packageManager": {
+      "name": "npm",
+      "version": "^11.0.0"
+    }
   }
 }
