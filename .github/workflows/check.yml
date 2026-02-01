@@ -28,6 +28,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
       # TODO: Remove this once we have a way to run linting without building the native code
       - name: Set up JDK 17
@@ -67,6 +71,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -96,6 +104,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       - run: npm ci
       - run: npm run build
       - name: Prepare weak-node-api
@@ -115,6 +127,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -148,6 +164,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -179,6 +199,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -259,6 +283,10 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Setup clang-format
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
