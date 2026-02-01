@@ -27,8 +27,12 @@ function escapeSpaces(source: string) {
   return source.replace(/ /g, "\\ ");
 }
 
-function escapeBundleIdentifier(identifier: string) {
-  return identifier.replaceAll("__", ".").replace(/[^A-Za-z0-9.-_]/g, "-");
+/**
+ * Escapes any input to match a CFBundleIdentifier
+ * See https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundleidentifier
+ */
+export function escapeBundleIdentifier(input: string) {
+  return input.replaceAll("__", ".").replace(/[^A-Za-z0-9-.]/g, "-");
 }
 
 /**
