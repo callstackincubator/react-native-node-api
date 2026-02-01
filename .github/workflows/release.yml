@@ -18,9 +18,9 @@ jobs:
     environment: main
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
