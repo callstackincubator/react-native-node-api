@@ -25,9 +25,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
       # TODO: Remove this once we have a way to run linting without building the native code
       - name: Set up JDK 17
@@ -64,9 +64,9 @@ jobs:
     name: Unit tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -93,9 +93,9 @@ jobs:
     name: Weak Node-API tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - run: npm ci
       - run: npm run build
       - name: Prepare weak-node-api
@@ -112,9 +112,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -145,9 +145,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -176,9 +176,9 @@ jobs:
     runs-on: ubuntu-self-hosted
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -256,9 +256,9 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/jod
+          node-version: lts/krypton
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
