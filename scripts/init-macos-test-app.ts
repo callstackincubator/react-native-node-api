@@ -104,6 +104,10 @@ async function patchPackageJson() {
       APP_PATH,
       path.join(ROOT_PATH, "packages", "host"),
     ),
+    "weak-node-api": path.relative(
+      APP_PATH,
+      path.join(ROOT_PATH, "packages", "weak-node-api"),
+    ),
     ...Object.fromEntries(
       Object.entries(otherDependencies).filter(([name]) =>
         transferredDependencies.has(name),

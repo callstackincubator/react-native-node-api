@@ -278,6 +278,8 @@ export const platform: Platform<Triplet[], AppleOpts> = {
               CMAKE_SYSTEM_NAME: CMAKE_SYSTEM_NAMES[triplet],
               CMAKE_OSX_SYSROOT: XCODE_SDK_NAMES[triplet],
               CMAKE_OSX_ARCHITECTURES: APPLE_ARCHITECTURES[triplet],
+              // Passing a linker flag to increase the header pad size to allow renaming the install name when linking it into the app.
+              CMAKE_SHARED_LINKER_FLAGS: "-Wl,-headerpad_max_install_names",
             },
             {
               // Setting the output directories works around an issue with Xcode generator
