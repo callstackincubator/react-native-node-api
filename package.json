@@ -76,6 +76,9 @@
     "typescript": "^5.8.0",
     "typescript-eslint": "^8.38.0"
   },
+  "overrides": {
+    "clang-format": "npm:dry-uninstall"
+  },
   "devEngines": {
     "runtime": {
       "name": "node",
