@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "cmake-rn": "*",
-    "node-addon-examples": "github:nodejs/node-addon-examples#4213d4c9d07996ae68629c67926251e117f8e52a",
+    "node-addon-examples": "github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509",
     "gyp-to-cmake": "*",
     "read-pkg": "^9.0.1"
   },
