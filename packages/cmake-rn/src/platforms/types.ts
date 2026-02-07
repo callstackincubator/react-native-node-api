@@ -54,6 +54,11 @@ export type Platform<
     mode: "current-development" | "all",
   ): Triplet[] | Promise<Triplet[]>;
   /**
+   * Assert the combination of triplets is supported by the platform.
+   * @throws {Error} If the combination of triplets is not supported.
+   */
+  assertValidTriplets(triplets: Triplet[]): void;
+  /**
    * Implement this to add any platform specific options to the command.
    */
   amendCommand(command: BaseCommand): Command;
