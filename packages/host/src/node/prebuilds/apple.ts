@@ -162,7 +162,7 @@ export async function createUniversalAppleLibrary(libraryPaths: string[]) {
   );
   const [filename] = filenames;
   const lipoParentPath = fs.realpathSync(
-    fs.mkdtempSync(path.join(os.tmpdir(), "ferric-lipo-output-")),
+    fs.mkdtempSync(path.join(os.tmpdir(), "node-api-lipo-output-")),
   );
   const outputPath = path.join(lipoParentPath, filename);
   await spawn("lipo", ["-create", "-output", outputPath, ...libraryPaths], {
