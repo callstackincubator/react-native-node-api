@@ -23,7 +23,6 @@ export type ModuleLinker = (
 
 export type LinkModulesOptions = {
   platform: PlatformName;
-  incremental: boolean;
   naming: NamingStrategy;
   fromPath: string;
   linker: ModuleLinker;
@@ -61,7 +60,6 @@ type ModuleOutput = ModuleOutputBase &
 
 export async function linkModules({
   fromPath,
-  incremental,
   naming,
   platform,
   linker,
@@ -96,7 +94,6 @@ export async function linkModules({
       try {
         return await linker({
           modulePath: originalPath,
-          incremental,
           naming,
           platform,
         });
