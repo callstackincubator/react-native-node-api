@@ -11,6 +11,7 @@ export default tseslint.config(
     "**/dist/**",
     "**/build/**",
     "apps/test-app/ios/**",
+    "apps/macos-test-app/**",
     "packages/host/hermes/**",
     "packages/node-addon-examples/examples/**",
     "packages/ferric-example/ferric_example.js",
