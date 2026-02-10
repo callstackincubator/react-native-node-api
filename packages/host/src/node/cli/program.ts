@@ -26,7 +26,7 @@ import {
 import { command as vendorHermes } from "./hermes";
 import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
-import { ensureXcodeBuildPhase, linkXcframework } from "./apple";
+import { ensureXcodeBuildPhase, createAppleLinker } from "./apple";
 import { linkAndroidDir } from "./android";
 
 // We're attaching a lot of listeners when spawning in parallel
@@ -36,11 +36,14 @@ export const program = new Command("react-native-node-api").addCommand(
   vendorHermes,
 );
 
-function getLinker(platform: PlatformName): ModuleLinker {
+async function createLinker(
+  platform: PlatformName,
+  fromPath: string,
+): Promise<ModuleLinker> {
   if (platform === "android") {
     return linkAndroidDir;
   } else if (platform === "apple") {
-    return linkXcframework;
+    return createAppleLinker();
   } else {
     throw new Error(`Unknown platform: ${platform as string}`);
   }
@@ -99,27 +102,20 @@ program
 
         for (const platform of platforms) {
           const platformDisplayName = getPlatformDisplayName(platform);
-          const platformOutputPath = getAutolinkPath(platform);
           const modules = await oraPromise(
-            () =>
-              linkModules({
+            async () =>
+              await linkModules({
                 platform,
                 fromPath: path.resolve(pathArg),
                 incremental: !force,
                 naming: { packageName, pathSuffix },
-                linker: getLinker(platform),
+                linker: await createLinker(platform, path.resolve(pathArg)),
               }),
             {
-              text: `Linking ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath,
-              )}`,
-              successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath,
-              )}`,
+              text: `Linking ${platformDisplayName} Node-API modules`,
+              successText: `Linked ${platformDisplayName} Node-API modules`,
               failText: () =>
-                `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
-                  platformOutputPath,
-                )}`,
+                `Failed to link ${platformDisplayName} Node-API modules`,
             },
           );
 
@@ -130,16 +126,18 @@ program
           const failures = modules.filter((result) => "failure" in result);
           const linked = modules.filter((result) => "outputPath" in result);
 
-          for (const { originalPath, outputPath, skipped } of linked) {
+          for (const { originalPath, outputPath, skipped, signed } of linked) {
             const prettyOutputPath = outputPath
-              ? "→ " + prettyPath(path.basename(outputPath))
+              ? "→ " + prettyPath(outputPath)
               : "";
+            const signedSuffix = signed ? "🔏" : "";
             if (skipped) {
               console.log(
                 chalk.greenBright("-"),
                 "Skipped",
                 prettyPath(originalPath),
                 prettyOutputPath,
+                signedSuffix,
                 "(up to date)",
               );
             } else {
@@ -148,6 +146,7 @@ program
                 "Linked",
                 prettyPath(originalPath),
                 prettyOutputPath,
+                signedSuffix,
               );
             }
           }

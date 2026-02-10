@@ -44,11 +44,13 @@ export type ModuleDetails = {
 
 export type LinkModuleResult = ModuleDetails & {
   skipped: boolean;
+  signed?: boolean;
 };
 
 export type ModuleOutputBase = {
   originalPath: string;
   skipped: boolean;
+  signed?: boolean;
 };
 
 type ModuleOutput = ModuleOutputBase &
