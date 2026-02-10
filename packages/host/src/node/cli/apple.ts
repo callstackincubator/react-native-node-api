@@ -3,9 +3,11 @@ import path from "node:path";
 import fs from "node:fs";
 
 import plist from "@expo/plist";
+import * as xcode from "@bacons/xcode";
+import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
 
-import { spawn } from "@react-native-node-api/cli-utils";
+import { chalk, spawn } from "@react-native-node-api/cli-utils";
 
 import { getLatestMtime, getLibraryName } from "../path-utils.js";
 import {
@@ -13,6 +15,52 @@ import {
   LinkModuleOptions,
   LinkModuleResult,
 } from "./link-modules.js";
+import { findXcodeProject } from "./xcode-helpers.js";
+
+const PACKAGE_ROOT = path.resolve(__dirname, "..", "..", "..");
+const CLI_PATH = path.resolve(PACKAGE_ROOT, "bin", "react-native-node-api.mjs");
+const BUILD_PHASE_PREFIX = "[Node-API]";
+const BUILD_PHASE_NAME = `${BUILD_PHASE_PREFIX} Copy, rename and sign frameworks`;
+
+export async function ensureXcodeBuildPhase(fromPath: string) {
+  // Locate the app's Xcode project
+  const xcodeProjectPath = await findXcodeProject(fromPath);
+  const pbxprojPath = path.join(xcodeProjectPath, "project.pbxproj");
+  assert(
+    fs.existsSync(pbxprojPath),
+    `Expected a project.pbxproj file at '${pbxprojPath}'`,
+  );
+  const xcodeProject = xcode.XcodeProject.open(pbxprojPath);
+  // Create a build phase on the main target to stage and rename the addon Xcframeworks
+  const mainTarget = xcodeProject.rootObject.getMainAppTarget();
+  assert(mainTarget, "Unable to find a main target");
+
+  const existingBuildPhases = mainTarget.props.buildPhases.filter((phase) =>
+    phase.getDisplayName().startsWith(BUILD_PHASE_PREFIX),
+  );
+
+  for (const existingBuildPhase of existingBuildPhases) {
+    console.log(
+      "Removing existing build phase:",
+      chalk.dim(existingBuildPhase.getDisplayName()),
+    );
+    existingBuildPhase.removeFromProject();
+  }
+
+  mainTarget.createBuildPhase(xcode.PBXShellScriptBuildPhase, {
+    name: BUILD_PHASE_NAME,
+    shellScript: [
+      "set -e",
+      `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
+    ].join("\n"),
+  });
+
+  await fs.promises.writeFile(
+    pbxprojPath,
+    xcodeJson.build(xcodeProject.toJSON()),
+    "utf8",
+  );
+}
 
 /**
  * Reads and parses a plist file, converting it to XML format if needed.

@@ -26,7 +26,7 @@ import {
 import { command as vendorHermes } from "./hermes";
 import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
-import { linkXcframework } from "./apple";
+import { ensureXcodeBuildPhase, linkXcframework } from "./apple";
 import { linkAndroidDir } from "./android";
 
 // We're attaching a lot of listeners when spawning in parallel
@@ -247,5 +247,26 @@ program
         relativePath: context.relativePath,
         libraryName,
       });
+    }),
+  );
+
+program
+  .command("patch-xcode-project")
+  .description("Patch the Xcode project to include the Node-API build phase")
+  .argument("[path]", "Some path inside the app package", process.cwd())
+  .action(
+    wrapAction(async (pathInput) => {
+      const resolvedPath = path.resolve(process.cwd(), pathInput);
+      console.log(
+        "Patching Xcode project in",
+        prettyPath(resolvedPath),
+        "to include a build phase to copy, rename and sign Node-API frameworks",
+      );
+      assert.equal(
+        process.platform,
+        "darwin",
+        "Patching Xcode project is only supported on macOS",
+      );
+      await ensureXcodeBuildPhase(resolvedPath);
     }),
   );
