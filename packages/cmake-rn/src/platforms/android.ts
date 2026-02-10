@@ -122,6 +122,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       .addOption(ndkVersionOption)
       .addOption(androidSdkVersionOption);
   },
+  assertValidTriplets() {},
   async configure(
     triplets,
     {
