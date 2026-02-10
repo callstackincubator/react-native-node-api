@@ -6,8 +6,6 @@ import cp from "node:child_process";
 // Using xmldom here because this is what @expo/plist uses internally and we might as well re-use it here.
 // Types come from packages/host/types/xmldom.d.ts (path mapping in tsconfig.node.json) to avoid pulling in lib "dom".
 import { DOMParser } from "@xmldom/xmldom";
-import xcode from "@bacons/xcode";
-import * as zod from "zod";
 
 export type XcodeWorkspace = {
   version: string;
@@ -89,50 +87,4 @@ export async function findXcodeProject(fromPath: string) {
   } else {
     throw new Error(`Unexpected scheme: ${scheme}`);
   }
-}
-
-const BuildSettingsSchema = zod.array(
-  zod.object({
-    target: zod.string(),
-    buildSettings: zod.partialRecord(zod.string(), zod.string()),
-  }),
-);
-
-export function getBuildSettings(
-  xcodeProjectPath: string,
-  mainTarget: xcode.PBXNativeTarget,
-) {
-  const result = cp.spawnSync(
-    "xcodebuild",
-    [
-      "-showBuildSettings",
-      "-project",
-      xcodeProjectPath,
-      "-target",
-      mainTarget.getDisplayName(),
-      "-json",
-    ],
-    {
-      cwd: xcodeProjectPath,
-      encoding: "utf-8",
-    },
-  );
-  assert.equal(
-    result.status,
-    0,
-    `Failed to run xcodebuild -showBuildSettings: ${result.stderr}`,
-  );
-  return BuildSettingsSchema.parse(JSON.parse(result.stdout));
-}
-
-export function getBuildDirPath(
-  xcodeProjectPath: string,
-  mainTarget: xcode.PBXNativeTarget,
-) {
-  const buildSettings = getBuildSettings(xcodeProjectPath, mainTarget);
-  assert(buildSettings.length === 1, "Expected exactly one build setting");
-  const [targetBuildSettings] = buildSettings;
-  const { BUILD_DIR: buildDirPath } = targetBuildSettings.buildSettings;
-  assert(buildDirPath, "Expected a build directory");
-  return buildDirPath;
 }

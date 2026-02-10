@@ -63,11 +63,6 @@ program
   .command("link")
   .argument("[path]", "Some path inside the app package", process.cwd())
   .option(
-    "--force",
-    "Don't check timestamps of input files to skip unnecessary rebuilds",
-    false,
-  )
-  .option(
     "--prune",
     "Delete vendored modules that are no longer auto-linked",
     true,
@@ -78,10 +73,7 @@ program
   .addOption(pathSuffixOption)
   .action(
     wrapAction(
-      async (
-        pathArg,
-        { force, prune, pathSuffix, android, apple, packageName },
-      ) => {
+      async (pathArg, { prune, pathSuffix, android, apple, packageName }) => {
         console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
         const platforms: PlatformName[] = [];
         if (android) {
@@ -107,7 +99,6 @@ program
               await linkModules({
                 platform,
                 fromPath: path.resolve(pathArg),
-                incremental: !force,
                 naming: { packageName, pathSuffix },
                 linker: await createLinker(platform, path.resolve(pathArg)),
               }),

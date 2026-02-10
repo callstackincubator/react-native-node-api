@@ -7,16 +7,15 @@ import * as xcode from "@bacons/xcode";
 import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
 
-import { assertFixable, chalk, spawn } from "@react-native-node-api/cli-utils";
+import { chalk, spawn } from "@react-native-node-api/cli-utils";
 
-import { getLatestMtime, getLibraryName } from "../path-utils.js";
+import { getLibraryName } from "../path-utils.js";
 import {
-  getLinkedModuleOutputPath,
   LinkModuleOptions,
   LinkModuleResult,
   ModuleLinker,
 } from "./link-modules.js";
-import { findXcodeProject, getBuildDirPath } from "./xcode-helpers.js";
+import { findXcodeProject } from "./xcode-helpers.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..", "..", "..");
 const CLI_PATH = path.resolve(PACKAGE_ROOT, "bin", "react-native-node-api.mjs");
@@ -461,7 +460,6 @@ export function determineFrameworkSlice(): {
 export async function linkXcframework({
   platform,
   modulePath,
-  incremental,
   naming,
   outputPath: outputParentPath,
   signingIdentity,
@@ -469,13 +467,6 @@ export async function linkXcframework({
   outputPath: string;
   signingIdentity?: string;
 }): Promise<LinkModuleResult> {
-  assertFixable(
-    !incremental,
-    "Incremental linking is not supported for Apple frameworks",
-    {
-      instructions: "Run the command with the --force flag",
-    },
-  );
   // Copy the xcframework to the output directory and rename the framework and binary
   const newLibraryName = getLibraryName(modulePath, naming);
   const frameworkOutputPath = path.join(
