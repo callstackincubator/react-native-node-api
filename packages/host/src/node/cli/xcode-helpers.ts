@@ -45,7 +45,7 @@ export async function readXcodeWorkspace(workspacePath: string) {
 
 export async function findXcodeWorkspace(fromPath: string) {
   // Check if the directory contains a Xcode workspace
-  const xcodeWorkspace = await fs.promises.glob(path.join("*.xcworkspace"), {
+  const xcodeWorkspace = fs.promises.glob(path.join("*.xcworkspace"), {
     cwd: fromPath,
   });
 
