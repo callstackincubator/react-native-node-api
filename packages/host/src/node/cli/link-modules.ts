@@ -17,9 +17,10 @@ import {
   getLibraryMap,
 } from "../path-utils";
 
-export type ModuleLinker = (
-  options: LinkModuleOptions,
-) => Promise<LinkModuleResult>;
+export type ModuleLinker = {
+  link(options: LinkModuleOptions): Promise<LinkModuleResult>;
+  outputParentPath: string;
+} & AsyncDisposable;
 
 export type LinkModulesOptions = {
   platform: PlatformName;
@@ -44,11 +45,13 @@ export type ModuleDetails = {
 
 export type LinkModuleResult = ModuleDetails & {
   skipped: boolean;
+  signed?: boolean;
 };
 
 export type ModuleOutputBase = {
   originalPath: string;
   skipped: boolean;
+  signed?: boolean;
 };
 
 type ModuleOutput = ModuleOutputBase &
@@ -92,7 +95,7 @@ export async function linkModules({
   return Promise.all(
     absoluteModulePaths.map(async (originalPath) => {
       try {
-        return await linker({
+        return await linker.link({
           modulePath: originalPath,
           incremental,
           naming,
@@ -114,19 +117,18 @@ export async function linkModules({
 }
 
 export async function pruneLinkedModules(
-  platform: PlatformName,
   linkedModules: ModuleOutput[],
+  outputParentPath: string,
 ) {
   if (linkedModules.some(({ failure }) => failure)) {
     // Don't prune if any of the modules failed to copy
     return;
   }
-  const platformOutputPath = getAutolinkPath(platform);
   // Pruning only when all modules are copied successfully
   const expectedPaths = new Set([...linkedModules.map((m) => m.outputPath)]);
   await Promise.all(
-    fs.readdirSync(platformOutputPath).map(async (entry) => {
-      const candidatePath = path.resolve(platformOutputPath, entry);
+    fs.readdirSync(outputParentPath).map(async (entry) => {
+      const candidatePath = path.resolve(outputParentPath, entry);
       if (!expectedPaths.has(candidatePath)) {
         console.log(
           "🧹Deleting",

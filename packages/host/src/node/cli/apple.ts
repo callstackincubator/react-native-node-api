@@ -2,17 +2,28 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 
+import * as xcode from "@bacons/xcode";
+import * as xcodeJson from "@bacons/xcode/json";
 import plist from "@expo/plist";
 import * as zod from "zod";
 
-import { spawn } from "@react-native-node-api/cli-utils";
+import { assertFixable, spawn } from "@react-native-node-api/cli-utils";
 
 import { getLatestMtime, getLibraryName } from "../path-utils.js";
 import {
   getLinkedModuleOutputPath,
   LinkModuleOptions,
   LinkModuleResult,
+  ModuleLinker,
 } from "./link-modules.js";
+import { findXcodeProject, getBuildDirPath } from "./xcode-helpers.js";
+
+const PACKAGE_ROOT = path.resolve(__dirname, "..", "..", "..");
+const CLI_PATH = path.resolve(PACKAGE_ROOT, "bin", "react-native-node-api.mjs");
+
+const BUILD_PHASE_NAME_PREFIX = "[Node-API]";
+const COPY_AND_RENAME_BUILD_PHASE_NAME = `${BUILD_PHASE_NAME_PREFIX} Copy, rename and sign addons`;
+const COPY_FRAMEWORKS_BUILD_PHASE_NAME = `${BUILD_PHASE_NAME_PREFIX} Copy addon frameworks to app bundle`;
 
 /**
  * Reads and parses a plist file, converting it to XML format if needed.
@@ -328,12 +339,235 @@ export async function linkVersionedFramework({
   );
 }
 
+export async function signXcframework(
+  xcframeworkPath: string,
+  skipIfMissingIdentity: boolean = true,
+) {
+  const { EXPANDED_CODE_SIGN_IDENTITY } = process.env;
+  if (skipIfMissingIdentity && !EXPANDED_CODE_SIGN_IDENTITY) {
+    return false;
+  }
+
+  assert(
+    EXPANDED_CODE_SIGN_IDENTITY,
+    "Expected EXPANDED_CODE_SIGN_IDENTITY to be set",
+  );
+
+  const info = await readXcframeworkInfo(
+    path.join(xcframeworkPath, "Info.plist"),
+  );
+
+  await Promise.all(
+    info.AvailableLibraries.map(async (framework) => {
+      const frameworkPath = path.join(
+        xcframeworkPath,
+        framework.LibraryIdentifier,
+        framework.LibraryPath,
+      );
+      await signFramework({
+        frameworkPath,
+        identity: EXPANDED_CODE_SIGN_IDENTITY,
+      });
+    }),
+  );
+
+  return true;
+}
+
+export async function signFramework({
+  frameworkPath,
+  identity,
+}: {
+  frameworkPath: string;
+  identity: string;
+}) {
+  await spawn(
+    "codesign",
+    [
+      "--force",
+      "--sign",
+      identity,
+      "--timestamp=none",
+      "--preserve-metadata=identifier,entitlements,flags",
+      frameworkPath,
+    ],
+    {
+      outputMode: "buffered",
+    },
+  );
+}
+
+type BuildPhases = {
+  copyAndRenameBuildPhase: xcode.PBXShellScriptBuildPhase;
+  copyFrameworksBuildPhase: xcode.PBXCopyFilesBuildPhase;
+};
+
+function ensureBuildPhases(
+  mainTarget: xcode.PBXNativeTarget,
+  clean: boolean,
+  fromPath: string,
+): BuildPhases {
+  const existingBuildPhases = mainTarget.props.buildPhases.filter((phase) =>
+    phase.getDisplayName().startsWith(BUILD_PHASE_NAME_PREFIX),
+  );
+
+  if (clean) {
+    for (const phase of existingBuildPhases) {
+      phase.removeFromProject();
+    }
+  }
+
+  if (existingBuildPhases.length === 0 || clean) {
+    // Setup the build phases
+    const copyAndRenameBuildPhase = mainTarget.createBuildPhase(
+      xcode.PBXShellScriptBuildPhase,
+      {
+        name: COPY_AND_RENAME_BUILD_PHASE_NAME,
+        shellPath: "/bin/sh",
+        shellScript: [
+          "set -e",
+          "export SKIP_XCODE_WRITE=true",
+          `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
+        ].join("\n"),
+      },
+    );
+    const copyFrameworksBuildPhase = mainTarget.createBuildPhase(
+      xcode.PBXCopyFilesBuildPhase,
+      {
+        name: COPY_FRAMEWORKS_BUILD_PHASE_NAME,
+        dstSubfolderSpec: xcodeJson.SubFolder.frameworks,
+        // TODO: File a bug and PR making this required (PBXCopyFilesBuildPhase.setupDefaults depends on it)
+        files: [],
+      },
+    );
+    return { copyAndRenameBuildPhase, copyFrameworksBuildPhase };
+  } else {
+    // Assert a good state of the build phases
+    assertFixable(
+      existingBuildPhases.length === 2,
+      `Expected exactly two Node-API build phases (found ${existingBuildPhases.map((phase) => phase.getDisplayName()).join(", ")})`,
+      {
+        command: "react-native-node-api link --apple --force",
+      },
+    );
+    const [copyAndRenameBuildPhase, copyFrameworksBuildPhase] =
+      existingBuildPhases;
+    assertFixable(
+      xcode.PBXShellScriptBuildPhase.is(copyAndRenameBuildPhase) &&
+        copyAndRenameBuildPhase.getDisplayName() ===
+          COPY_AND_RENAME_BUILD_PHASE_NAME,
+      "Expected the Node-API build phases to be in the correct order",
+      {
+        command: "react-native-node-api link --apple --force",
+      },
+    );
+    assertFixable(
+      xcode.PBXCopyFilesBuildPhase.is(copyFrameworksBuildPhase) &&
+        copyFrameworksBuildPhase.getDisplayName() ===
+          COPY_FRAMEWORKS_BUILD_PHASE_NAME,
+      "Expected the Node-API build phases to be in the correct order",
+      {
+        command: "react-native-node-api link --apple --force",
+      },
+    );
+    return { copyAndRenameBuildPhase, copyFrameworksBuildPhase };
+  }
+}
+
+export async function createXcodeLinker(
+  fromPath: string,
+  clean: boolean,
+): Promise<ModuleLinker> {
+  // Locate the app's Xcode project
+  const xcodeProjectPath = await findXcodeProject(fromPath);
+  const pbxprojPath = path.join(xcodeProjectPath, "project.pbxproj");
+  assert(
+    fs.existsSync(pbxprojPath),
+    `Expected a project.pbxproj file at '${pbxprojPath}'`,
+  );
+  const xcodeProject = xcode.XcodeProject.open(pbxprojPath);
+
+  // Create a build phase on the main target to stage and rename the addon Xcframeworks
+  const mainTarget = xcodeProject.rootObject.getMainAppTarget();
+  assert(mainTarget, "Unable to find a main target");
+
+  // Read build path
+  const buildDirPath = getBuildDirPath(xcodeProjectPath, mainTarget);
+  const outputParentPath = path.join(buildDirPath, "node-api-addons");
+  await fs.promises.mkdir(outputParentPath, { recursive: true });
+
+  const buildPhases = ensureBuildPhases(mainTarget, clean, fromPath);
+
+  // Upsert a group for the Node-API addons
+  const nodeApiAddonsGroup =
+    xcodeProject.rootObject.ensureMainGroupChild("Node-API Addons");
+
+  const linkedModulePaths = new Set<string>();
+
+  return {
+    async link(options) {
+      const result = await linkXcframework({
+        ...options,
+        nodeApiAddonsGroup,
+        buildPhases,
+        outputParentPath,
+      });
+      linkedModulePaths.add(result.outputPath);
+      return result;
+    },
+    outputParentPath,
+    [Symbol.asyncDispose]: async () => {
+      // Clean up any abandoned file references
+      for (const child of nodeApiAddonsGroup.props.children) {
+        if (
+          xcode.PBXFileReference.is(child) &&
+          !linkedModulePaths.has(child.getFullPath())
+        ) {
+          child.removeFromProject();
+        }
+      }
+      // Update the copy frameworks phase to reflect the file references
+      buildPhases.copyFrameworksBuildPhase.props.files = [];
+      for (const child of nodeApiAddonsGroup.props.children) {
+        if (
+          xcode.PBXFileReference.is(child) &&
+          linkedModulePaths.has(child.getFullPath())
+        ) {
+          buildPhases.copyFrameworksBuildPhase.ensureFile({
+            fileRef: child,
+            settings: {
+              // Not passing "CodeSignOnCopy" since we're already signing when linking the framework
+              ATTRIBUTES: ["RemoveHeadersOnCopy"],
+            },
+          });
+        }
+      }
+      if (process.env.SKIP_XCODE_WRITE === "true") {
+        console.log("Skipping Xcode project write due to SKIP_XCODE_WRITE");
+        return;
+      }
+      await fs.promises.writeFile(
+        pbxprojPath,
+        xcodeJson.build(xcodeProject.toJSON()),
+        "utf8",
+      );
+    },
+  };
+}
+
 export async function linkXcframework({
+  nodeApiAddonsGroup,
+  buildPhases,
   platform,
+  outputParentPath,
   modulePath,
   incremental,
   naming,
-}: LinkModuleOptions): Promise<LinkModuleResult> {
+}: LinkModuleOptions & {
+  nodeApiAddonsGroup: xcode.PBXGroup;
+  buildPhases: BuildPhases;
+  outputParentPath: string;
+}): Promise<LinkModuleResult> {
   assert.equal(
     process.platform,
     "darwin",
@@ -341,17 +575,31 @@ export async function linkXcframework({
   );
   // Copy the xcframework to the output directory and rename the framework and binary
   const newLibraryName = getLibraryName(modulePath, naming);
-  const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
+  const outputPath = path.join(
+    outputParentPath,
+    newLibraryName + ".xcframework",
+  );
+
+  // Ensure the nodeApiAddonsGroup has a reference to the file
+  const hasFileReference = nodeApiAddonsGroup.props.children.some(
+    (child) =>
+      xcode.PBXFileReference.is(child) && child.getFullPath() === outputPath,
+  );
+  if (!hasFileReference) {
+    nodeApiAddonsGroup.createFile({ path: outputPath });
+  }
 
   if (incremental && fs.existsSync(outputPath)) {
     const moduleModified = getLatestMtime(modulePath);
     const outputModified = getLatestMtime(outputPath);
     if (moduleModified < outputModified) {
+      const signed = await signXcframework(outputPath);
       return {
         originalPath: modulePath,
         libraryName: newLibraryName,
         outputPath,
         skipped: true,
+        signed,
       };
     }
   }
@@ -402,10 +650,13 @@ export async function linkXcframework({
     force: true,
   });
 
+  const signed = await signXcframework(outputPath);
+
   return {
     originalPath: modulePath,
     libraryName: newLibraryName,
     outputPath,
     skipped: false,
+    signed,
   };
 }

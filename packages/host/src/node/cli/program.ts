@@ -26,8 +26,8 @@ import {
 import { command as vendorHermes } from "./hermes";
 import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
-import { linkXcframework } from "./apple";
-import { linkAndroidDir } from "./android";
+import { createXcodeLinker } from "./apple";
+import { createAndroidLinker } from "./android";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
@@ -36,11 +36,15 @@ export const program = new Command("react-native-node-api").addCommand(
   vendorHermes,
 );
 
-function getLinker(platform: PlatformName): ModuleLinker {
+async function getLinker(
+  platform: PlatformName,
+  fromPath: string,
+  clean: boolean,
+): Promise<ModuleLinker> {
   if (platform === "android") {
-    return linkAndroidDir;
+    return createAndroidLinker();
   } else if (platform === "apple") {
-    return linkXcframework;
+    return await createXcodeLinker(fromPath, clean);
   } else {
     throw new Error(`Unknown platform: ${platform as string}`);
   }
@@ -99,27 +103,27 @@ program
 
         for (const platform of platforms) {
           const platformDisplayName = getPlatformDisplayName(platform);
-          const platformOutputPath = getAutolinkPath(platform);
-          const modules = await oraPromise(
-            () =>
-              linkModules({
+          const { modules, outputParentPath } = await oraPromise(
+            async (spinner) => {
+              const fromPath = path.resolve(pathArg);
+              await using linker = await getLinker(platform, fromPath, force);
+              const modules = await linkModules({
+                fromPath,
                 platform,
-                fromPath: path.resolve(pathArg),
                 incremental: !force,
                 naming: { packageName, pathSuffix },
-                linker: getLinker(platform),
-              }),
+                linker,
+              });
+              return {
+                modules,
+                outputParentPath: linker.outputParentPath,
+              };
+            },
             {
-              text: `Linking ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath,
-              )}`,
-              successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath,
-              )}`,
+              text: `Linking ${platformDisplayName} Node-API modules`,
+              successText: `Linked ${platformDisplayName} Node-API modules`,
               failText: () =>
-                `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
-                  platformOutputPath,
-                )}`,
+                `Failed to link ${platformDisplayName} Node-API modules`,
             },
           );
 
@@ -130,10 +134,11 @@ program
           const failures = modules.filter((result) => "failure" in result);
           const linked = modules.filter((result) => "outputPath" in result);
 
-          for (const { originalPath, outputPath, skipped } of linked) {
+          for (const { originalPath, outputPath, skipped, signed } of linked) {
             const prettyOutputPath = outputPath
-              ? "→ " + prettyPath(path.basename(outputPath))
+              ? "→ " + prettyPath(outputPath)
               : "";
+            const signedSuffix = signed ? " 🔏" : "";
             if (skipped) {
               console.log(
                 chalk.greenBright("-"),
@@ -141,6 +146,7 @@ program
                 prettyPath(originalPath),
                 prettyOutputPath,
                 "(up to date)",
+                signedSuffix,
               );
             } else {
               console.log(
@@ -148,6 +154,7 @@ program
                 "Linked",
                 prettyPath(originalPath),
                 prettyOutputPath,
+                signedSuffix,
               );
             }
           }
@@ -166,7 +173,7 @@ program
           }
 
           if (prune) {
-            await pruneLinkedModules(platform, modules);
+            await pruneLinkedModules(modules, outputParentPath);
           }
         }
       },

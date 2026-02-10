@@ -2,10 +2,16 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { getLatestMtime, getLibraryName, MAGIC_FILENAME } from "../path-utils";
+import {
+  getAutolinkPath,
+  getLatestMtime,
+  getLibraryName,
+  MAGIC_FILENAME,
+} from "../path-utils";
 import {
   getLinkedModuleOutputPath,
   LinkModuleResult,
+  ModuleLinker,
   type LinkModuleOptions,
 } from "./link-modules";
 
@@ -15,6 +21,15 @@ const ANDROID_ARCHITECTURES = [
   "x86_64",
   "x86",
 ] as const;
+
+export async function createAndroidLinker(): Promise<ModuleLinker> {
+  const outputParentPath = getAutolinkPath("android");
+  return {
+    link: linkAndroidDir,
+    outputParentPath,
+    [Symbol.asyncDispose]: async () => {},
+  };
+}
 
 export async function linkAndroidDir({
   incremental,
