@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
 import fs from "node:fs";
-import cp from "node:child_process";
 
 // Using xmldom here because this is what @expo/plist uses internally and we might as well re-use it here.
 // Types come from packages/host/types/xmldom.d.ts (path mapping in tsconfig.node.json) to avoid pulling in lib "dom".

@@ -482,7 +482,6 @@ export function determineFrameworkSlice(): {
 }
 
 export async function linkXcframework({
-  platform,
   modulePath,
   naming,
   outputPath: outputParentPath,
@@ -502,12 +501,7 @@ export async function linkXcframework({
 
   const info = await readXcframeworkInfo(path.join(modulePath, "Info.plist"));
 
-  // TODO: Assert the existence of environment variables injected by Xcodebuild
-  // TODO: Pick and assert the existence of the right framework slice based on the environment variables
-  // TODO: Link the framework into the output path
-
   const expectedSlice = determineFrameworkSlice();
-
   const framework = info.AvailableLibraries.find((framework) => {
     return (
       expectedSlice.platform === framework.SupportedPlatform &&

@@ -30,7 +30,7 @@ export type LinkModulesOptions = {
 
 export type LinkModuleOptions = Omit<
   LinkModulesOptions,
-  "fromPath" | "linker"
+  "fromPath" | "linker" | "platform"
 > & {
   modulePath: string;
 };
@@ -95,7 +95,6 @@ export async function linkModules({
         return await linker({
           modulePath: originalPath,
           naming,
-          platform,
         });
       } catch (error) {
         if (error instanceof SpawnFailure) {
