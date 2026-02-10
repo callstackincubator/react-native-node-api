@@ -35,31 +35,38 @@ export async function ensureXcodeBuildPhase(fromPath: string) {
     `Expected a project.pbxproj file at '${pbxprojPath}'`,
   );
   const xcodeProject = xcode.XcodeProject.open(pbxprojPath);
-  // Create a build phase on the main target to stage and rename the addon Xcframeworks
-  const mainTarget = xcodeProject.rootObject.getMainAppTarget();
-  assert(mainTarget, "Unable to find a main target");
-
-  const existingBuildPhases = mainTarget.props.buildPhases.filter((phase) =>
-    phase.getDisplayName().startsWith(BUILD_PHASE_PREFIX),
+  // Create a build phase in all application targets to stage and rename the addon frameworks
+  const applicationTargets = xcodeProject.rootObject.props.targets.filter(
+    (target) =>
+      xcode.PBXNativeTarget.is(target) &&
+      target.props.productType === "com.apple.product-type.application",
   );
 
-  for (const existingBuildPhase of existingBuildPhases) {
-    console.log(
-      "Removing existing build phase:",
-      chalk.dim(existingBuildPhase.getDisplayName()),
+  for (const target of applicationTargets) {
+    console.log(`Patching '${target.getDisplayName()}' target`);
+
+    const existingBuildPhases = target.props.buildPhases.filter((phase) =>
+      phase.getDisplayName().startsWith(BUILD_PHASE_PREFIX),
     );
-    existingBuildPhase.removeFromProject();
+
+    for (const existingBuildPhase of existingBuildPhases) {
+      console.log(
+        "Removing existing build phase:",
+        chalk.dim(existingBuildPhase.getDisplayName()),
+      );
+      existingBuildPhase.removeFromProject();
+    }
+
+    // TODO: Declare input and output files to prevent unnecessary runs
+
+    target.createBuildPhase(xcode.PBXShellScriptBuildPhase, {
+      name: BUILD_PHASE_NAME,
+      shellScript: [
+        "set -e",
+        `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
+      ].join("\n"),
+    });
   }
-
-  // TODO: Declare input and output files to prevent unnecessary runs
-
-  mainTarget.createBuildPhase(xcode.PBXShellScriptBuildPhase, {
-    name: BUILD_PHASE_NAME,
-    shellScript: [
-      "set -e",
-      `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
-    ].join("\n"),
-  });
 
   await fs.promises.writeFile(
     pbxprojPath,
