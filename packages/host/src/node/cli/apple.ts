@@ -15,7 +15,11 @@ import {
   LinkModuleResult,
   ModuleLinker,
 } from "./link-modules.js";
-import { findXcodeProject } from "./xcode-helpers.js";
+import {
+  determineFrameworkSlice,
+  ExpectedFrameworkSlice,
+  findXcodeProject,
+} from "./xcode-helpers.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..", "..", "..");
 const CLI_PATH = path.resolve(PACKAGE_ROOT, "bin", "react-native-node-api.mjs");
@@ -408,10 +412,13 @@ export async function createAppleLinker(): Promise<ModuleLinker> {
     CODE_SIGNING_ALLOWED: signingAllowed,
   } = process.env;
 
+  const expectedSlice = determineFrameworkSlice();
+
   return (options: LinkModuleOptions) => {
     return linkXcframework({
       ...options,
       outputPath,
+      expectedSlice,
       signingIdentity:
         signingRequired !== "NO" && signingAllowed !== "NO"
           ? signingIdentity
@@ -420,74 +427,15 @@ export async function createAppleLinker(): Promise<ModuleLinker> {
   };
 }
 
-/**
- * Maps Xcode PLATFORM_NAME to SupportedPlatform / SupportedPlatformVariant
- * as used in xcframework Info.plist (e.g. hello.apple.node/Info.plist).
- * PLATFORM_NAME values: iphoneos, iphonesimulator, macosx, appletvos,
- * appletvsimulator, xros, xrsimulator.
- */
-export function determineFrameworkSlice(): {
-  platform: string;
-  platformVariant?: string;
-  architectures: string[];
-} {
-  const {
-    PLATFORM_NAME: platformName,
-    EFFECTIVE_PLATFORM_NAME: effectivePlatformName,
-    ARCHS: architecturesJoined,
-  } = process.env;
-
-  assert(platformName, "Expected PLATFORM_NAME to be set by Xcodebuild");
-  assert(architecturesJoined, "Expected ARCHS to be set by Xcodebuild");
-  const architectures = architecturesJoined.split(" ");
-
-  switch (platformName) {
-    case "iphoneos":
-      return { platform: "ios", architectures };
-    case "iphonesimulator":
-      return {
-        platform: "ios",
-        platformVariant: "simulator",
-        architectures,
-      };
-    case "macosx":
-      return {
-        platform: "macos",
-        architectures,
-        platformVariant: effectivePlatformName?.endsWith("maccatalyst")
-          ? "maccatalyst"
-          : undefined,
-      };
-    case "appletvos":
-      return { platform: "tvos", architectures };
-    case "appletvsimulator":
-      return {
-        platform: "tvos",
-        platformVariant: "simulator",
-        architectures,
-      };
-    case "xros":
-      return { platform: "xros", architectures };
-    case "xrsimulator":
-      return {
-        platform: "xros",
-        platformVariant: "simulator",
-        architectures,
-      };
-    default:
-      throw new Error(
-        `Unsupported platform: ${effectivePlatformName ?? platformName}`,
-      );
-  }
-}
-
 export async function linkXcframework({
   modulePath,
   naming,
   outputPath: outputParentPath,
+  expectedSlice,
   signingIdentity,
 }: LinkModuleOptions & {
   outputPath: string;
+  expectedSlice: ExpectedFrameworkSlice;
   signingIdentity?: string;
 }): Promise<LinkModuleResult> {
   // Copy the xcframework to the output directory and rename the framework and binary
@@ -500,8 +448,6 @@ export async function linkXcframework({
   await fs.promises.rm(frameworkOutputPath, { recursive: true, force: true });
 
   const info = await readXcframeworkInfo(path.join(modulePath, "Info.plist"));
-
-  const expectedSlice = determineFrameworkSlice();
   const framework = info.AvailableLibraries.find((framework) => {
     return (
       expectedSlice.platform === framework.SupportedPlatform &&

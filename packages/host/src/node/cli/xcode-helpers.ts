@@ -87,3 +87,66 @@ export async function findXcodeProject(fromPath: string) {
     throw new Error(`Unexpected scheme: ${scheme}`);
   }
 }
+
+export type ExpectedFrameworkSlice = {
+  platform: string;
+  platformVariant?: string;
+  architectures: string[];
+};
+
+/**
+ * Maps Xcode PLATFORM_NAME to SupportedPlatform / SupportedPlatformVariant
+ * as used in xcframework Info.plist (e.g. hello.apple.node/Info.plist).
+ * PLATFORM_NAME values: iphoneos, iphonesimulator, macosx, appletvos,
+ * appletvsimulator, xros, xrsimulator.
+ */
+export function determineFrameworkSlice(): ExpectedFrameworkSlice {
+  const {
+    PLATFORM_NAME: platformName,
+    EFFECTIVE_PLATFORM_NAME: effectivePlatformName,
+    ARCHS: architecturesJoined,
+  } = process.env;
+
+  assert(platformName, "Expected PLATFORM_NAME to be set by Xcodebuild");
+  assert(architecturesJoined, "Expected ARCHS to be set by Xcodebuild");
+  const architectures = architecturesJoined.split(" ");
+
+  switch (platformName) {
+    case "iphoneos":
+      return { platform: "ios", architectures };
+    case "iphonesimulator":
+      return {
+        platform: "ios",
+        platformVariant: "simulator",
+        architectures,
+      };
+    case "macosx":
+      return {
+        platform: "macos",
+        architectures,
+        platformVariant: effectivePlatformName?.endsWith("maccatalyst")
+          ? "maccatalyst"
+          : undefined,
+      };
+    case "appletvos":
+      return { platform: "tvos", architectures };
+    case "appletvsimulator":
+      return {
+        platform: "tvos",
+        platformVariant: "simulator",
+        architectures,
+      };
+    case "xros":
+      return { platform: "xros", architectures };
+    case "xrsimulator":
+      return {
+        platform: "xros",
+        platformVariant: "simulator",
+        architectures,
+      };
+    default:
+      throw new Error(
+        `Unsupported platform: ${effectivePlatformName ?? platformName}`,
+      );
+  }
+}
