@@ -14,7 +14,6 @@ import {
 import {
   determineModuleContext,
   findNodeApiModulePathsByDependency,
-  getAutolinkPath,
   getLibraryName,
   visualizeLibraryMap,
   normalizeModulePath,
@@ -36,10 +35,7 @@ export const program = new Command("react-native-node-api").addCommand(
   vendorHermes,
 );
 
-async function createLinker(
-  platform: PlatformName,
-  fromPath: string,
-): Promise<ModuleLinker> {
+async function createLinker(platform: PlatformName): Promise<ModuleLinker> {
   if (platform === "android") {
     return linkAndroidDir;
   } else if (platform === "apple") {
@@ -100,7 +96,7 @@ program
                 platform,
                 fromPath: path.resolve(pathArg),
                 naming: { packageName, pathSuffix },
-                linker: await createLinker(platform, path.resolve(pathArg)),
+                linker: await createLinker(platform),
               }),
             {
               text: `Linking ${platformDisplayName} Node-API modules`,
