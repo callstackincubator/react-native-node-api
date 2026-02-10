@@ -83,7 +83,7 @@ export async function readAndParsePlist(plistPath: string): Promise<unknown> {
         "Updating Info.plist files are not supported on this platform",
       );
       await spawn("plutil", ["-convert", "xml1", plistPath], {
-        outputMode: "inherit",
+        outputMode: "buffered",
       });
     } catch (cause) {
       throw new Error(`Failed to convert plist to XML: ${plistPath}`, {
@@ -323,6 +323,7 @@ export async function linkVersionedFramework({
     "Info.plist",
   );
   const frameworkInfo = await readFrameworkInfo(frameworkInfoPath);
+
   // Update install name
   await spawn(
     "install_name_tool",
