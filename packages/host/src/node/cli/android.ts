@@ -19,10 +19,9 @@ const ANDROID_ARCHITECTURES = [
 export async function linkAndroidDir({
   modulePath,
   naming,
-  platform,
 }: LinkModuleOptions): Promise<LinkModuleResult> {
   const libraryName = getLibraryName(modulePath, naming);
-  const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
+  const outputPath = getLinkedModuleOutputPath("android", modulePath, naming);
 
   await fs.promises.rm(outputPath, { recursive: true, force: true });
   await fs.promises.cp(modulePath, outputPath, { recursive: true });
