@@ -4,7 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { readPackage } from "read-pkg";
 
-const REACT_NATIVE_VERSION = "0.79.6";
+const REACT_NATIVE_VERSION = "0.81.5";
+const REACT_NATIVE_MACOS_VERSION = "0.81.1";
+const REACT_VERSION = "^19.1.4";
+
 const ROOT_PATH = path.join(import.meta.dirname, "..");
 const APP_PATH = path.join(ROOT_PATH, "apps", "macos-test-app");
 const OTHER_APP_PATH = path.join(ROOT_PATH, "apps", "test-app");
@@ -87,6 +90,7 @@ async function patchPackageJson() {
 
   packageJson.dependencies = {
     ...packageJson.dependencies,
+    react: REACT_VERSION,
     "react-native-macos-init": "^2.1.3",
     "@react-native-node-api/node-addon-examples": path.relative(
       APP_PATH,
@@ -131,9 +135,13 @@ function installDependencies() {
 
 function initializeReactNativeMacOSTemplate() {
   console.log("Initializing react-native-macos template");
-  exec("npx", ["react-native-macos-init"], {
-    cwd: APP_PATH,
-  });
+  exec(
+    "npx",
+    ["react-native-macos-init", "--version", REACT_NATIVE_MACOS_VERSION],
+    {
+      cwd: APP_PATH,
+    },
+  );
 }
 
 async function patchPodfile() {
