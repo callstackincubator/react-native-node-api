@@ -65,16 +65,14 @@ async function writeFrameworkInfoPlist({
 async function updateLibraryInstallName({
   binaryPath,
   libraryName,
-  cwd,
 }: {
   binaryPath: string;
   libraryName: string;
-  cwd: string;
 }) {
   await spawn(
     "install_name_tool",
     ["-id", `@rpath/${libraryName}.framework/${libraryName}`, binaryPath],
-    { outputMode: "buffered", cwd },
+    { outputMode: "buffered" },
   );
 }
 
@@ -110,9 +108,8 @@ async function createFlatFramework({
   // TODO: Consider copying the library instead of renaming it
   await fs.promises.rename(libraryPath, newLibraryPath);
   await updateLibraryInstallName({
-    binaryPath: libraryName,
+    binaryPath: newLibraryPath,
     libraryName,
-    cwd: frameworkPath,
   });
   return frameworkPath;
 }
@@ -162,9 +159,8 @@ async function createVersionedFramework({
   const versionBinaryPath = path.join(versionDir, libraryName);
   await fs.promises.rename(libraryPath, versionBinaryPath);
   await updateLibraryInstallName({
-    binaryPath: path.join("Versions", VERSIONED_FRAMEWORK_VERSION, libraryName),
+    binaryPath: versionBinaryPath,
     libraryName,
-    cwd: frameworkPath,
   });
 
   const currentLink = path.join(versionsDir, "Current");
