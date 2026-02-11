@@ -31,9 +31,11 @@ import {
   ANDROID_TARGETS,
   AndroidTargetName,
   APPLE_TARGETS,
+  AppleOperatingSystem,
   AppleTargetName,
   ensureAvailableTargets,
   filterTargetsByPlatform,
+  parseAppleTargetName,
 } from "./targets.js";
 import { generateTypeScriptDeclarations } from "./napi-rs.js";
 import { getBlockComment } from "./banner.js";
@@ -299,16 +301,16 @@ export const buildCommand = new Command("build")
         }
 
         if (appleLibraries.length > 0) {
-          const libraryPaths = await combineLibraries(appleLibraries);
+          const libraries = await combineAppleLibraries(appleLibraries);
 
           const frameworkPaths = await oraPromise(
             Promise.all(
-              libraryPaths.map((libraryPath) =>
+              libraries.map((library) =>
                 limit(() =>
-                  // TODO: Pass true as `versioned` argument for -darwin targets
                   createAppleFramework({
-                    libraryPath,
+                    libraryPath: library.path,
                     bundleIdentifier: appleBundleIdentifier,
+                    versioned: library.os === "darwin",
                   }),
                 ),
               ),
@@ -389,16 +391,23 @@ export const buildCommand = new Command("build")
     ),
   );
 
-async function createUniversalAppleLibraries(libraryPathGroups: string[][]) {
+async function createUniversalAppleLibraries(
+  groups: { os: AppleOperatingSystem; paths: string[] }[],
+): Promise<{ os: AppleOperatingSystem; path: string }[]> {
   const result = await oraPromise(
     Promise.all(
-      libraryPathGroups.map(async (libraryPaths) => {
-        if (libraryPaths.length === 0) {
+      groups.map(async ({ os, paths }) => {
+        if (paths.length === 0) {
           return [];
-        } else if (libraryPaths.length === 1) {
-          return libraryPaths;
+        } else if (paths.length == 1) {
+          return [{ os, path: paths[0] }];
         } else {
-          return [await createUniversalAppleLibrary(libraryPaths)];
+          return [
+            {
+              os,
+              path: await createUniversalAppleLibrary(paths),
+            },
+          ];
         }
       }),
     ),
@@ -412,15 +421,21 @@ async function createUniversalAppleLibraries(libraryPathGroups: string[][]) {
   return result.flat();
 }
 
-async function combineLibraries(
+type CombinedAppleLibrary = {
+  path: string;
+  os: AppleOperatingSystem;
+};
+
+async function combineAppleLibraries(
   libraries: Readonly<[AppleTargetName, string]>[],
-): Promise<string[]> {
+): Promise<CombinedAppleLibrary[]> {
   const result = [];
   const darwinLibraries = [];
   const iosSimulatorLibraries = [];
   const tvosSimulatorLibraries = [];
   for (const [target, libraryPath] of libraries) {
-    if (target.endsWith("-darwin")) {
+    const { os } = parseAppleTargetName(target);
+    if (os === "darwin") {
       darwinLibraries.push(libraryPath);
     } else if (
       target === "aarch64-apple-ios-sim" ||
@@ -433,14 +448,14 @@ async function combineLibraries(
     ) {
       tvosSimulatorLibraries.push(libraryPath);
     } else {
-      result.push(libraryPath);
+      result.push({ os, path: libraryPath });
     }
   }
 
   const combinedLibraryPaths = await createUniversalAppleLibraries([
-    darwinLibraries,
-    iosSimulatorLibraries,
-    tvosSimulatorLibraries,
+    { os: "darwin", paths: darwinLibraries },
+    { os: "ios", paths: iosSimulatorLibraries },
+    { os: "tvos", paths: tvosSimulatorLibraries },
   ]);
 
   return [...result, ...combinedLibraryPaths];
