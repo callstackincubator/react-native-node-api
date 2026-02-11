@@ -167,11 +167,11 @@ async function createVersionedFramework({
   await fs.promises.symlink(VERSIONED_FRAMEWORK_VERSION, currentLink);
 
   await fs.promises.symlink(
-    "Versions/Current/Resources",
+    path.join("Versions", "Current", "Resources"),
     path.join(frameworkPath, "Resources"),
   );
   await fs.promises.symlink(
-    "Versions/Current/Headers",
+    path.join("Versions", "Current", "Headers"),
     path.join(frameworkPath, "Headers"),
   );
   await fs.promises.symlink(
