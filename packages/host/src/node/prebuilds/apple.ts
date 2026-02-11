@@ -22,62 +22,182 @@ export function escapeBundleIdentifier(input: string) {
   return input.replace(/[^A-Za-z0-9-.]/g, "-");
 }
 
+/** Serialize a plist object and write it to the given path. */
+async function writeInfoPlist(
+  infoPlistPath: string,
+  plistDict: Record<string, unknown>,
+) {
+  await fs.promises.writeFile(infoPlistPath, plist.build(plistDict), "utf8");
+}
+
+/** Build and write the framework Info.plist to the given path. */
+async function writeFrameworkInfoPlist(
+  infoPlistPath: string,
+  libraryName: string,
+  bundleIdentifier?: string,
+) {
+  await writeInfoPlist(infoPlistPath, {
+    CFBundleDevelopmentRegion: "en",
+    CFBundleExecutable: libraryName,
+    CFBundleIdentifier: escapeBundleIdentifier(
+      bundleIdentifier ?? `com.callstackincubator.node-api.${libraryName}`,
+    ),
+    CFBundleInfoDictionaryVersion: "6.0",
+    CFBundleName: libraryName,
+    CFBundlePackageType: "FMWK",
+    CFBundleShortVersionString: "1.0",
+    CFBundleVersion: "1",
+    NSPrincipalClass: "",
+  });
+}
+
+/** Update the library binary’s install name so it resolves correctly at load time. */
+async function updateLibraryInstallName(
+  binaryPath: string,
+  libraryName: string,
+  cwd: string,
+) {
+  await spawn(
+    "install_name_tool",
+    ["-id", `@rpath/${libraryName}.framework/${libraryName}`, binaryPath],
+    { outputMode: "buffered", cwd },
+  );
+}
+
 type CreateAppleFrameworkOptions = {
   libraryPath: string;
-  versioned?: boolean;
+  kind: "flat" | "versioned";
   bundleIdentifier?: string;
 };
 
+/**
+ * Creates a flat (non-versioned) .framework bundle:
+ * MyFramework.framework/MyFramework, Info.plist, Headers/
+ */
+async function createFlatFramework({
+  libraryPath,
+  frameworkPath,
+  libraryName,
+  bundleIdentifier,
+}: {
+  libraryPath: string;
+  frameworkPath: string;
+  libraryName: string;
+  bundleIdentifier?: string;
+}): Promise<string> {
+  await fs.promises.mkdir(frameworkPath);
+  await fs.promises.mkdir(path.join(frameworkPath, "Headers"));
+  await writeFrameworkInfoPlist(
+    path.join(frameworkPath, "Info.plist"),
+    libraryName,
+    bundleIdentifier,
+  );
+  const newLibraryPath = path.join(frameworkPath, libraryName);
+  // TODO: Consider copying the library instead of renaming it
+  await fs.promises.rename(libraryPath, newLibraryPath);
+  await updateLibraryInstallName(libraryName, libraryName, frameworkPath);
+  return frameworkPath;
+}
+
+/**
+ * Version identifier for the single version we create.
+ * Apple uses A, B, ... for major versions; we only ever create one version.
+ */
+const VERSIONED_FRAMEWORK_VERSION = "A";
+
+/**
+ * Creates a versioned .framework bundle (Versions/Current convention):
+ * MyFramework.framework/
+ *   MyFramework -> Versions/Current/MyFramework
+ *   Resources -> Versions/Current/Resources
+ *   Headers -> Versions/Current/Headers
+ *   Versions/
+ *     A/MyFramework, Resources/Info.plist, Headers/
+ *     Current -> A
+ * See: https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPFrameworks/Concepts/FrameworkAnatomy.html
+ */
+async function createVersionedFramework({
+  libraryPath,
+  frameworkPath,
+  libraryName,
+  bundleIdentifier,
+}: {
+  libraryPath: string;
+  frameworkPath: string;
+  libraryName: string;
+  bundleIdentifier?: string;
+}): Promise<string> {
+  const versionsDir = path.join(frameworkPath, "Versions");
+  const versionDir = path.join(versionsDir, VERSIONED_FRAMEWORK_VERSION);
+  const versionResourcesDir = path.join(versionDir, "Resources");
+  const versionHeadersDir = path.join(versionDir, "Headers");
+
+  await fs.promises.mkdir(versionResourcesDir, { recursive: true });
+  await fs.promises.mkdir(versionHeadersDir, { recursive: true });
+
+  await writeFrameworkInfoPlist(
+    path.join(versionResourcesDir, "Info.plist"),
+    libraryName,
+    bundleIdentifier,
+  );
+
+  const versionBinaryPath = path.join(versionDir, libraryName);
+  await fs.promises.rename(libraryPath, versionBinaryPath);
+  await updateLibraryInstallName(
+    path.join("Versions", VERSIONED_FRAMEWORK_VERSION, libraryName),
+    libraryName,
+    frameworkPath,
+  );
+
+  const currentLink = path.join(versionsDir, "Current");
+  await fs.promises.symlink(VERSIONED_FRAMEWORK_VERSION, currentLink);
+
+  await fs.promises.symlink(
+    "Versions/Current/Resources",
+    path.join(frameworkPath, "Resources"),
+  );
+  await fs.promises.symlink(
+    "Versions/Current/Headers",
+    path.join(frameworkPath, "Headers"),
+  );
+  await fs.promises.symlink(
+    path.join("Versions", "Current", libraryName),
+    path.join(frameworkPath, libraryName),
+  );
+
+  return frameworkPath;
+}
+
 export async function createAppleFramework({
   libraryPath,
-  versioned = false,
+  kind,
   bundleIdentifier,
 }: CreateAppleFrameworkOptions) {
-  if (versioned) {
-    // TODO: Add support for generating a Versions/Current/Resources/Info.plist convention framework
-    throw new Error("Creating versioned frameworks is not supported yet");
-  }
   assert(fs.existsSync(libraryPath), `Library not found: ${libraryPath}`);
-  // Write a info.plist file to the framework
   const libraryName = path.basename(libraryPath, path.extname(libraryPath));
   const frameworkPath = path.join(
     path.dirname(libraryPath),
     `${libraryName}.framework`,
   );
-  // Create the framework from scratch
   await fs.promises.rm(frameworkPath, { recursive: true, force: true });
-  await fs.promises.mkdir(frameworkPath);
-  await fs.promises.mkdir(path.join(frameworkPath, "Headers"));
-  // Create an empty Info.plist file
-  await fs.promises.writeFile(
-    path.join(frameworkPath, "Info.plist"),
-    plist.build({
-      CFBundleDevelopmentRegion: "en",
-      CFBundleExecutable: libraryName,
-      CFBundleIdentifier: escapeBundleIdentifier(
-        bundleIdentifier ?? `com.callstackincubator.node-api.${libraryName}`,
-      ),
-      CFBundleInfoDictionaryVersion: "6.0",
-      CFBundleName: libraryName,
-      CFBundlePackageType: "FMWK",
-      CFBundleShortVersionString: "1.0",
-      CFBundleVersion: "1",
-      NSPrincipalClass: "",
-    }),
-    "utf8",
-  );
-  const newLibraryPath = path.join(frameworkPath, libraryName);
-  // TODO: Consider copying the library instead of renaming it
-  await fs.promises.rename(libraryPath, newLibraryPath);
-  // Update the name of the library
-  await spawn(
-    "install_name_tool",
-    ["-id", `@rpath/${libraryName}.framework/${libraryName}`, newLibraryPath],
-    {
-      outputMode: "buffered",
-    },
-  );
-  return frameworkPath;
+
+  if (kind === "versioned") {
+    return createVersionedFramework({
+      libraryPath,
+      frameworkPath,
+      libraryName,
+      bundleIdentifier,
+    });
+  } else if (kind === "flat") {
+    return createFlatFramework({
+      libraryPath,
+      frameworkPath,
+      libraryName,
+      bundleIdentifier,
+    });
+  } else {
+    throw new Error(`Unexpected framework kind: ${kind as string}`);
+  }
 }
 
 export async function createXCframework({

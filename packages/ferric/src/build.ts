@@ -309,8 +309,8 @@ export const buildCommand = new Command("build")
                 limit(() =>
                   createAppleFramework({
                     libraryPath: library.path,
+                    kind: library.os === "darwin" ? "versioned" : "flat",
                     bundleIdentifier: appleBundleIdentifier,
-                    versioned: library.os === "darwin",
                   }),
                 ),
               ),
@@ -399,7 +399,7 @@ async function createUniversalAppleLibraries(
       groups.map(async ({ os, paths }) => {
         if (paths.length === 0) {
           return [];
-        } else if (paths.length == 1) {
+        } else if (paths.length === 1) {
           return [{ os, path: paths[0] }];
         } else {
           return [

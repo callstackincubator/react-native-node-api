@@ -417,7 +417,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
       const [artifact] = artifacts;
       await createAppleFramework({
         libraryPath: path.join(buildPath, artifact.path),
-        versioned: triplet.endsWith("-darwin"),
+        kind: triplet.endsWith("-darwin") ? "versioned" : "flat",
         bundleIdentifier: appleBundleIdentifier,
       });
     }
