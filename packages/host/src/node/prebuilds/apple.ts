@@ -23,40 +23,54 @@ export function escapeBundleIdentifier(input: string) {
 }
 
 /** Serialize a plist object and write it to the given path. */
-async function writeInfoPlist(
-  infoPlistPath: string,
-  plistDict: Record<string, unknown>,
-) {
+async function writeInfoPlist({
+  path: infoPlistPath,
+  plist: plistDict,
+}: {
+  path: string;
+  plist: Record<string, unknown>;
+}) {
   await fs.promises.writeFile(infoPlistPath, plist.build(plistDict), "utf8");
 }
 
 /** Build and write the framework Info.plist to the given path. */
-async function writeFrameworkInfoPlist(
-  infoPlistPath: string,
-  libraryName: string,
-  bundleIdentifier?: string,
-) {
-  await writeInfoPlist(infoPlistPath, {
-    CFBundleDevelopmentRegion: "en",
-    CFBundleExecutable: libraryName,
-    CFBundleIdentifier: escapeBundleIdentifier(
-      bundleIdentifier ?? `com.callstackincubator.node-api.${libraryName}`,
-    ),
-    CFBundleInfoDictionaryVersion: "6.0",
-    CFBundleName: libraryName,
-    CFBundlePackageType: "FMWK",
-    CFBundleShortVersionString: "1.0",
-    CFBundleVersion: "1",
-    NSPrincipalClass: "",
+async function writeFrameworkInfoPlist({
+  path: infoPlistPath,
+  libraryName,
+  bundleIdentifier,
+}: {
+  path: string;
+  libraryName: string;
+  bundleIdentifier?: string;
+}) {
+  await writeInfoPlist({
+    path: infoPlistPath,
+    plist: {
+      CFBundleDevelopmentRegion: "en",
+      CFBundleExecutable: libraryName,
+      CFBundleIdentifier: escapeBundleIdentifier(
+        bundleIdentifier ?? `com.callstackincubator.node-api.${libraryName}`,
+      ),
+      CFBundleInfoDictionaryVersion: "6.0",
+      CFBundleName: libraryName,
+      CFBundlePackageType: "FMWK",
+      CFBundleShortVersionString: "1.0",
+      CFBundleVersion: "1",
+      NSPrincipalClass: "",
+    },
   });
 }
 
 /** Update the library binary’s install name so it resolves correctly at load time. */
-async function updateLibraryInstallName(
-  binaryPath: string,
-  libraryName: string,
-  cwd: string,
-) {
+async function updateLibraryInstallName({
+  binaryPath,
+  libraryName,
+  cwd,
+}: {
+  binaryPath: string;
+  libraryName: string;
+  cwd: string;
+}) {
   await spawn(
     "install_name_tool",
     ["-id", `@rpath/${libraryName}.framework/${libraryName}`, binaryPath],
@@ -87,15 +101,19 @@ async function createFlatFramework({
 }): Promise<string> {
   await fs.promises.mkdir(frameworkPath);
   await fs.promises.mkdir(path.join(frameworkPath, "Headers"));
-  await writeFrameworkInfoPlist(
-    path.join(frameworkPath, "Info.plist"),
+  await writeFrameworkInfoPlist({
+    path: path.join(frameworkPath, "Info.plist"),
     libraryName,
     bundleIdentifier,
-  );
+  });
   const newLibraryPath = path.join(frameworkPath, libraryName);
   // TODO: Consider copying the library instead of renaming it
   await fs.promises.rename(libraryPath, newLibraryPath);
-  await updateLibraryInstallName(libraryName, libraryName, frameworkPath);
+  await updateLibraryInstallName({
+    binaryPath: libraryName,
+    libraryName,
+    cwd: frameworkPath,
+  });
   return frameworkPath;
 }
 
@@ -135,19 +153,19 @@ async function createVersionedFramework({
   await fs.promises.mkdir(versionResourcesDir, { recursive: true });
   await fs.promises.mkdir(versionHeadersDir, { recursive: true });
 
-  await writeFrameworkInfoPlist(
-    path.join(versionResourcesDir, "Info.plist"),
+  await writeFrameworkInfoPlist({
+    path: path.join(versionResourcesDir, "Info.plist"),
     libraryName,
     bundleIdentifier,
-  );
+  });
 
   const versionBinaryPath = path.join(versionDir, libraryName);
   await fs.promises.rename(libraryPath, versionBinaryPath);
-  await updateLibraryInstallName(
-    path.join("Versions", VERSIONED_FRAMEWORK_VERSION, libraryName),
+  await updateLibraryInstallName({
+    binaryPath: path.join("Versions", VERSIONED_FRAMEWORK_VERSION, libraryName),
     libraryName,
-    frameworkPath,
-  );
+    cwd: frameworkPath,
+  });
 
   const currentLink = path.join(versionsDir, "Current");
   await fs.promises.symlink(VERSIONED_FRAMEWORK_VERSION, currentLink);
