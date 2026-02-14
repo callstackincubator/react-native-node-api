@@ -228,9 +228,16 @@ program = program.action(
         triplet,
         platform,
         async spawn(command: string, args: string[], cwd?: string) {
+          const outputPrefix = verbose ? chalk.dim(`[${triplet}] `) : undefined;
+          if (verbose) {
+            console.log(
+              `${outputPrefix}» ${command} ${args.map((arg) => chalk.dim(`${arg}`)).join(" ")}`,
+              cwd ? `(in ${chalk.dim(cwd)})` : "",
+            );
+          }
           await spawn(command, args, {
             outputMode: verbose ? "inherit" : "buffered",
-            outputPrefix: verbose ? chalk.dim(`[${triplet}] `) : undefined,
+            outputPrefix,
             cwd,
           });
         },
