@@ -187,6 +187,11 @@ jobs:
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
+      - name: Upload node-addon-examples
+        uses: actions/upload-artifact@v6
+        with:
+          name: node-addon-examples
+          path: node_modules/@react-native-node-api/node-addon-examples
       - name: Run MacOS test app
         # TODO: Enable release mode when the 'Bundle React Native code and images' build phase doesn't fail on CI
         # run: npm run test:allTests -- --mode Release
