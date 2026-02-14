@@ -162,9 +162,6 @@ jobs:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
     runs-on: macos-latest
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_26.2.app
-      IOS_DEVICE_NAME: iPhone 16
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -173,6 +170,8 @@ jobs:
       - uses: pnpm/action-setup@v6
         with:
           cache: true
+      - name: Boot the simulator
+        run: xcrun simctl boot 'iPhone 17'
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
