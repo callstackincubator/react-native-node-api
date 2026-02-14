@@ -5,7 +5,11 @@
     "declarationMap": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@xmldom/xmldom": ["./types/xmldom.d.ts"]
+    }
   },
   "include": ["src/node/**/*.ts", "types/**/*.d.ts"],
   "exclude": ["**/*.test.ts"],

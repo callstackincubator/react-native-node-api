@@ -14,7 +14,6 @@ import {
 import {
   determineModuleContext,
   findNodeApiModulePathsByDependency,
-  getAutolinkPath,
   getLibraryName,
   visualizeLibraryMap,
   normalizeModulePath,
@@ -26,7 +25,7 @@ import {
 import { command as vendorHermes } from "./hermes";
 import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
-import { linkXcframework } from "./apple";
+import { ensureXcodeBuildPhase, createAppleLinker } from "./apple";
 import { linkAndroidDir } from "./android";
 
 // We're attaching a lot of listeners when spawning in parallel
@@ -36,11 +35,11 @@ export const program = new Command("react-native-node-api").addCommand(
   vendorHermes,
 );
 
-function getLinker(platform: PlatformName): ModuleLinker {
+async function createLinker(platform: PlatformName): Promise<ModuleLinker> {
   if (platform === "android") {
     return linkAndroidDir;
   } else if (platform === "apple") {
-    return linkXcframework;
+    return createAppleLinker();
   } else {
     throw new Error(`Unknown platform: ${platform as string}`);
   }
@@ -60,11 +59,6 @@ program
   .command("link")
   .argument("[path]", "Some path inside the app package", process.cwd())
   .option(
-    "--force",
-    "Don't check timestamps of input files to skip unnecessary rebuilds",
-    false,
-  )
-  .option(
     "--prune",
     "Delete vendored modules that are no longer auto-linked",
     true,
@@ -75,10 +69,7 @@ program
   .addOption(pathSuffixOption)
   .action(
     wrapAction(
-      async (
-        pathArg,
-        { force, prune, pathSuffix, android, apple, packageName },
-      ) => {
+      async (pathArg, { prune, pathSuffix, android, apple, packageName }) => {
         console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
         const platforms: PlatformName[] = [];
         if (android) {
@@ -99,27 +90,19 @@ program
 
         for (const platform of platforms) {
           const platformDisplayName = getPlatformDisplayName(platform);
-          const platformOutputPath = getAutolinkPath(platform);
           const modules = await oraPromise(
-            () =>
-              linkModules({
+            async () =>
+              await linkModules({
                 platform,
                 fromPath: path.resolve(pathArg),
-                incremental: !force,
                 naming: { packageName, pathSuffix },
-                linker: getLinker(platform),
+                linker: await createLinker(platform),
               }),
             {
-              text: `Linking ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath,
-              )}`,
-              successText: `Linked ${platformDisplayName} Node-API modules into ${prettyPath(
-                platformOutputPath,
-              )}`,
+              text: `Linking ${platformDisplayName} Node-API modules`,
+              successText: `Linked ${platformDisplayName} Node-API modules`,
               failText: () =>
-                `Failed to link ${platformDisplayName} Node-API modules into ${prettyPath(
-                  platformOutputPath,
-                )}`,
+                `Failed to link ${platformDisplayName} Node-API modules`,
             },
           );
 
@@ -130,16 +113,18 @@ program
           const failures = modules.filter((result) => "failure" in result);
           const linked = modules.filter((result) => "outputPath" in result);
 
-          for (const { originalPath, outputPath, skipped } of linked) {
+          for (const { originalPath, outputPath, skipped, signed } of linked) {
             const prettyOutputPath = outputPath
-              ? "→ " + prettyPath(path.basename(outputPath))
+              ? "→ " + prettyPath(outputPath)
               : "";
+            const signedSuffix = signed ? "🔏" : "";
             if (skipped) {
               console.log(
                 chalk.greenBright("-"),
                 "Skipped",
                 prettyPath(originalPath),
                 prettyOutputPath,
+                signedSuffix,
                 "(up to date)",
               );
             } else {
@@ -148,6 +133,7 @@ program
                 "Linked",
                 prettyPath(originalPath),
                 prettyOutputPath,
+                signedSuffix,
               );
             }
           }
@@ -247,5 +233,26 @@ program
         relativePath: context.relativePath,
         libraryName,
       });
+    }),
+  );
+
+program
+  .command("patch-xcode-project")
+  .description("Patch the Xcode project to include the Node-API build phase")
+  .argument("[path]", "Some path inside the app package", process.cwd())
+  .action(
+    wrapAction(async (pathInput) => {
+      const resolvedPath = path.resolve(process.cwd(), pathInput);
+      console.log(
+        "Patching Xcode project in",
+        prettyPath(resolvedPath),
+        "to include a build phase to copy, rename and sign Node-API frameworks",
+      );
+      assert.equal(
+        process.platform,
+        "darwin",
+        "Patching Xcode project is only supported on macOS",
+      );
+      await ensureXcodeBuildPhase(resolvedPath);
     }),
   );
