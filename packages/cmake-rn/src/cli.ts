@@ -20,11 +20,10 @@ import {
   platformHasTriplet,
 } from "./platforms.js";
 import { Platform } from "./platforms/types.js";
+import { getCcachePath } from "./ccache.js";
 
 // We're attaching a lot of listeners when spawning in parallel
 EventEmitter.defaultMaxListeners = 100;
-
-// TODO: Add automatic ccache support
 
 const verboseOption = new Option(
   "--verbose",
@@ -125,6 +124,11 @@ const cmakeJsOption = new Option(
   "Define CMAKE_JS_* variables used for compatibility with cmake-js",
 ).default(false);
 
+const ccachePathOption = new Option(
+  "--ccache-path <path>",
+  "Specify the path to the ccache executable",
+).default(getCcachePath());
+
 let program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(tripletOption)
@@ -139,7 +143,8 @@ let program = new Command("cmake-rn")
   .addOption(stripOption)
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption)
-  .addOption(cmakeJsOption);
+  .addOption(cmakeJsOption)
+  .addOption(ccachePathOption);
 
 for (const platform of platforms) {
   const allOption = new Option(
@@ -169,7 +174,14 @@ program = program.action(
       process.cwd(),
       expandTemplate(baseOptions.out, baseOptions),
     );
-    const { verbose, clean, source, out, build: buildPath } = baseOptions;
+    const {
+      verbose,
+      clean,
+      source,
+      out,
+      build: buildPath,
+      ccachePath,
+    } = baseOptions;
 
     assertFixable(
       fs.existsSync(path.join(source, "CMakeLists.txt")),
@@ -178,6 +190,10 @@ program = program.action(
         instructions: `Change working directory into a directory with a CMakeLists.txt, create one or specify the correct source directory using --source`,
       },
     );
+
+    if (ccachePath) {
+      console.log(`♻️ Using ccache: ${chalk.dim(ccachePath)}`);
+    }
 
     if (clean) {
       await fs.promises.rm(buildPath, { recursive: true, force: true });
