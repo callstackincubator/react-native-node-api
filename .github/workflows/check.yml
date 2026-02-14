@@ -151,7 +151,7 @@ jobs:
       - name: Run tests (iOS)
         run: npm run test:ios:allTests
         # TODO: Enable release mode when it works
-        # run: npm run test:ios -- --mode Release
+        # run: npm run test:ios:allTests -- --mode Release
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
@@ -188,7 +188,9 @@ jobs:
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
       - name: Run MacOS test app
-        run: npm run test:allTests -- --mode Release
+        # TODO: Enable release mode when the 'Bundle React Native code and images' build phase doesn't fail on CI
+        # run: npm run test:allTests -- --mode Release
+        run: npm run test:allTests
         working-directory: apps/macos-test-app
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
