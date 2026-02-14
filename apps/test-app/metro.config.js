@@ -11,6 +11,8 @@ const config = makeMetroConfig({
   },
 });
 
+console.log("watchFolders =", config.watchFolders);
+
 if (config.watchFolders.length === 0) {
   // This patch is needed to locate packages in the monorepo from the MacOS app
   // which is intentionally kept outside of the workspaces configuration to prevent
