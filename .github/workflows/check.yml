@@ -151,7 +151,7 @@ jobs:
       - name: Run tests (iOS)
         run: npm run test:ios:allTests
         # TODO: Enable release mode when it works
-        # run: npm run test:ios -- --mode Release
+        # run: npm run test:ios:allTests -- --mode Release
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
@@ -187,9 +187,17 @@ jobs:
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
-      - name: Run MacOS test app
-        run: npm run test:allTests -- --mode Release
+      - name: Bundle test app
+        run: npx react-native bundle --entry-file index.js --platform macos --dev false --minify false --bundle-output dist/main.macos.jsbundle --assets-dest dist/res
         working-directory: apps/macos-test-app
+      - name: Build test app
+        run: xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
+        working-directory: apps/macos-test-app/macos
+      - name: Run test app
+        run: npx mocha-remote --exit-on-error -- macos/build/macos-test-app.xcarchive/Products/Applications/MacOSTestApp.app/Contents/MacOS/MacOSTestApp
+        working-directory: apps/macos-test-app
+        env:
+          MOCHA_REMOTE_CONTEXT: allTests
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
