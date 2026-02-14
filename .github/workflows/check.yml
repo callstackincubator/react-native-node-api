@@ -133,6 +133,9 @@ jobs:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
     runs-on: macos-latest
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app
+      IOS_DEVICE_NAME: iPhone 16
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v6
@@ -146,28 +149,38 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ runner.os }}
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: "17"
-          distribution: "temurin"
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
-      - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      - run: rustup target add aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim
+      # Because the Xcode project injects its own CCACHE_CONFIGPATH,
+      # the configuration set by the ccache action doesn't propagate.
+      - name: Expose Ccache config to Xcode
+        run: |
+          echo "CCACHE_DIR=`ccache --get-config cache_dir`" >> $GITHUB_ENV
+          echo "CCACHE_MAXSIZE=`ccache --get-config max_size`" >> $GITHUB_ENV
+          echo "CCACHE_COMPILERCHECK=`ccache --get-config compiler_check`" >> $GITHUB_ENV
       - run: npm run pod-install
         working-directory: apps/test-app
-      - name: Run tests (iOS)
-        run: npm run test:ios:allTests
-        # TODO: Enable release mode when it works
-        # run: npm run test:ios:allTests -- --mode Release
+        env:
+          USE_CCACHE: 1
+      - name: Bundle test app
+        run: npx react-native bundle --entry-file index.ts --platform ios --dev false --minify false --bundle-output dist/main.ios.jsbundle --assets-dest dist/res
         working-directory: apps/test-app
+      - name: Build test app
+        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination generic/platform="iOS" -archivePath ./build/test-app.xcarchive | xcbeautify
+        working-directory: apps/test-app/ios
+      - name: Run test app
+        run: |
+          # Install the app
+          xcrun simctl install booted ./ios/build/test-app.xcarchive/Products/Applications/ReactTestApp.app
+          # Run Mocha Remote wrapping the launch of the app
+          npx mocha-remote --exit-on-error -- xcrun simctl launch --terminate-running-process --console-pty booted com.microsoft.ReactTestApp
+        working-directory: apps/test-app
+        env:
+          MOCHA_REMOTE_CONTEXT: allTests
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
     # we don't have macOS-specific code yet
