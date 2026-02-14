@@ -187,16 +187,17 @@ jobs:
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
-      - name: Upload node-addon-examples
-        uses: actions/upload-artifact@v6
-        with:
-          name: node-addon-examples
-          path: node_modules/@react-native-node-api/node-addon-examples
-      - name: Run MacOS test app
-        # TODO: Enable release mode when the 'Bundle React Native code and images' build phase doesn't fail on CI
-        # run: npm run test:allTests -- --mode Release
-        run: npm run test:allTests
+      - name: Bundle test app
+        run: npx react-native bundle --entry-file index.js --platform macos --dev false --minify false --bundle-output dist/main.macos.jsbundle --assets-dest dist/res
         working-directory: apps/macos-test-app
+      - name: Build test app
+        run: xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
+        working-directory: apps/macos-test-app/macos
+      - name: Run test app
+        run: npx mocha-remote --exit-on-error -- macos/build/macos-test-app.xcarchive/Products/Applications/MacOSTestApp.app/Contents/MacOS/MacOSTestApp
+        working-directory: apps/macos-test-app
+        env:
+          MOCHA_REMOTE_CONTEXT: allTests
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
