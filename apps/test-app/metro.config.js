@@ -11,9 +11,7 @@ const config = makeMetroConfig({
   },
 });
 
-console.log("watchFolders =", config.watchFolders);
-
-if (config.watchFolders.length === 0) {
+if (config.projectRoot.endsWith("macos-test-app")) {
   // This patch is needed to locate packages in the monorepo from the MacOS app
   // which is intentionally kept outside of the workspaces configuration to prevent
   // duplicate react-native version and pollution of the package lock.
