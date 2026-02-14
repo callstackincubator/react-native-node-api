@@ -421,15 +421,17 @@ export async function createAppleLinker(): Promise<ModuleLinker> {
 
   const expectedSlice = determineFrameworkSlice();
 
+  assert(
+    signingRequired !== "YES" || signingAllowed !== "NO",
+    "Expected either CODE_SIGNING_REQUIRED not be YES or CODE_SIGNING_ALLOWED not be NO",
+  );
+
   return (options: LinkModuleOptions) => {
     return linkXcframework({
       ...options,
       outputPath,
       expectedSlice,
-      signingIdentity:
-        signingRequired !== "NO" && signingAllowed !== "NO"
-          ? signingIdentity
-          : undefined,
+      signingIdentity: signingAllowed !== "NO" ? signingIdentity : undefined,
     });
   };
 }
@@ -443,6 +445,10 @@ export async function linkXcframework({
 }: LinkModuleOptions & {
   outputPath: string;
   expectedSlice: ExpectedFrameworkSlice;
+  /**
+   * If not provided, the framework will not be signed.
+   * If provided, the framework will be signed with the given identity.
+   */
   signingIdentity?: string;
 }): Promise<LinkModuleResult> {
   // Copy the xcframework to the output directory and rename the framework and binary
