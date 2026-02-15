@@ -134,6 +134,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       build,
       weakNodeApiLinkage,
       cmakeJs,
+      ccachePath,
     },
   ) {
     const ndkPath = getNdkPath(ndkVersion);
@@ -146,16 +147,18 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
         CMAKE_SYSTEM_NAME: "Android",
         // "CMAKE_INSTALL_PREFIX": installPath,
         CMAKE_MAKE_PROGRAM: "ninja",
-        // "-D",
-        // "CMAKE_C_COMPILER_LAUNCHER=ccache",
-        // "-D",
-        // "CMAKE_CXX_COMPILER_LAUNCHER=ccache",
         ANDROID_NDK: ndkPath,
         ANDROID_TOOLCHAIN: "clang",
         ANDROID_PLATFORM: androidSdkVersion,
         // TODO: Make this configurable
         ANDROID_STL: "c++_shared",
       },
+      ccachePath
+        ? {
+            CMAKE_C_COMPILER_LAUNCHER: ccachePath,
+            CMAKE_CXX_COMPILER_LAUNCHER: ccachePath,
+          }
+        : {},
     ];
 
     await Promise.all(

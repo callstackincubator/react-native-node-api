@@ -21,10 +21,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:

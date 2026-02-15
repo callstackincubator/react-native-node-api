@@ -200,6 +200,17 @@ const SIMULATOR_TRIPLET_SUFFIXES = [
   "apple-visionos-sim",
 ] as const;
 
+async function getCompilerPath(
+  name: "clang" | "clang++",
+  { buildBinPath, ccachePath }: { buildBinPath: string; ccachePath: string },
+) {
+  const result = path.join(buildBinPath, name);
+  if (!fs.existsSync(result)) {
+    await fs.promises.symlink(ccachePath, result);
+  }
+  return result;
+}
+
 export const platform: Platform<Triplet[], AppleOpts> = {
   id: "apple",
   name: "Apple",
@@ -281,16 +292,40 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   },
   async configure(
     triplets,
-    { source, build, define, weakNodeApiLinkage, cmakeJs },
-    spawn,
+    { source, build, define, weakNodeApiLinkage, cmakeJs, ccachePath },
   ) {
+    // When using ccache, we're creating symlinks for the clang and clang++ binaries to the ccache binary
+    // This is needed for ccache to understand it's being invoked as clang and clang++ respectively.
+    const buildBinPath = path.join(build, "bin");
+    await fs.promises.mkdir(buildBinPath, { recursive: true });
+    const compilerDefinitions = ccachePath
+      ? {
+          CMAKE_XCODE_ATTRIBUTE_CC: await getCompilerPath("clang", {
+            buildBinPath,
+            ccachePath,
+          }),
+          CMAKE_XCODE_ATTRIBUTE_CXX: await getCompilerPath("clang++", {
+            buildBinPath,
+            ccachePath,
+          }),
+          CMAKE_XCODE_ATTRIBUTE_LD: await getCompilerPath("clang", {
+            buildBinPath,
+            ccachePath,
+          }),
+          CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS: await getCompilerPath("clang++", {
+            buildBinPath,
+            ccachePath,
+          }),
+        }
+      : {};
+
     // Ideally, we would generate a single Xcode project supporting all architectures / platforms
     // However, CMake's Xcode generator does not support that well, so we generate one project per triplet
     // Specifically, the linking of weak-node-api breaks, since the sdk / arch specific framework
     // from the xcframework is picked at configure time, not at build time.
     // See https://gitlab.kitware.com/cmake/cmake/-/issues/21752#note_1717047 for more information.
     await Promise.all(
-      triplets.map(async ({ triplet }) => {
+      triplets.map(async ({ triplet, spawn }) => {
         const buildPath = getBuildPath(build, triplet);
         // We want to use the CMake File API to query information later
         // TODO: Or do we?
@@ -308,16 +343,15 @@ export const platform: Platform<Triplet[], AppleOpts> = {
           "Xcode",
           ...toDefineArguments([
             ...define,
-            ...(weakNodeApiLinkage ? [getWeakNodeApiVariables("apple")] : []),
-            ...(cmakeJs ? [getCmakeJSVariables("apple")] : []),
+            weakNodeApiLinkage ? getWeakNodeApiVariables("apple") : {},
+            cmakeJs ? getCmakeJSVariables("apple") : {},
+            compilerDefinitions,
             {
               CMAKE_SYSTEM_NAME: CMAKE_SYSTEM_NAMES[triplet],
               CMAKE_OSX_SYSROOT: XCODE_SDK_NAMES[triplet],
               CMAKE_OSX_ARCHITECTURES: APPLE_ARCHITECTURES[triplet],
               // Passing a linker flag to increase the header pad size to allow renaming the install name when linking it into the app.
               CMAKE_SHARED_LINKER_FLAGS: "-Wl,-headerpad_max_install_names",
-            },
-            {
               // Setting the output directories works around an issue with Xcode generator
               // where an unexpanded variable would emitted in the artifact paths.
               // This is okay, since we're generating per triplet build directories anyway.
@@ -419,7 +453,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
       const [artifact] = artifacts;
       await createAppleFramework({
         libraryPath: path.join(buildPath, artifact.path),
-        versioned: triplet.endsWith("-darwin"),
+        kind: triplet.endsWith("-darwin") ? "versioned" : "flat",
         bundleIdentifier: appleBundleIdentifier,
       });
     }

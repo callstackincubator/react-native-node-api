@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import cp from "node:child_process";
 
 import { assertFixable } from "@react-native-node-api/cli-utils";
@@ -47,6 +48,65 @@ export const APPLE_TARGETS = [
   // "x86_64h-apple-darwin",
 ] as const;
 export type AppleTargetName = (typeof APPLE_TARGETS)[number];
+
+const APPLE_ARCHITECTURES = [
+  "aarch64",
+  "arm64_32",
+  "arm64e",
+  "armv7",
+  "armv7s",
+  "x86_64",
+  "x86_64h",
+  "i386",
+  "i686",
+] as const;
+export type AppleArchitecture = (typeof APPLE_ARCHITECTURES)[number];
+export function isAppleArchitecture(
+  architecture: string,
+): architecture is AppleArchitecture {
+  return (APPLE_ARCHITECTURES as readonly string[]).includes(architecture);
+}
+
+const APPLE_OPERATING_SYSTEMS = [
+  "darwin",
+  "ios",
+  "tvos",
+  "visionos",
+  "watchos",
+] as const;
+export type AppleOperatingSystem = (typeof APPLE_OPERATING_SYSTEMS)[number];
+export function isAppleOperatingSystem(os: string): os is AppleOperatingSystem {
+  return (APPLE_OPERATING_SYSTEMS as readonly string[]).includes(os);
+}
+
+const APPLE_VARIANTS = ["sim", "macabi"] as const;
+export type AppleVariant = (typeof APPLE_VARIANTS)[number];
+export function isAppleVariant(variant: string): variant is AppleVariant {
+  return (APPLE_VARIANTS as readonly string[]).includes(variant);
+}
+
+export function parseAppleTargetName(target: AppleTargetName): {
+  architecture: AppleArchitecture;
+  os: AppleOperatingSystem;
+  variant?: AppleVariant;
+} {
+  const [architecture, vendor, os, variant] = target.split("-");
+  assert(vendor === "apple", "Expected vendor to be apple");
+  assert(
+    isAppleArchitecture(architecture),
+    `Unexpected architecture: ${architecture}`,
+  );
+  assert(isAppleOperatingSystem(os), `Unexpected operating system: ${os}`);
+  assert(
+    typeof variant === "undefined" || isAppleVariant(variant),
+    `Unexpected variant: ${variant}`,
+  );
+  return {
+    architecture,
+    os,
+    variant,
+  };
+}
 
 export const ALL_TARGETS = [...ANDROID_TARGETS, ...APPLE_TARGETS] as const;
 export type TargetName = (typeof ALL_TARGETS)[number];

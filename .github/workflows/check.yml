@@ -4,7 +4,7 @@ env:
   # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
   NDK_VERSION: 27.1.12297006
   # Building Hermes from source doesn't support CMake v4
-  CMAKE_VERSION: 3.31.6
+  CMAKE_VERSION: 4.2.2
   # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
   ENABLE_GRADLE_TESTS: true
 
@@ -28,10 +28,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
       # TODO: Remove this once we have a way to run linting without building the native code
       - name: Set up JDK 17
@@ -71,10 +75,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -104,10 +112,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - run: npm ci
       - run: npm run build
       - name: Prepare weak-node-api
@@ -127,10 +139,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -151,7 +167,7 @@ jobs:
       - name: Run tests (iOS)
         run: npm run test:ios:allTests
         # TODO: Enable release mode when it works
-        # run: npm run test:ios -- --mode Release
+        # run: npm run test:ios:allTests -- --mode Release
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
@@ -164,10 +180,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -187,9 +207,17 @@ jobs:
       - run: npm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
-      - name: Run MacOS test app
-        run: npm run test:allTests -- --mode Release
+      - name: Bundle test app
+        run: npx react-native bundle --entry-file index.js --platform macos --dev false --minify false --bundle-output dist/main.macos.jsbundle --assets-dest dist/res
         working-directory: apps/macos-test-app
+      - name: Build test app
+        run: xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
+        working-directory: apps/macos-test-app/macos
+      - name: Run test app
+        run: npx mocha-remote --exit-on-error -- macos/build/macos-test-app.xcarchive/Products/Applications/MacOSTestApp.app/Contents/MacOS/MacOSTestApp
+        working-directory: apps/macos-test-app
+        env:
+          MOCHA_REMOTE_CONTEXT: allTests
   test-android:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
@@ -199,10 +227,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -283,10 +315,14 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
-      - name: Setup clang-format
+      - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
           clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
