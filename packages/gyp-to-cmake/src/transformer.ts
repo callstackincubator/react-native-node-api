@@ -16,6 +16,7 @@ export type GypToCmakeListsOptions = {
   defineNapiVersion?: boolean;
   weakNodeApi?: boolean;
   appleFramework?: boolean;
+  namespacedTargets?: boolean;
 };
 
 function isCmdExpansion(value: string) {
@@ -50,6 +51,7 @@ export function bindingGypToCmakeLists({
   weakNodeApi = false,
   appleFramework = true,
   compileFeatures = [],
+  namespacedTargets = false,
 }: GypToCmakeListsOptions): string {
   function mapExpansion(value: string): string[] {
     if (!isCmdExpansion(value)) {
@@ -123,12 +125,16 @@ export function bindingGypToCmakeLists({
       escapedIncludes.push("${CMAKE_JS_INC}");
     }
 
+    const actualTargetName = namespacedTargets
+      ? `${projectName}-${targetName}`
+      : targetName;
+
     function setTargetPropertiesLines(
       properties: Record<string, string>,
       indent = "",
     ): string[] {
       return [
-        `${indent}set_target_properties(${targetName} PROPERTIES`,
+        `${indent}set_target_properties(${actualTargetName} PROPERTIES`,
         ...Object.entries(properties).map(
           ([key, value]) => `${indent}  ${key} ${value ? value : '""'}`,
         ),
@@ -136,7 +142,9 @@ export function bindingGypToCmakeLists({
       ];
     }
 
-    lines.push(`add_library(${targetName} SHARED ${escapedSources.join(" ")})`);
+    lines.push(
+      `add_library(${actualTargetName} SHARED ${escapedSources.join(" ")})`,
+    );
 
     if (appleFramework) {
       lines.push(
@@ -161,6 +169,8 @@ export function bindingGypToCmakeLists({
           {
             PREFIX: "",
             SUFFIX: ".node",
+            // Ensure the final library use the non-namespaced target name
+            ...(actualTargetName ? { OUTPUT_NAME: targetName } : {}),
           },
           "  ",
         ),
@@ -178,13 +188,13 @@ export function bindingGypToCmakeLists({
 
     if (libraries.length > 0) {
       lines.push(
-        `target_link_libraries(${targetName} PRIVATE ${libraries.join(" ")})`,
+        `target_link_libraries(${actualTargetName} PRIVATE ${libraries.join(" ")})`,
       );
     }
 
     if (escapedIncludes.length > 0) {
       lines.push(
-        `target_include_directories(${targetName} PRIVATE ${escapedIncludes.join(
+        `target_include_directories(${actualTargetName} PRIVATE ${escapedIncludes.join(
           " ",
         )})`,
       );
@@ -192,17 +202,17 @@ export function bindingGypToCmakeLists({
 
     if (escapedDefines.length > 0) {
       lines.push(
-        `target_compile_definitions(${targetName} PRIVATE ${escapedDefines.join(" ")})`,
+        `target_compile_definitions(${actualTargetName} PRIVATE ${escapedDefines.join(" ")})`,
       );
     }
 
     if (compileFeatures.length > 0) {
       lines.push(
-        `target_compile_features(${targetName} PRIVATE ${compileFeatures.join(" ")})`,
+        `target_compile_features(${actualTargetName} PRIVATE ${compileFeatures.join(" ")})`,
       );
     }
 
-    // `set_target_properties(${targetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
+    // `set_target_properties(${actualTargetName} PROPERTIES CXX_STANDARD 11 CXX_STANDARD_REQUIRED YES CXX_EXTENSIONS NO)`,
   }
 
   if (!weakNodeApi) {
