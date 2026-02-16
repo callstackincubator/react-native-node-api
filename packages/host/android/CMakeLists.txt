@@ -28,7 +28,15 @@ target_link_libraries(node-api-host
   log
   ReactAndroid::reactnative
   ReactAndroid::jsi
-  hermes-engine::libhermes
   weak-node-api
   # react_codegen_NodeApiHostSpec
 )
+
+if(TARGET hermes-engine::hermesvm)
+  # The Hermes target changed name in Hermes version used by React Native 0.82.0 and upwards
+  target_link_libraries(node-api-host PRIVATE hermes-engine::hermesvm)
+elseif(TARGET hermes-engine::libhermes)
+  target_link_libraries(node-api-host PRIVATE hermes-engine::libhermes)
+else()
+  message(FATAL_ERROR "Neither hermes-engine::hermesvm nor hermes-engine::libhermes target found.")
+endif()
