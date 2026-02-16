@@ -171,6 +171,10 @@ jobs:
       - name: Build test app
         run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination generic/platform="iOS" -archivePath ./build/test-app.xcarchive # | xcbeautify
         working-directory: apps/test-app/ios
+      - uses: actions/upload-artifact@v6
+        with:
+          name: test-app-build
+          path: apps/test-app/ios/build/test-app.xcarchive
       - name: Run test app
         run: |
           # Install the app
