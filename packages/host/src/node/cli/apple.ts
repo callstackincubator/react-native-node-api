@@ -7,7 +7,7 @@ import * as xcode from "@bacons/xcode";
 import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
 
-import { chalk, spawn } from "@react-native-node-api/cli-utils";
+import { chalk, prettyPath, spawn } from "@react-native-node-api/cli-utils";
 
 import { getLibraryName } from "../path-utils.js";
 import {
@@ -42,6 +42,8 @@ export async function ensureXcodeBuildPhase(fromPath: string) {
       target.props.productType === "com.apple.product-type.application",
   );
 
+  let saveProject = false;
+
   for (const target of applicationTargets) {
     console.log(`Patching '${target.getDisplayName()}' target`);
 
@@ -49,30 +51,64 @@ export async function ensureXcodeBuildPhase(fromPath: string) {
       phase.getDisplayName().startsWith(BUILD_PHASE_PREFIX),
     );
 
+    const shellScript = [
+      "set -e",
+      `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
+    ].join("\n");
+
+    let foundBuildPhase = false;
+
     for (const existingBuildPhase of existingBuildPhases) {
-      console.log(
-        "Removing existing build phase:",
-        chalk.dim(existingBuildPhase.getDisplayName()),
-      );
-      existingBuildPhase.removeFromProject();
+      if (
+        xcode.PBXShellScriptBuildPhase.is(existingBuildPhase) &&
+        existingBuildPhase.getDisplayName() === BUILD_PHASE_NAME
+      ) {
+        if (existingBuildPhase.props.shellScript === shellScript) {
+          console.log("Found existing build phase with the same shell script");
+          foundBuildPhase = true;
+        } else {
+          console.log(
+            "Updating existing build phase with the new shell script",
+          );
+          existingBuildPhase.props.shellScript = shellScript;
+          foundBuildPhase = true;
+          saveProject = true;
+        }
+      } else {
+        // We're expecting no other build phases with this prefix
+        console.log(
+          "Removing existing build phase:",
+          chalk.dim(existingBuildPhase.getDisplayName()),
+        );
+        existingBuildPhase.removeFromProject();
+      }
     }
 
-    // TODO: Declare input and output files to prevent unnecessary runs
-
-    target.createBuildPhase(xcode.PBXShellScriptBuildPhase, {
-      name: BUILD_PHASE_NAME,
-      shellScript: [
-        "set -e",
-        `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
-      ].join("\n"),
-    });
+    if (!foundBuildPhase) {
+      console.log("Adding new build phase");
+      // TODO: Consider declaring input and output files to prevent unnecessary runs
+      target.createBuildPhase(xcode.PBXShellScriptBuildPhase, {
+        name: BUILD_PHASE_NAME,
+        shellScript,
+      });
+      saveProject = true;
+    }
   }
 
-  await fs.promises.writeFile(
-    pbxprojPath,
-    xcodeJson.build(xcodeProject.toJSON()),
-    "utf8",
-  );
+  if (saveProject) {
+    console.log("Saving Xcode project", prettyPath(pbxprojPath));
+    await fs.promises.writeFile(
+      pbxprojPath,
+      xcodeJson.build(xcodeProject.toJSON()),
+      "utf8",
+    );
+  } else {
+    console.log(
+      "Skipped saving Xcode project",
+      prettyPath(pbxprojPath),
+      chalk.dim("(no changes were made)"),
+    );
+  }
 }
 
 /**
