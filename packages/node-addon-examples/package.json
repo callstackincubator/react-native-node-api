@@ -21,8 +21,8 @@
   },
   "scripts": {
     "copy-examples": "tsx scripts/copy-examples.mts",
-    "gyp-to-cmake": "gyp-to-cmake --weak-node-api .",
-    "build": "tsx scripts/build-examples.mts",
+    "gyp-to-cmake": "gyp-to-cmake --namespaced-targets --weak-node-api .",
+    "build": "cmake-rn --configuration RelWithDebInfo",
     "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
     "test": "node --run copy-and-build && node --run verify",
