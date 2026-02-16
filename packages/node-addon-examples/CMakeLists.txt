@@ -7,6 +7,6 @@ file(GLOB_RECURSE SUBDIR_CMAKE_LISTS
 )
 
 foreach(SUBDIR_CMAKE ${SUBDIR_CMAKE_LISTS})
-  get_filename_component(SUBDIR_PATH ${SUBDIR_CMAKE} DIRECTORY)
-  add_subdirectory(${SUBDIR_PATH} ${SUBDIR_PATH}/build)
+  get_filename_component(SUBDIR_PATH ${SUBDIR_CMAKE} DIRECTORY)  
+  add_subdirectory(${SUBDIR_PATH})
 endforeach()
