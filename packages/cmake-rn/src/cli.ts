@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 import { EventEmitter } from "node:events";
+import os from "node:os";
 
 import {
   chalk,
@@ -11,6 +12,7 @@ import {
   oraPromise,
   assertFixable,
   wrapAction,
+  pLimit,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -129,6 +131,16 @@ const ccachePathOption = new Option(
   "Specify the path to the ccache executable",
 ).default(getCcachePath());
 
+const concurrencyOption = new Option(
+  "--concurrency <limit>",
+  "Limit the number of concurrent tasks",
+)
+  .argParser((value) => parseInt(value, 10))
+  .default(
+    os.availableParallelism(),
+    `${os.availableParallelism()} or 1 when verbose is enabled`,
+  );
+
 let program = new Command("cmake-rn")
   .description("Build React Native Node API modules with CMake")
   .addOption(tripletOption)
@@ -144,7 +156,8 @@ let program = new Command("cmake-rn")
   .addOption(noAutoLinkOption)
   .addOption(noWeakNodeApiLinkageOption)
   .addOption(cmakeJsOption)
-  .addOption(ccachePathOption);
+  .addOption(ccachePathOption)
+  .addOption(concurrencyOption);
 
 for (const platform of platforms) {
   const allOption = new Option(
@@ -181,6 +194,7 @@ program = program.action(
       out,
       build: buildPath,
       ccachePath,
+      concurrency,
     } = baseOptions;
 
     assertFixable(
@@ -232,6 +246,8 @@ program = program.action(
       }
     }
 
+    const limit = pLimit(concurrency);
+
     const tripletContexts = [...triplets].map((triplet) => {
       const platform = findPlatformForTriplet(triplet);
 
@@ -244,17 +260,21 @@ program = program.action(
         triplet,
         platform,
         async spawn(command: string, args: string[], cwd?: string) {
-          const outputPrefix = verbose ? chalk.dim(`[${triplet}] `) : undefined;
-          if (verbose) {
-            console.log(
-              `${outputPrefix}» ${command} ${args.map((arg) => chalk.dim(`${arg}`)).join(" ")}`,
-              cwd ? `(in ${chalk.dim(cwd)})` : "",
-            );
-          }
-          await spawn(command, args, {
-            outputMode: verbose ? "inherit" : "buffered",
-            outputPrefix,
-            cwd,
+          await limit(async () => {
+            const outputPrefix = verbose
+              ? chalk.dim(`[${triplet}] `)
+              : undefined;
+            if (verbose) {
+              console.log(
+                `${outputPrefix}» ${command} ${args.map((arg) => chalk.dim(`${arg}`)).join(" ")}`,
+                cwd ? `(in ${chalk.dim(cwd)})` : "",
+              );
+            }
+            await spawn(command, args, {
+              outputMode: verbose ? "inherit" : "buffered",
+              outputPrefix,
+              cwd,
+            });
           });
         },
       };
@@ -280,13 +300,15 @@ program = program.action(
               relevantTriplets,
               baseOptions,
               (command, args, cwd) =>
-                spawn(command, args, {
-                  outputMode: verbose ? "inherit" : "buffered",
-                  outputPrefix: verbose
-                    ? chalk.dim(`[${platform.name}] `)
-                    : undefined,
-                  cwd,
-                }),
+                limit(() =>
+                  spawn(command, args, {
+                    outputMode: verbose ? "inherit" : "buffered",
+                    outputPrefix: verbose
+                      ? chalk.dim(`[${platform.name}] `)
+                      : undefined,
+                    cwd,
+                  }),
+                ),
             );
           }
         }),
