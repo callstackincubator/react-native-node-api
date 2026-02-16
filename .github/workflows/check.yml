@@ -148,6 +148,7 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ runner.os }}
+          create-symlink: true
       - run: rustup target add aarch64-apple-ios-sim
       - run: npm ci
       - run: npm run bootstrap
