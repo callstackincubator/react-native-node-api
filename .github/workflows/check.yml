@@ -225,6 +225,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+      - name: Disable Caddy apt repo (expired GPG key)
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/caddy*.list || true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
