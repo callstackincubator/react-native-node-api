@@ -3,16 +3,113 @@ import path from "node:path";
 import fs from "node:fs";
 
 import plist from "@expo/plist";
+import * as xcode from "@bacons/xcode";
+import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
 
-import { spawn } from "@react-native-node-api/cli-utils";
+import { chalk, prettyPath, spawn } from "@react-native-node-api/cli-utils";
 
-import { getLatestMtime, getLibraryName } from "../path-utils.js";
+import { getLibraryName } from "../path-utils.js";
 import {
-  getLinkedModuleOutputPath,
   LinkModuleOptions,
   LinkModuleResult,
+  ModuleLinker,
 } from "./link-modules.js";
+import {
+  determineFrameworkSlice,
+  ExpectedFrameworkSlice,
+  findXcodeProject,
+} from "./xcode-helpers.js";
+
+const PACKAGE_ROOT = path.resolve(__dirname, "..", "..", "..");
+const CLI_PATH = path.resolve(PACKAGE_ROOT, "bin", "react-native-node-api.mjs");
+const BUILD_PHASE_PREFIX = "[Node-API]";
+const BUILD_PHASE_NAME = `${BUILD_PHASE_PREFIX} Copy, rename and sign frameworks`;
+
+export async function ensureXcodeBuildPhase(fromPath: string) {
+  // Locate the app's Xcode project
+  const xcodeProjectPath = await findXcodeProject(fromPath);
+  const pbxprojPath = path.join(xcodeProjectPath, "project.pbxproj");
+  assert(
+    fs.existsSync(pbxprojPath),
+    `Expected a project.pbxproj file at '${pbxprojPath}'`,
+  );
+  const xcodeProject = xcode.XcodeProject.open(pbxprojPath);
+  // Create a build phase in all application targets to stage and rename the addon frameworks
+  const applicationTargets = xcodeProject.rootObject.props.targets.filter(
+    (target) =>
+      xcode.PBXNativeTarget.is(target) &&
+      target.props.productType === "com.apple.product-type.application",
+  );
+
+  let saveProject = false;
+
+  for (const target of applicationTargets) {
+    console.log(`Patching '${target.getDisplayName()}' target`);
+
+    const existingBuildPhases = target.props.buildPhases.filter((phase) =>
+      phase.getDisplayName().startsWith(BUILD_PHASE_PREFIX),
+    );
+
+    const shellScript = [
+      "set -e",
+      `'${process.execPath}' '${CLI_PATH}' link --apple '${fromPath}'`,
+    ].join("\n");
+
+    let foundBuildPhase = false;
+
+    for (const existingBuildPhase of existingBuildPhases) {
+      if (
+        xcode.PBXShellScriptBuildPhase.is(existingBuildPhase) &&
+        existingBuildPhase.getDisplayName() === BUILD_PHASE_NAME
+      ) {
+        if (existingBuildPhase.props.shellScript === shellScript) {
+          console.log("Found existing build phase with the same shell script");
+          foundBuildPhase = true;
+        } else {
+          console.log(
+            "Updating existing build phase with the new shell script",
+          );
+          existingBuildPhase.props.shellScript = shellScript;
+          foundBuildPhase = true;
+          saveProject = true;
+        }
+      } else {
+        // We're expecting no other build phases with this prefix
+        console.log(
+          "Removing existing build phase:",
+          chalk.dim(existingBuildPhase.getDisplayName()),
+        );
+        existingBuildPhase.removeFromProject();
+      }
+    }
+
+    if (!foundBuildPhase) {
+      console.log("Adding new build phase");
+      // TODO: Consider declaring input and output files to prevent unnecessary runs
+      target.createBuildPhase(xcode.PBXShellScriptBuildPhase, {
+        name: BUILD_PHASE_NAME,
+        shellScript,
+      });
+      saveProject = true;
+    }
+  }
+
+  if (saveProject) {
+    console.log("Saving Xcode project", prettyPath(pbxprojPath));
+    await fs.promises.writeFile(
+      pbxprojPath,
+      xcodeJson.build(xcodeProject.toJSON()),
+      "utf8",
+    );
+  } else {
+    console.log(
+      "Skipped saving Xcode project",
+      prettyPath(pbxprojPath),
+      chalk.dim("(no changes were made)"),
+    );
+  }
+}
 
 /**
  * Reads and parses a plist file, converting it to XML format if needed.
@@ -33,7 +130,7 @@ export async function readAndParsePlist(plistPath: string): Promise<unknown> {
         "Updating Info.plist files are not supported on this platform",
       );
       await spawn("plutil", ["-convert", "xml1", plistPath], {
-        outputMode: "inherit",
+        outputMode: "buffered",
       });
     } catch (cause) {
       throw new Error(`Failed to convert plist to XML: ${plistPath}`, {
@@ -60,6 +157,9 @@ const XcframeworkInfoSchema = zod.looseObject({
       LibraryIdentifier: zod.string(),
       LibraryPath: zod.string(),
       DebugSymbolsPath: zod.string().optional(),
+      SupportedArchitectures: zod.array(zod.string()),
+      SupportedPlatform: zod.string(),
+      SupportedPlatformVariant: zod.string().optional(),
     }),
   ),
   CFBundlePackageType: zod.literal("XFWK"),
@@ -270,6 +370,7 @@ export async function linkVersionedFramework({
     "Info.plist",
   );
   const frameworkInfo = await readFrameworkInfo(frameworkInfoPath);
+
   // Update install name
   await spawn(
     "install_name_tool",
@@ -328,84 +429,147 @@ export async function linkVersionedFramework({
   );
 }
 
-export async function linkXcframework({
-  platform,
-  modulePath,
-  incremental,
-  naming,
-}: LinkModuleOptions): Promise<LinkModuleResult> {
+export async function createAppleLinker(): Promise<ModuleLinker> {
   assert.equal(
     process.platform,
     "darwin",
     "Linking Apple addons are only supported on macOS",
   );
+
+  const {
+    TARGET_BUILD_DIR: targetBuildDir,
+    FRAMEWORKS_FOLDER_PATH: frameworksFolderPath,
+  } = process.env;
+  assert(targetBuildDir, "Expected TARGET_BUILD_DIR to be set by Xcodebuild");
+  assert(
+    frameworksFolderPath,
+    "Expected FRAMEWORKS_FOLDER_PATH to be set by Xcodebuild",
+  );
+
+  const outputPath = path.join(targetBuildDir, frameworksFolderPath);
+  await fs.promises.mkdir(outputPath, { recursive: true });
+
+  const {
+    EXPANDED_CODE_SIGN_IDENTITY: signingIdentity = "-",
+    CODE_SIGNING_REQUIRED: signingRequired,
+    CODE_SIGNING_ALLOWED: signingAllowed,
+  } = process.env;
+
+  const expectedSlice = determineFrameworkSlice();
+
+  assert(
+    signingRequired !== "YES" || signingAllowed !== "NO",
+    "Expected either CODE_SIGNING_REQUIRED not be YES or CODE_SIGNING_ALLOWED not be NO",
+  );
+
+  return (options: LinkModuleOptions) => {
+    return linkXcframework({
+      ...options,
+      outputPath,
+      expectedSlice,
+      signingIdentity: signingAllowed !== "NO" ? signingIdentity : undefined,
+    });
+  };
+}
+
+export async function linkXcframework({
+  modulePath,
+  naming,
+  outputPath: outputParentPath,
+  expectedSlice,
+  signingIdentity,
+}: LinkModuleOptions & {
+  outputPath: string;
+  expectedSlice: ExpectedFrameworkSlice;
+  /**
+   * If not provided, the framework will not be signed.
+   * If provided, the framework will be signed with the given identity.
+   */
+  signingIdentity?: string;
+}): Promise<LinkModuleResult> {
   // Copy the xcframework to the output directory and rename the framework and binary
   const newLibraryName = getLibraryName(modulePath, naming);
-  const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
-
-  if (incremental && fs.existsSync(outputPath)) {
-    const moduleModified = getLatestMtime(modulePath);
-    const outputModified = getLatestMtime(outputPath);
-    if (moduleModified < outputModified) {
-      return {
-        originalPath: modulePath,
-        libraryName: newLibraryName,
-        outputPath,
-        skipped: true,
-      };
-    }
-  }
+  const frameworkOutputPath = path.join(
+    outputParentPath,
+    `${newLibraryName}.framework`,
+  );
   // Delete any existing xcframework (or xcodebuild will try to amend it)
-  await fs.promises.rm(outputPath, { recursive: true, force: true });
-  // Copy the existing xcframework to the output path
-  await fs.promises.cp(modulePath, outputPath, {
+  await fs.promises.rm(frameworkOutputPath, { recursive: true, force: true });
+
+  const info = await readXcframeworkInfo(path.join(modulePath, "Info.plist"));
+  const framework = info.AvailableLibraries.find((framework) => {
+    return (
+      expectedSlice.platform === framework.SupportedPlatform &&
+      expectedSlice.platformVariant === framework.SupportedPlatformVariant &&
+      expectedSlice.architectures.every((architecture) =>
+        framework.SupportedArchitectures.includes(architecture),
+      )
+    );
+  });
+  assert(
+    framework,
+    `Failed to find a framework slice matching: ${JSON.stringify(expectedSlice)}`,
+  );
+
+  const originalFrameworkPath = path.join(
+    modulePath,
+    framework.LibraryIdentifier,
+    framework.LibraryPath,
+  );
+
+  // Copy the existing framework to the output path
+  await fs.promises.cp(originalFrameworkPath, frameworkOutputPath, {
     recursive: true,
     verbatimSymlinks: true,
   });
 
-  const info = await readXcframeworkInfo(path.join(outputPath, "Info.plist"));
-
-  await Promise.all(
-    info.AvailableLibraries.map(async (framework) => {
-      const frameworkPath = path.join(
-        outputPath,
-        framework.LibraryIdentifier,
-        framework.LibraryPath,
-      );
-      await linkFramework({
-        frameworkPath,
-        newLibraryName,
-        debugSymbolsPath: framework.DebugSymbolsPath
-          ? path.join(
-              outputPath,
-              framework.LibraryIdentifier,
-              framework.DebugSymbolsPath,
-            )
-          : undefined,
-      });
-    }),
-  );
-
-  await writeXcframeworkInfo(outputPath, {
-    ...info,
-    AvailableLibraries: info.AvailableLibraries.map((library) => {
-      return {
-        ...library,
-        LibraryPath: `${newLibraryName}.framework`,
-        BinaryPath: `${newLibraryName}.framework/${newLibraryName}`,
-      };
-    }),
+  await linkFramework({
+    frameworkPath: frameworkOutputPath,
+    newLibraryName,
+    debugSymbolsPath: framework.DebugSymbolsPath
+      ? path.join(
+          modulePath,
+          framework.LibraryIdentifier,
+          framework.DebugSymbolsPath,
+        )
+      : undefined,
   });
 
-  // Delete any leftover "magic file"
-  await fs.promises.rm(path.join(outputPath, "react-native-node-api-module"), {
-    force: true,
-  });
+  if (signingIdentity) {
+    await signFramework({
+      frameworkPath: frameworkOutputPath,
+      identity: signingIdentity,
+    });
+  }
 
   return {
     originalPath: modulePath,
     libraryName: newLibraryName,
-    outputPath,
+    outputPath: frameworkOutputPath,
     skipped: false,
+    signed: signingIdentity ? true : false,
   };
+}
+
+export async function signFramework({
+  frameworkPath,
+  identity,
+}: {
+  frameworkPath: string;
+  identity: string;
+}) {
+  await spawn(
+    "codesign",
+    [
+      "--force",
+      "--sign",
+      identity,
+      "--timestamp=none",
+      "--preserve-metadata=identifier,entitlements,flags",
+      frameworkPath,
+    ],
+    {
+      outputMode: "buffered",
+    },
+  );
 }

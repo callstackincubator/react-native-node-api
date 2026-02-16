@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { getLatestMtime, getLibraryName, MAGIC_FILENAME } from "../path-utils";
+import { getLibraryName, MAGIC_FILENAME } from "../path-utils";
 import {
   getLinkedModuleOutputPath,
   LinkModuleResult,
@@ -17,26 +17,11 @@ const ANDROID_ARCHITECTURES = [
 ] as const;
 
 export async function linkAndroidDir({
-  incremental,
   modulePath,
   naming,
-  platform,
 }: LinkModuleOptions): Promise<LinkModuleResult> {
   const libraryName = getLibraryName(modulePath, naming);
-  const outputPath = getLinkedModuleOutputPath(platform, modulePath, naming);
-
-  if (incremental && fs.existsSync(outputPath)) {
-    const moduleModified = getLatestMtime(modulePath);
-    const outputModified = getLatestMtime(outputPath);
-    if (moduleModified < outputModified) {
-      return {
-        originalPath: modulePath,
-        libraryName,
-        outputPath,
-        skipped: true,
-      };
-    }
-  }
+  const outputPath = getLinkedModuleOutputPath("android", modulePath, naming);
 
   await fs.promises.rm(outputPath, { recursive: true, force: true });
   await fs.promises.cp(modulePath, outputPath, { recursive: true });

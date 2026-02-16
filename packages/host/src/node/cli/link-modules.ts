@@ -23,7 +23,6 @@ export type ModuleLinker = (
 
 export type LinkModulesOptions = {
   platform: PlatformName;
-  incremental: boolean;
   naming: NamingStrategy;
   fromPath: string;
   linker: ModuleLinker;
@@ -31,7 +30,7 @@ export type LinkModulesOptions = {
 
 export type LinkModuleOptions = Omit<
   LinkModulesOptions,
-  "fromPath" | "linker"
+  "fromPath" | "linker" | "platform"
 > & {
   modulePath: string;
 };
@@ -44,11 +43,13 @@ export type ModuleDetails = {
 
 export type LinkModuleResult = ModuleDetails & {
   skipped: boolean;
+  signed?: boolean;
 };
 
 export type ModuleOutputBase = {
   originalPath: string;
   skipped: boolean;
+  signed?: boolean;
 };
 
 type ModuleOutput = ModuleOutputBase &
@@ -59,7 +60,6 @@ type ModuleOutput = ModuleOutputBase &
 
 export async function linkModules({
   fromPath,
-  incremental,
   naming,
   platform,
   linker,
@@ -94,9 +94,7 @@ export async function linkModules({
       try {
         return await linker({
           modulePath: originalPath,
-          incremental,
           naming,
-          platform,
         });
       } catch (error) {
         if (error instanceof SpawnFailure) {
