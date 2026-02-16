@@ -4,6 +4,7 @@ import fs from "node:fs";
 import cp from "node:child_process";
 
 import {
+  assertFixable,
   Option,
   oraPromise,
   prettyPath,
@@ -193,6 +194,12 @@ async function readCmakeSharedLibraryTarget(
   return sharedLibrary;
 }
 
+const SIMULATOR_TRIPLET_SUFFIXES = [
+  "apple-ios-sim",
+  "apple-tvos-sim",
+  "apple-visionos-sim",
+] as const;
+
 async function getCompilerPath(
   name: "clang" | "clang++",
   { buildBinPath, ccachePath }: { buildBinPath: string; ccachePath: string },
@@ -253,6 +260,35 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     return command
       .addOption(xcframeworkExtensionOption)
       .addOption(appleBundleIdentifierOption);
+  },
+  assertValidTriplets(triplets) {
+    for (const suffix of SIMULATOR_TRIPLET_SUFFIXES) {
+      const suggestion = `use the universal 'arm64;x86_64-${suffix}' triplet instead`;
+      assertFixable(
+        !triplets.includes(`x86_64-${suffix}`) ||
+          !triplets.includes(`arm64-${suffix}`),
+        `Conflicting triplet variants for ${suffix}`,
+        {
+          instructions: `Remove either the arm64 or x86_64 variant of the ${suffix} triplet or ${suggestion}`,
+        },
+      );
+      assertFixable(
+        !triplets.includes(`x86_64-${suffix}`) ||
+          !triplets.includes(`arm64;x86_64-${suffix}`),
+        `Conflicting triplet variants for ${suffix}`,
+        {
+          instructions: `Remove the x86_64 variant of the ${suffix} triplet and ${suggestion}`,
+        },
+      );
+      assertFixable(
+        !triplets.includes(`arm64-${suffix}`) ||
+          !triplets.includes(`arm64;x86_64-${suffix}`),
+        `Conflicting triplet variants for ${suffix}`,
+        {
+          instructions: `Remove the arm64 variant of the ${suffix} triplet and ${suggestion}`,
+        },
+      );
+    }
   },
   async configure(
     triplets,

@@ -273,6 +273,9 @@ program = program.action(
             platformHasTriplet(platform, triplet),
           );
           if (relevantTriplets.length > 0) {
+            platform.assertValidTriplets(
+              relevantTriplets.map(({ triplet }) => triplet),
+            );
             await platform.configure(
               relevantTriplets,
               baseOptions,
