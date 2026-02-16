@@ -25,7 +25,7 @@ import { Platform } from "./platforms/types.js";
 import { getCcachePath } from "./ccache.js";
 
 // We're attaching a lot of listeners when spawning in parallel
-EventEmitter.defaultMaxListeners = 100;
+EventEmitter.defaultMaxListeners = 500;
 
 const verboseOption = new Option(
   "--verbose",
