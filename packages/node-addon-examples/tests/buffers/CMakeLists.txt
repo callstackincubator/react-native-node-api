@@ -3,12 +3,12 @@ project(buffers-test)
 
 find_package(weak-node-api REQUIRED CONFIG)
 
-add_library(addon SHARED addon.c)
+add_library(buffers-test-addon SHARED addon.c)
 
 option(BUILD_APPLE_FRAMEWORK "Wrap addon in an Apple framework" ON)
 
 if(APPLE AND BUILD_APPLE_FRAMEWORK)
-  set_target_properties(addon PROPERTIES
+  set_target_properties(buffers-test-addon PROPERTIES
     FRAMEWORK TRUE
     MACOSX_FRAMEWORK_IDENTIFIER buffers-test.addon
     MACOSX_FRAMEWORK_SHORT_VERSION_STRING 1.0
@@ -16,11 +16,12 @@ if(APPLE AND BUILD_APPLE_FRAMEWORK)
     XCODE_ATTRIBUTE_SKIP_INSTALL NO
    )
 else()
-  set_target_properties(addon PROPERTIES
+  set_target_properties(buffers-test-addon PROPERTIES
     PREFIX ""
     SUFFIX .node
+    OUTPUT_NAME addon
    )
 endif()
 
-target_link_libraries(addon PRIVATE weak-node-api)
-target_compile_features(addon PRIVATE cxx_std_17)
+target_link_libraries(buffers-test-addon PRIVATE weak-node-api)
+target_compile_features(buffers-test-addon PRIVATE cxx_std_17)
