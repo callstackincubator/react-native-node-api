@@ -90,6 +90,11 @@ export const program = new Command("gyp-to-cmake")
     "Disable emitting target properties to produce Apple frameworks",
   )
   .option("--cpp <version>", "C++ standard version", "17")
+  .option(
+    "--namespaced-targets",
+    "Use namespaced targets, to allow multiple targets with the same name to be referenced from a single parent project",
+    false,
+  )
   .addOption(projectNameOption)
   .argument(
     "[path]",
@@ -107,6 +112,7 @@ export const program = new Command("gyp-to-cmake")
           weakNodeApi,
           appleFramework,
           projectName,
+          namespacedTargets,
         },
       ) => {
         const options: Omit<TransformOptions, "projectName"> = {
@@ -117,6 +123,7 @@ export const program = new Command("gyp-to-cmake")
           defineNapiVersion,
           weakNodeApi,
           appleFramework,
+          namespacedTargets,
         };
         const stat = fs.statSync(targetPath);
         if (stat.isFile()) {
