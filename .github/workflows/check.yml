@@ -1,10 +1,9 @@
 name: Check
 
 env:
+  CMAKE_VERSION: 4.1.2
   # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
   NDK_VERSION: 27.1.12297006
-  # Building Hermes from source doesn't support CMake v4
-  CMAKE_VERSION: 4.2.2
   # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
   ENABLE_GRADLE_TESTS: true
 
@@ -193,7 +192,6 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
-      # Install CMake 3 since 4.x may have compatibility issues with Hermes build system
       - name: Install compatible CMake version
         uses: jwlawson/actions-setup-cmake@v2
         with:
