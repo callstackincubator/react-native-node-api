@@ -53,10 +53,15 @@ export async function findXcodeWorkspace(fromPath: string) {
     return path.join(fromPath, workspace);
   }
 
-  // Check if the directory contain an ios directory and call recursively from that
+  // Check if the directory contains an "ios" or a "macos" directory and call recursively from that
   const iosDirectory = path.join(fromPath, "ios");
   if (fs.existsSync(iosDirectory)) {
     return findXcodeWorkspace(iosDirectory);
+  }
+
+  const macosDirectory = path.join(fromPath, "macos");
+  if (fs.existsSync(macosDirectory)) {
+    return findXcodeWorkspace(macosDirectory);
   }
 
   // TODO: Consider continuing searching in parent directories
