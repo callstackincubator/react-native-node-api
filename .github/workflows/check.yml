@@ -91,7 +91,7 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
-      - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim x86_64-apple-ios
       - run: npm ci
       - run: npm run bootstrap
       - run: npm test
@@ -148,12 +148,12 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ runner.os }}
-      - run: rustup target add aarch64-apple-ios-sim
+      - run: rustup target add aarch64-apple-ios-sim x86_64-apple-ios
       - run: npm ci
       - run: npm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
-          FERRIC_TARGETS: aarch64-apple-ios-sim
+          FERRIC_TARGETS: aarch64-apple-ios-sim,x86_64-apple-ios
       # Because the Xcode project injects its own CCACHE_CONFIGPATH,
       # the configuration set by the ccache action doesn't propagate.
       - name: Expose Ccache config to Xcode
