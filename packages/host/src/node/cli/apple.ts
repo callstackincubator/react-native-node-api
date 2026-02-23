@@ -508,7 +508,7 @@ export async function linkXcframework({
   });
   assert(
     framework,
-    `Failed to find a framework slice matching: ${JSON.stringify(expectedSlice)}`,
+    `Failed to find a framework slice of '${modulePath}' matching: ${JSON.stringify(expectedSlice)}`,
   );
 
   const originalFrameworkPath = path.join(
