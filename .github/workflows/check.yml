@@ -169,7 +169,7 @@ jobs:
         run: npx react-native bundle --entry-file index.ts --platform ios --dev false --minify false --bundle-output dist/main.ios.jsbundle --assets-dest dist/res
         working-directory: apps/test-app
       - name: Build test app
-        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination generic/platform="iOS" -archivePath ./build/test-app.xcarchive | xcbeautify
+        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination generic/platform="iOS" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES | xcbeautify
         working-directory: apps/test-app/ios
       - name: Run test app
         run: |
