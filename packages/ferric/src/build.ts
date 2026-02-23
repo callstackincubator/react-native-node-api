@@ -207,6 +207,7 @@ export const buildCommand = new Command("build")
           if (isAppleSupported()) {
             if (process.arch === "arm64") {
               targets.add("aarch64-apple-ios-sim");
+              targets.add("x86_64-apple-ios");
             }
           }
           logNotice(
