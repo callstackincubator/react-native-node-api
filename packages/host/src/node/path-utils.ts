@@ -308,23 +308,27 @@ export function findPackageDependencyPaths(
     path.join(packageRoot, "noop.js"),
   );
 
-  const { dependencies = {}, napiDependencies = [] } = readPackageSync({ cwd: packageRoot });
+  const { dependencies = {}, napiDependencies = [] } = readPackageSync({
+    cwd: packageRoot,
+  });
 
   const safeNApiDependencies: string[] = Array.isArray(napiDependencies)
     ? napiDependencies.map(String)
     : [];
 
   return Object.fromEntries(
-    Object.keys(dependencies).concat(safeNApiDependencies).flatMap((dependencyName) => {
-      const resolvedDependencyRoot = resolvePackageRoot(
-        requireFromPackageRoot,
-        dependencyName,
-      );
+    Object.keys(dependencies)
+      .concat(safeNApiDependencies)
+      .flatMap((dependencyName) => {
+        const resolvedDependencyRoot = resolvePackageRoot(
+          requireFromPackageRoot,
+          dependencyName,
+        );
 
-      return resolvedDependencyRoot
-        ? [[dependencyName, resolvedDependencyRoot]]
-        : [];
-    }),
+        return resolvedDependencyRoot
+          ? [[dependencyName, resolvedDependencyRoot]]
+          : [];
+      }),
   );
 }
 
