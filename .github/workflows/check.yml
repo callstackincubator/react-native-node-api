@@ -338,17 +338,23 @@ jobs:
       - run: npx ferric --apple
         working-directory: packages/ferric-example
       - name: Inspect the structure of the prebuilt binary
-        run: lipo -info ferric_example.apple.node/*/libferric_example.framework/libferric_example > lipo-info.txt
-        working-directory: packages/ferric-example
-      - name: Upload lipo info
+        run: |
+          lipo -info ferric_example.apple.node/*/libferric_example.framework/libferric_example > lipo-output.txt
+          otool -L ferric_example.apple.node/*/libferric_example.framework/libferric_example > otool-output.txt
+      - name: Upload lipo output
         uses: actions/upload-artifact@v4
         with:
-          name: lipo-info
-          path: packages/ferric-example/lipo-info.txt
+          name: lipo-output
+          path: packages/ferric-example/lipo-output.txt
+      - name: Upload otool output
+        uses: actions/upload-artifact@v4
+        with:
+          name: otool-output
+          path: packages/ferric-example/otool-output.txt
       - name: Verify Apple triplet builds
         run: |
           # Create expected fixture content
-          cat > expected-lipo-info.txt << 'EOF'
+          cat > expected-lipo-output.txt << 'EOF'
           Architectures in the fat file: ferric_example.apple.node/ios-arm64_x86_64-simulator/libferric_example.framework/libferric_example are: x86_64 arm64 
           Architectures in the fat file: ferric_example.apple.node/macos-arm64_x86_64/libferric_example.framework/libferric_example are: x86_64 arm64 
           Architectures in the fat file: ferric_example.apple.node/tvos-arm64_x86_64-simulator/libferric_example.framework/libferric_example are: x86_64 arm64 
@@ -358,5 +364,12 @@ jobs:
           Non-fat file: ferric_example.apple.node/xros-arm64/libferric_example.framework/libferric_example is architecture: arm64
           EOF
           # Compare with expected fixture (will fail if files differ)
-          diff expected-lipo-info.txt lipo-info.txt
+          diff expected-lipo-output.txt lipo-output.txt
+          # Verify weak-node-api linking
+          WEAK_NODE_API_COUNT=$(grep -c "@rpath/weak-node-api.framework/weak-node-api" otool-output.txt)
+          if [ "$WEAK_NODE_API_COUNT" -ne 4 ]; then
+            echo "Expected 4 occurrences of @rpath/weak-node-api.framework/weak-node-api, found $WEAK_NODE_API_COUNT"
+            cat otool-output.txt
+            exit 1
+          fi
         working-directory: packages/ferric-example
