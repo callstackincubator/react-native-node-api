@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 import { packageDirectorySync } from "pkg-dir";
-import { readPackageSync } from "read-pkg";
+import { NormalizedPackageJson, readPackageSync } from "read-pkg";
 import { createRequire } from "node:module";
 
 import { chalk, prettyPath } from "@react-native-node-api/cli-utils";
@@ -294,9 +294,36 @@ export function visualizeLibraryMap(libraryMap: LibraryMap) {
   return result.join("\n");
 }
 
+export function findPackageConfigurationByPath(
+  fromPath: string,
+): ReactNativeNodeAPIConfiguration {
+  const packageRoot = packageDirectorySync({ cwd: fromPath });
+  assert(packageRoot, `Could not find package root from ${fromPath}`);
+
+  const {
+    reactNativeNodeApi,
+  }: NormalizedPackageJson & ReactNativeNodeAPIConfiguration = readPackageSync({
+    cwd: packageRoot,
+  });
+
+  return { reactNativeNodeApi };
+}
+
+export interface ReactNativeNodeAPIConfiguration {
+  reactNativeNodeApi?: {
+    scan?: {
+      dependencies?: string[];
+    };
+  };
+}
+
+type PackageJsonWithNodeApi = NormalizedPackageJson &
+  ReactNativeNodeAPIConfiguration;
+
 /**
  * Search upwards from a directory to find a package.json and
- * return a record mapping from each dependencies of that package to their path on disk.
+ * return a record mapping from each dependency of that package to their path on disk.
+ * Also checks all dependencies from reactNativeNodeApi field in dependencies package.json
  */
 export function findPackageDependencyPaths(
   fromPath: string,
@@ -304,31 +331,36 @@ export function findPackageDependencyPaths(
   const packageRoot = packageDirectorySync({ cwd: fromPath });
   assert(packageRoot, `Could not find package root from ${fromPath}`);
 
-  const requireFromPackageRoot = createRequire(
-    path.join(packageRoot, "noop.js"),
+  const requireFromRoot = createRequire(path.join(packageRoot, "noop.js"));
+
+  const { dependencies = {}, reactNativeNodeApi } = readPackageSync({
+    cwd: packageRoot,
+  }) as PackageJsonWithNodeApi;
+
+  const initialDeps = Object.keys(dependencies).concat(
+    reactNativeNodeApi?.scan?.dependencies ?? [],
   );
 
-  const { dependencies = {}, napiDependencies = [] } = readPackageSync({
-    cwd: packageRoot,
-  });
-
-  const safeNApiDependencies: string[] = Array.isArray(napiDependencies)
-    ? napiDependencies.map(String)
-    : [];
-
   return Object.fromEntries(
-    Object.keys(dependencies)
-      .concat(safeNApiDependencies)
-      .flatMap((dependencyName) => {
-        const resolvedDependencyRoot = resolvePackageRoot(
-          requireFromPackageRoot,
-          dependencyName,
-        );
+    initialDeps.flatMap((name) => {
+      const root = resolvePackageRoot(requireFromRoot, name);
+      if (!root) return [];
 
-        return resolvedDependencyRoot
-          ? [[dependencyName, resolvedDependencyRoot]]
-          : [];
-      }),
+      const nested =
+        findPackageConfigurationByPath(root)?.reactNativeNodeApi?.scan
+          ?.dependencies ?? [];
+
+      const nestedEntries = nested
+        .map((nestedName) => {
+          const nestedRoot = resolvePackageRoot(requireFromRoot, nestedName);
+          return nestedRoot
+            ? ([nestedName, nestedRoot] as [string, string])
+            : null;
+        })
+        .filter((entry): entry is [string, string] => entry !== null);
+
+      return [[name, root] as [string, string], ...nestedEntries];
+    }),
   );
 }
 
