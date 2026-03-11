@@ -4,6 +4,7 @@ import fs from "node:fs";
 import { packageDirectorySync } from "pkg-dir";
 import { readPackageSync } from "read-pkg";
 import { createRequire } from "node:module";
+import * as zod from "zod";
 
 import { chalk, prettyPath } from "@react-native-node-api/cli-utils";
 
@@ -294,9 +295,64 @@ export function visualizeLibraryMap(libraryMap: LibraryMap) {
   return result.join("\n");
 }
 
+export const ReactNativeNodeAPIConfigurationSchema = zod.object({
+  reactNativeNodeApi: zod
+    .object({
+      scan: zod
+        .object({
+          dependencies: zod.array(zod.string()).optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
+
+export const PackageJsonDependenciesSchema = zod.object({
+  dependencies: zod.record(zod.string(), zod.string()).optional(),
+});
+
+export type ReactNativeNodeAPIConfiguration = zod.infer<
+  typeof ReactNativeNodeAPIConfigurationSchema
+>;
+export type PackageJsonDependencies = zod.infer<
+  typeof PackageJsonDependenciesSchema
+>;
+
+type PackageJsonWithNodeApi = PackageJsonDependencies &
+  ReactNativeNodeAPIConfiguration;
+
+export function parseReactNativeNodeAPIConfigurationSchema(
+  packageJson: PackageJsonWithNodeApi,
+): ReactNativeNodeAPIConfiguration {
+  const parsed = ReactNativeNodeAPIConfigurationSchema.safeParse(packageJson);
+
+  if (!parsed.success) {
+    console.warn("Invalid reactNativeNodeApi configuration");
+    console.warn(JSON.stringify(packageJson));
+    console.warn(parsed.error.message);
+    return {};
+  }
+
+  return parsed.data;
+}
+
+export function findPackageConfigurationByPath(
+  fromPath: string,
+): ReactNativeNodeAPIConfiguration {
+  const packageRoot = packageDirectorySync({ cwd: fromPath });
+  assert(packageRoot, `Could not find package root from ${fromPath}`);
+
+  const packageJson = readPackageSync({
+    cwd: packageRoot,
+  });
+
+  return parseReactNativeNodeAPIConfigurationSchema(packageJson);
+}
+
 /**
  * Search upwards from a directory to find a package.json and
- * return a record mapping from each dependencies of that package to their path on disk.
+ * return a record mapping from each dependency of that package to their path on disk.
+ * Also checks all dependencies from reactNativeNodeApi field in dependencies package.json
  */
 export function findPackageDependencyPaths(
   fromPath: string,
@@ -304,23 +360,55 @@ export function findPackageDependencyPaths(
   const packageRoot = packageDirectorySync({ cwd: fromPath });
   assert(packageRoot, `Could not find package root from ${fromPath}`);
 
-  const requireFromPackageRoot = createRequire(
+  const requireFromRoot: NodeRequire = createRequire(
     path.join(packageRoot, "noop.js"),
   );
 
-  const { dependencies = {} } = readPackageSync({ cwd: packageRoot });
+  const packageJson = readPackageSync({
+    cwd: packageRoot,
+  }) as PackageJsonWithNodeApi;
 
-  return Object.fromEntries(
-    Object.keys(dependencies).flatMap((dependencyName) => {
-      const resolvedDependencyRoot = resolvePackageRoot(
-        requireFromPackageRoot,
-        dependencyName,
-      );
-      return resolvedDependencyRoot
-        ? [[dependencyName, resolvedDependencyRoot]]
-        : [];
-    }),
+  const { dependencies = {} } =
+    PackageJsonDependenciesSchema.parse(packageJson);
+  const { reactNativeNodeApi } =
+    parseReactNativeNodeAPIConfigurationSchema(packageJson);
+
+  const initialDeps = Object.keys(dependencies).concat(
+    reactNativeNodeApi?.scan?.dependencies ?? [],
   );
+
+  const result: Record<string, string> = {};
+  const visited = new Set<string>();
+  const queue: Array<string> = [...initialDeps];
+
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+
+    if (visited.has(name)) {
+      continue;
+    }
+    visited.add(name);
+
+    const root = resolvePackageRoot(requireFromRoot, name);
+    if (!root) {
+      console.warn(`Cannot find package root from ${fromPath} for ${name}`);
+      continue;
+    }
+
+    result[name] = root;
+
+    const config = findPackageConfigurationByPath(root);
+    const nestedDependencies =
+      config?.reactNativeNodeApi?.scan?.dependencies ?? [];
+
+    for (const nestedName of nestedDependencies) {
+      if (!visited.has(nestedName)) {
+        queue.push(nestedName);
+      }
+    }
+  }
+
+  return result;
 }
 
 export const MAGIC_FILENAME = "react-native-node-api-module";
