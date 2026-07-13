@@ -33,7 +33,7 @@
     "@react-native/babel-preset": "0.87.0-nightly-20260529-88857d22f",
     "@react-native/metro-config": "0.87.0-nightly-20260529-88857d22f",
     "@react-native/typescript-config": "0.87.0-nightly-20260529-88857d22f",
-    "@rnx-kit/metro-config": "^2.1.1",
+    "@rnx-kit/metro-config": "^2.2.4",
     "@types/mocha": "^10.0.10",
     "@types/react": "^19.1.0",
     "concurrently": "^9.1.2",
