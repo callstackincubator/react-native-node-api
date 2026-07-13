@@ -2,7 +2,18 @@
 #include "Logger.hpp"
 #include "RuntimeNodeApiAsync.hpp"
 
+#include <jsi/hermes-interfaces.h>
+
 using namespace facebook;
+
+// Declared by the vendored Hermes in API/napi/hermes_napi.h. We forward declare
+// it here (rather than including that header) to avoid pulling in Hermes' own
+// node_api.h alongside the weak-node-api copy already included transitively.
+// Only the mangled name matters for linking, so passing host as nullptr is
+// enough — async work / thread-safe functions will return failure until a
+// host integration is wired up (Phase 3).
+struct hermes_napi_host;
+napi_env hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host);
 
 namespace callstack::react_native_node_api {
 
@@ -108,8 +119,25 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
   // TODO: Read the version from the addon
   // @see
   // https://github.com/callstackincubator/react-native-node-api/issues/4
-  // TODO: Phase 2-3 will replace this with hermes_napi_create_env
-  napi_env env = nullptr;
+
+  // Lazily create the Node-API environment backing this runtime. Hermes binds
+  // an env to its low-level VM runtime, which we reach through the (unstable)
+  // IHermes JSI interface. The env is owned by the runtime and shared across
+  // all addons, so we create it once and cache it.
+  if (env_ == nullptr) {
+    // Fully qualified: `using namespace facebook` makes a bare `hermes`
+    // ambiguous with the top-level `::hermes` (VM) namespace pulled in via
+    // <jsi/hermes-interfaces.h>.
+    auto *hermes = facebook::jsi::castInterface<facebook::hermes::IHermes>(&rt);
+    if (hermes == nullptr) {
+      log_debug("NapiHost: JSI runtime is not castable to IHermes; cannot "
+                "create a Node-API environment");
+      abort();
+    }
+    env_ = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), nullptr);
+    assert(env_ != nullptr);
+  }
+  napi_env env = env_;
 
   // Create the "exports" object
   napi_value exports;
