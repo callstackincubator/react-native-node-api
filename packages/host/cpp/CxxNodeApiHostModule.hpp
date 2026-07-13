@@ -30,6 +30,11 @@ protected:
   std::unordered_map<std::string, NodeAddon> nodeAddons_;
   std::shared_ptr<facebook::react::CallInvoker> callInvoker_;
 
+  // The Node-API environment backing every addon loaded into this runtime.
+  // Created lazily on first use from the underlying Hermes VM runtime and
+  // shared across all addons (Node-API expects a single env per realm).
+  napi_env env_ = nullptr;
+
   using LoaderPolicy = PosixLoader; // FIXME: HACK: This is temporary workaround
                                     // for my lazyness (work on iOS and Android)
 
