@@ -30,9 +30,9 @@
     "@react-native-node-api/ferric-example": "*",
     "@react-native-node-api/node-addon-examples": "*",
     "@react-native-node-api/node-tests": "*",
-    "@react-native/babel-preset": "0.81.4",
-    "@react-native/metro-config": "0.81.4",
-    "@react-native/typescript-config": "0.81.4",
+    "@react-native/babel-preset": "0.87.0-nightly-20260529-88857d22f",
+    "@react-native/metro-config": "0.87.0-nightly-20260529-88857d22f",
+    "@react-native/typescript-config": "0.87.0-nightly-20260529-88857d22f",
     "@rnx-kit/metro-config": "^2.1.1",
     "@types/mocha": "^10.0.10",
     "@types/react": "^19.1.0",
@@ -40,10 +40,10 @@
     "mocha": "^11.6.0",
     "mocha-remote-cli": "^1.13.2",
     "mocha-remote-react-native": "^1.13.2",
-    "react": "19.1.0",
-    "react-native": "0.81.4",
+    "react": "19.2.3",
+    "react-native": "0.87.0-nightly-20260529-88857d22f",
     "react-native-node-api": "*",
-    "react-native-test-app": "^4.4.7",
+    "react-native-test-app": "^5.1.9",
     "weak-node-api": "*"
   }
 }
