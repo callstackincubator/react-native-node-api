@@ -68,18 +68,9 @@ export async function findXcodeWorkspace(fromPath: string) {
   throw new Error(`No Xcode workspace found in '${fromPath}'`);
 }
 
-export async function findXcodeProject(fromPath: string) {
-  // Read the workspace contents to find the first project
-  const workspacePath = await findXcodeWorkspace(fromPath);
-  const workspace = await readXcodeWorkspace(workspacePath);
-  // Resolve the first project location to an absolute path
-  assert(
-    workspace.fileRefs.length > 0,
-    "Expected at least one project in the workspace",
-  );
-  const [firstProject] = workspace.fileRefs;
+function resolveWorkspaceFileRef(location: string, workspacePath: string) {
   // Extract the path from the scheme (using a regex)
-  const match = firstProject.location.match(/^([^:]*):(.*)$/);
+  const match = location.match(/^([^:]*):(.*)$/);
   assert(match, "Expected a project path in the workspace");
   const [, scheme, projectPath] = match;
   assert(scheme, "Expected a scheme in the fileRef location");
@@ -91,6 +82,30 @@ export async function findXcodeProject(fromPath: string) {
   } else {
     throw new Error(`Unexpected scheme: ${scheme}`);
   }
+}
+
+export async function findXcodeProject(fromPath: string) {
+  const workspacePath = await findXcodeWorkspace(fromPath);
+  const workspace = await readXcodeWorkspace(workspacePath);
+  assert(
+    workspace.fileRefs.length > 0,
+    "Expected at least one project in the workspace",
+  );
+  // The workspace references the Pods project alongside the app project, and in
+  // a monorepo it can accumulate stale references to app projects generated
+  // under a different node_modules. Pick the first referenced app project that
+  // actually exists on disk (ignoring the Pods project).
+  const appProjectPaths = workspace.fileRefs
+    .map(({ location }) => resolveWorkspaceFileRef(location, workspacePath))
+    .filter((projectPath) => path.basename(projectPath) !== "Pods.xcodeproj");
+  const existingProjectPath = appProjectPaths.find((projectPath) =>
+    fs.existsSync(path.join(projectPath, "project.pbxproj")),
+  );
+  assert(
+    existingProjectPath,
+    `Expected one of the workspace's projects to exist: ${appProjectPaths.join(", ")}`,
+  );
+  return existingProjectPath;
 }
 
 export type ExpectedFrameworkSlice = {
