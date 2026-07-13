@@ -108,7 +108,8 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
   // TODO: Read the version from the addon
   // @see
   // https://github.com/callstackincubator/react-native-node-api/issues/4
-  napi_env env = reinterpret_cast<napi_env>(rt.createNodeApiEnv(8));
+  // TODO: Phase 2-3 will replace this with hermes_napi_create_env
+  napi_env env = nullptr;
 
   // Create the "exports" object
   napi_value exports;
