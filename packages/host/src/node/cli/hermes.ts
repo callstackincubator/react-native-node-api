@@ -28,6 +28,41 @@ const platformOption = new Option(
   "The React Native package to vendor Hermes into",
 ).default("react-native");
 
+// The public `hermes_napi_*` entry points (e.g. `hermes_napi_create_env`) are
+// declared in `hermes_napi.h` with `NAPI_EXTERN` (visibility "default") but —
+// unlike the sibling `js_native_api.h` / `node_api.h` headers — without any
+// `extern "C"` wrapping. So they get C++ linkage: the symbols are name-mangled
+// and, because Hermes builds with a global `-fvisibility=hidden`, stay out of
+// the shared framework's export table. We reach `hermes_napi_create_env` from
+// the host module, so consumers linking the framework hit "Undefined symbol".
+//
+// Wrapping the declarations in `EXTERN_C_START` / `EXTERN_C_END` (both already
+// available via the `node_api.h` include) gives them C linkage, so they export
+// under their unmangled C names. This mirrors facebook/hermes#2106.
+const HERMES_NAPI_HEADER = "API/napi/hermes_napi.h";
+const HERMES_NAPI_INCLUDE = '#include "hermes/napi/node_api.h"';
+const HERMES_NAPI_ENDIF = "#endif // HERMES_NAPI_HERMES_NAPI_H";
+
+async function patchHermesNapiVisibility(hermesPath: string) {
+  const headerPath = path.join(hermesPath, HERMES_NAPI_HEADER);
+  const contents = await fs.promises.readFile(headerPath, "utf8");
+  if (contents.includes("EXTERN_C_START")) {
+    return;
+  }
+  assert(
+    contents.includes(HERMES_NAPI_INCLUDE) &&
+      contents.includes(HERMES_NAPI_ENDIF),
+    `Cannot patch ${HERMES_NAPI_HEADER}: expected anchors not found (did the pinned Hermes commit change?)`,
+  );
+  const patched = contents
+    .replace(
+      HERMES_NAPI_INCLUDE,
+      `${HERMES_NAPI_INCLUDE}\n\nEXTERN_C_START`,
+    )
+    .replace(HERMES_NAPI_ENDIF, `EXTERN_C_END\n\n${HERMES_NAPI_ENDIF}`);
+  await fs.promises.writeFile(headerPath, patched);
+}
+
 export const command = new Command("vendor-hermes")
   .argument("[from]", "Path to a file inside the app package", process.cwd())
   .option("--silent", "Don't print anything except the final path", false)
@@ -115,6 +150,9 @@ export const command = new Command("vendor-hermes")
           });
         }
       }
+      // Applied unconditionally (idempotent) so an existing checkout from
+      // before this patch also gets fixed.
+      await patchHermesNapiVisibility(hermesPath);
       console.log(hermesPath);
     }),
   );
