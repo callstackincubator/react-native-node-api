@@ -55,10 +55,7 @@ async function patchHermesNapiVisibility(hermesPath: string) {
     `Cannot patch ${HERMES_NAPI_HEADER}: expected anchors not found (did the pinned Hermes commit change?)`,
   );
   const patched = contents
-    .replace(
-      HERMES_NAPI_INCLUDE,
-      `${HERMES_NAPI_INCLUDE}\n\nEXTERN_C_START`,
-    )
+    .replace(HERMES_NAPI_INCLUDE, `${HERMES_NAPI_INCLUDE}\n\nEXTERN_C_START`)
     .replace(HERMES_NAPI_ENDIF, `EXTERN_C_END\n\n${HERMES_NAPI_ENDIF}`);
   await fs.promises.writeFile(headerPath, patched);
 }
