@@ -27,7 +27,7 @@
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
     "test": "npm test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
-    "bootstrap": "node --run build && npm run bootstrap --workspaces --if-present",
+    "bootstrap": "node --run build && node scripts/bootstrap.ts",
     "changeset": "changeset",
     "release": "changeset publish",
     "prerelease": "node --run build && npm run prerelease --workspaces --if-present && node --run publint",
