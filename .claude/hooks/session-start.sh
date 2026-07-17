@@ -3,8 +3,8 @@
 # SessionStart hook: bootstraps the repo so a fresh Claude Code worker can build,
 # lint and test the Node.js tooling packages out of the box.
 #
-# It ensures Node.js 24 (required by "devEngines" in package.json), installs the
-# npm workspace dependencies and builds the TypeScript project references.
+# It ensures the Node.js version pinned in .nvmrc (which matches CI), installs
+# the npm workspace dependencies and builds the TypeScript project references.
 #
 # Native iOS/Android artifacts are intentionally NOT built here: they require the
 # Android NDK / Apple toolchains which are not present on a generic Linux worker.
@@ -19,9 +19,10 @@ fi
 
 cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel)}"
 
-# --- Ensure Node.js 24 via nvm -----------------------------------------------
-# package.json's devEngines pins Node ^24 (and npm ^11); npm refuses to install
-# with an older runtime. nvm ships on the remote workers, so use it to select 24.
+# --- Ensure the Node.js version from .nvmrc via nvm ---------------------------
+# .nvmrc pins the Node version (matching CI). package.json's devEngines requires
+# Node ^24 / npm ^11, and npm refuses to install with an older runtime. nvm ships
+# on the remote workers, so use it to install and select the pinned version.
 NVM_DIR="${NVM_DIR:-/opt/nvm}"
 if [ ! -s "$NVM_DIR/nvm.sh" ] && [ -s "$HOME/.nvm/nvm.sh" ]; then
   NVM_DIR="$HOME/.nvm"
@@ -33,14 +34,15 @@ if [ -s "$NVM_DIR/nvm.sh" ]; then
   set +u
   # shellcheck disable=SC1091
   . "$NVM_DIR/nvm.sh"
-  nvm install 24 >/dev/null
-  nvm use 24 >/dev/null
+  # No version argument: nvm reads .nvmrc from the current directory.
+  nvm install >/dev/null
+  nvm use >/dev/null
+  NODE_BIN="$(dirname "$(nvm which current)")"
   set -u
 
-  NODE_BIN="$(dirname "$(nvm which 24)")"
   export PATH="$NODE_BIN:$PATH"
 
-  # Persist the Node 24 toolchain on PATH for the rest of the session.
+  # Persist the resolved Node toolchain on PATH for the rest of the session.
   if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
     echo "export PATH=\"$NODE_BIN:\$PATH\"" >> "$CLAUDE_ENV_FILE"
   fi

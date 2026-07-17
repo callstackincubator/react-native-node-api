@@ -25,7 +25,7 @@ See the [README.md](README.md#packages) for detailed descriptions of each packag
 
 ## Environment & Bootstrap
 
-- **Node.js 24 is required** — `package.json`'s `devEngines` pins Node `^24` (and npm `^11`), and npm refuses to install with an older runtime.
+- **Node.js 24 is required** — pinned in `.nvmrc` as `lts/krypton` (matching CI); `package.json`'s `devEngines` requires Node `^24` and npm `^11`, and npm refuses to install with an older runtime. With nvm: `nvm install && nvm use`.
 - Standard setup for the Node.js tooling packages:
 
   ```bash
@@ -33,7 +33,7 @@ See the [README.md](README.md#packages) for detailed descriptions of each packag
   npm run build    # Incremental TypeScript build (tsc --build)
   ```
 
-- On Claude Code on the web, `.claude/hooks/session-start.sh` performs the above automatically (selecting Node 24 via nvm) at session start.
+- On Claude Code on the web, `.claude/hooks/session-start.sh` performs the above automatically (selecting the `.nvmrc` version via nvm) at session start.
 - **Native (iOS/Android) builds are not part of the default bootstrap.** `npm run bootstrap` and the native `bootstrap` scripts compile artifacts that require the Android NDK / Apple toolchains, which are absent on a generic Linux worker. Focus on the Node.js tooling packages; pass an explicit target (e.g. `npx ferric --apple`) only when the corresponding SDK is installed.
 
 ## Critical Build Dependencies
