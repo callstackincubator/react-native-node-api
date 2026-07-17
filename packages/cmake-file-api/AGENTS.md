@@ -1,4 +1,4 @@
-# Copilot Instructions for cmake-file-api Package
+# AGENTS.md — cmake-file-api Package
 
 This package provides a TypeScript wrapper around the CMake File API using Zod schemas for validation.
 
