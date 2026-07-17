@@ -92,6 +92,12 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
+      # macOS runners ship a newer CMake than the project supports; pin it to match the version used elsewhere in CI
+      - name: Install compatible CMake version
+        if: runner.os == 'macOS'
+        uses: jwlawson/actions-setup-cmake@v2
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: npm ci
       - run: npm run bootstrap
       - run: npm test
