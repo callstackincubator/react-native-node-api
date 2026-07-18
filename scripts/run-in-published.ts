@@ -4,8 +4,13 @@ import cp from "node:child_process";
 console.log("Run command in all non-private packages of the monorepo");
 
 function getWorkspaces() {
+  // `pnpm ls -r --depth -1 --json` lists every workspace project (including the
+  // private repo root, filtered out below) with `name`, `path` and `private`
+  // fields — the pnpm equivalent of the removed `npm query .workspace`.
   const workspaces = JSON.parse(
-    cp.execFileSync("npm", ["query", ".workspace"], { encoding: "utf8" }),
+    cp.execFileSync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], {
+      encoding: "utf8",
+    }),
   ) as unknown;
   assert(Array.isArray(workspaces));
   for (const workspace of workspaces) {

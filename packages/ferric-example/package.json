@@ -22,6 +22,6 @@
     "bootstrap": "node --run build"
   },
   "devDependencies": {
-    "ferric-cli": "*"
+    "ferric-cli": "workspace:*"
   }
 }

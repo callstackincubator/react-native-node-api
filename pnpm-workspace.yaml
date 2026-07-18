@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - apps/test-app
+
+# pnpm 10 blocks dependency lifecycle (post-install) scripts by default.
+# esbuild (pulled in via tsx/rolldown) needs its install script to place the
+# platform binary; allow just that one rather than disabling the safety globally.
+onlyBuiltDependencies:
+  - esbuild

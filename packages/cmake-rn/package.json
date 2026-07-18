@@ -24,11 +24,11 @@
     "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
   "dependencies": {
-    "@react-native-node-api/cli-utils": "0.1.4",
-    "cmake-file-api": "0.1.2",
-    "react-native-node-api": "1.0.1",
+    "@react-native-node-api/cli-utils": "workspace:*",
+    "cmake-file-api": "workspace:*",
+    "react-native-node-api": "workspace:*",
     "zod": "^4.1.11",
-    "weak-node-api": "0.1.1"
+    "weak-node-api": "workspace:*"
   },
   "peerDependencies": {
     "node-addon-api": "^8.3.1",

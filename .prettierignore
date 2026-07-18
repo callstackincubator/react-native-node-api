@@ -5,6 +5,9 @@ Pods
 target
 .cxx
 
+# Ignore the pnpm lockfile (managed by pnpm, not formatted by Prettier)
+pnpm-lock.yaml
+
 # Ignore hermes
 packages/host/hermes
 packages/node-addon-examples/examples

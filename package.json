@@ -3,19 +3,7 @@
   "description": "Node-API Modules for React Native",
   "type": "module",
   "private": true,
-  "workspaces": [
-    "packages/cli-utils",
-    "packages/cmake-file-api",
-    "packages/weak-node-api",
-    "packages/cmake-rn",
-    "packages/ferric",
-    "packages/gyp-to-cmake",
-    "packages/host",
-    "packages/node-addon-examples",
-    "packages/node-tests",
-    "packages/ferric-example",
-    "apps/test-app"
-  ],
+  "packageManager": "pnpm@10.33.0",
   "homepage": "https://github.com/callstackincubator/react-native-node-api#readme",
   "scripts": {
     "build": "tsc --build",
@@ -23,14 +11,14 @@
     "dev": "tsc --build --watch",
     "lint": "eslint .",
     "depcheck": "node scripts/depcheck.ts",
-    "publint": "node scripts/run-in-published.ts npx publint --strict",
+    "publint": "node scripts/run-in-published.ts pnpm exec publint --strict",
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
-    "test": "npm test --workspace react-native-node-api --workspace cmake-rn --workspace gyp-to-cmake --workspace node-addon-examples",
-    "bootstrap": "node --run build && npm run bootstrap --workspaces --if-present",
+    "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter @react-native-node-api/node-addon-examples run test",
+    "bootstrap": "node --run build && pnpm --recursive run bootstrap",
     "changeset": "changeset",
-    "release": "changeset publish",
-    "prerelease": "node --run build && npm run prerelease --workspaces --if-present && node --run publint",
+    "release": "node --run prerelease && changeset publish",
+    "prerelease": "node --run build && pnpm --recursive run prerelease && node --run publint",
     "init-macos-test-app": "node scripts/init-macos-test-app.ts"
   },
   "author": {
@@ -68,7 +56,7 @@
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^16.0.0",
-    "prettier": "^3.6.2",
+    "prettier": "3.6.2",
     "publint": "^0.3.15",
     "react-native": "0.81.4",
     "read-pkg": "^9.0.1",
@@ -82,8 +70,8 @@
       "version": "^24.0.0"
     },
     "packageManager": {
-      "name": "npm",
-      "version": "^11.0.0"
+      "name": "pnpm",
+      "version": "^10.0.0"
     }
   }
 }

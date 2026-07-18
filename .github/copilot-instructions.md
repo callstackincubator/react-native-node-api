@@ -33,14 +33,14 @@ See the [README.md](../README.md#packages) for detailed descriptions of each pac
 ### Development Setup
 
 ```bash
-npm ci && npm run build      # Install deps and build all packages
-npm run bootstrap           # Build native components (weak-node-api, examples)
+pnpm install && pnpm run build   # Install deps and build all packages
+pnpm run bootstrap               # Build native components (weak-node-api, examples)
 ```
 
 ### Package Development
 
 - **TypeScript project references**: Use `tsc --build` for incremental compilation
-- **Workspace scripts**: Most build/test commands use npm workspaces (`--workspace` flag)
+- **Workspace scripts**: Most build/test commands use pnpm workspaces (`--filter` flag), run in topological (dependency) order and fail fast
 - **Focus on Node.js packages**: AI development primarily targets the Node.js tooling packages rather than native mobile code
 - **No TypeScript type asserts**: You have to ask explicitly and justify if you want to add `as` type assertions.
 
@@ -70,8 +70,8 @@ Library names use double-dash separation: `package-name--path-component--addon-n
 
 ### Testing
 
-- **Individual packages**: Some packages have VS Code test tasks and others have their own `npm test` scripts for focused iteration (e.g., `npm test --workspace cmake-rn`). Use the latter only if the former is missing.
-- **Cross-package**: Use root-level `npm test` for cross-package testing once individual package tests pass
+- **Individual packages**: Some packages have VS Code test tasks and others have their own test scripts for focused iteration (e.g., `pnpm --filter cmake-rn run test`). Use the latter only if the former is missing.
+- **Cross-package**: Use root-level `pnpm test` for cross-package testing once individual package tests pass
 - **Mobile integration**: Available but not the primary AI development focus - ask the developer to run those tests as needed
 
 **Documentation**: Integration details, platform setup, and toolchain configuration are covered in existing repo documentation files.

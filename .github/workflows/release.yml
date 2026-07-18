@@ -18,9 +18,11 @@ jobs:
     environment: main
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -39,12 +41,12 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm install
+      - run: pnpm install
 
       - name: Create Release Pull Request or Publish to NPM
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: npm run release
+          publish: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
