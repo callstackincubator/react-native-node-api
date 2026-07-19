@@ -234,7 +234,11 @@ jobs:
         env:
           MOCHA_REMOTE_CONTEXT: allTests
   test-android:
-    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'Android 🤖')
+    # Temporarily gated to labeled PRs only: the ubuntu-self-hosted runner is
+    # offline, so running this on main pushes leaves the job queued forever and
+    # blocks the whole Check run from completing. Re-enable on main once the
+    # self-hosted runner is back. Tracked in #379.
+    if: contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
     runs-on: ubuntu-self-hosted
     steps:
