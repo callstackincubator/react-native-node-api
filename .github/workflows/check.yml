@@ -6,6 +6,13 @@ env:
   NDK_VERSION: 27.1.12297006
   # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
   ENABLE_GRADLE_TESTS: true
+  # pnpm records GitHub git dependencies (e.g. node-addon-examples) with an SSH
+  # repo URL, which anonymous CI runners can't clone. Rewrite git@github.com: to
+  # HTTPS so the public repo is fetched over HTTPS. Provided as ad-hoc git config
+  # via env so it applies to every job without a per-job step.
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: "url.https://github.com/.insteadOf"
+  GIT_CONFIG_VALUE_0: "git@github.com:"
 
 on:
   push:
@@ -49,7 +56,7 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run build
       # Bootstrap weak-node-api and ferric-example to get types
       # TODO: Solve this by adding an option to ferric to build only types or by committing the types into the repo as a fixture for an "init" command
@@ -102,7 +109,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: ${{ env.CMAKE_VERSION }}
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run bootstrap
       - run: pnpm test
   weak-node-api-tests:
@@ -137,7 +144,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: ${{ env.CMAKE_VERSION }}
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run build
       - name: Prepare weak-node-api
         run: pnpm --filter weak-node-api run prebuild:prepare
@@ -181,7 +188,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: ${{ env.CMAKE_VERSION }}
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
@@ -224,7 +231,7 @@ jobs:
         with:
           cmake-version: ${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-apple-darwin
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-darwin
@@ -272,7 +279,7 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }} cmake;${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: x86_64-linux-android
@@ -364,7 +371,7 @@ jobs:
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: ${{ env.CMAKE_VERSION }}
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install
       - run: pnpm run build
       - name: Build weak-node-api for all Apple architectures
         run: |

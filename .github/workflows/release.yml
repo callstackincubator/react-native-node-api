@@ -3,6 +3,12 @@ name: Release
 env:
   # Version here should match the one in React Native template and packages/cmake-rn/src/cli.ts
   NDK_VERSION: 27.1.12297006
+  # pnpm records GitHub git dependencies (e.g. node-addon-examples) with an SSH
+  # repo URL, which anonymous CI runners can't clone. Rewrite git@github.com: to
+  # HTTPS so the public repo is fetched over HTTPS.
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: "url.https://github.com/.insteadOf"
+  GIT_CONFIG_VALUE_0: "git@github.com:"
 
 on:
   push:
