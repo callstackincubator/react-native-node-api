@@ -68,6 +68,7 @@
     "node-api-headers": "^1.5.0"
   },
   "devDependencies": {
+    "cmake-rn": "workspace:*",
     "zod": "^4.1.11"
   }
 }
