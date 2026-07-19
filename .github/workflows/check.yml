@@ -92,12 +92,6 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      # macOS runners ship a newer CMake than the project supports; pin it to match the version used elsewhere in CI
-      - name: Install compatible CMake version
-        if: runner.os == 'macOS'
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: npm ci
       - run: npm run bootstrap
       - run: npm test
@@ -125,12 +119,6 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ runner.os }}
-      # macOS runners ship a newer CMake than the project supports; pin it to match the version used elsewhere in CI
-      - name: Install compatible CMake version
-        if: runner.os == 'macOS'
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: npm ci
       - run: npm run build
       - name: Prepare weak-node-api
@@ -168,11 +156,6 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      # macOS runners ship a newer CMake than the project supports; pin it to match the version used elsewhere in CI
-      - name: Install compatible CMake version
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: npm ci
       - run: npm run bootstrap
         env:
@@ -209,10 +192,6 @@ jobs:
         with:
           java-version: "17"
           distribution: "temurin"
-      - name: Install compatible CMake version
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-apple-darwin
       - run: npm ci
       - run: npm run bootstrap
@@ -349,11 +328,6 @@ jobs:
           distribution: "temurin"
       - run: rustup target add x86_64-apple-darwin x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim
       - run: rustup toolchain install nightly --component rust-src
-      # macOS runners ship a newer CMake than the project supports; pin it to match the version used elsewhere in CI
-      - name: Install compatible CMake version
-        uses: jwlawson/actions-setup-cmake@v2
-        with:
-          cmake-version: ${{ env.CMAKE_VERSION }}
       - run: npm ci
       - run: npm run build
       - name: Build weak-node-api for all Apple architectures

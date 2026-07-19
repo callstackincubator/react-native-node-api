@@ -10,24 +10,32 @@ add_library(${PROJECT_NAME} SHARED)
 set(INCLUDE_DIR "include")
 set(GENERATED_SOURCE_DIR "generated")
 
+set(PUBLIC_HEADER_FILES
+  ${GENERATED_SOURCE_DIR}/weak_node_api.hpp
+  ${GENERATED_SOURCE_DIR}/NodeApiHost.hpp
+  ${INCLUDE_DIR}/js_native_api_types.h
+  ${INCLUDE_DIR}/js_native_api.h
+  ${INCLUDE_DIR}/node_api_types.h
+  ${INCLUDE_DIR}/node_api.h
+)
+
 target_sources(${PROJECT_NAME}
   PUBLIC
     ${GENERATED_SOURCE_DIR}/weak_node_api.cpp
-  PUBLIC FILE_SET HEADERS
-  BASE_DIRS ${GENERATED_SOURCE_DIR} ${INCLUDE_DIR} FILES
-    ${GENERATED_SOURCE_DIR}/weak_node_api.hpp
-    ${GENERATED_SOURCE_DIR}/NodeApiHost.hpp
-    ${INCLUDE_DIR}/js_native_api_types.h
-    ${INCLUDE_DIR}/js_native_api.h
-    ${INCLUDE_DIR}/node_api_types.h
-    ${INCLUDE_DIR}/node_api.h
 )
 
-get_target_property(PUBLIC_HEADER_FILES ${PROJECT_NAME} HEADER_SET)
+# Expose the public headers to consumers within the build tree (e.g. the tests)
+# regardless of how they are packaged below.
+target_include_directories(${PROJECT_NAME}
+  PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${GENERATED_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/${INCLUDE_DIR}>
+)
 
 # Stripping the prefix from the library name
 # to make sure the name of the XCFramework will match the name of the library
 if(APPLE)
+  # Frameworks ship their public headers via the PUBLIC_HEADER property.
   set_target_properties(${PROJECT_NAME} PROPERTIES
     FRAMEWORK TRUE
     MACOSX_FRAMEWORK_IDENTIFIER com.callstack.${PROJECT_NAME}
@@ -36,6 +44,13 @@ if(APPLE)
     VERSION ${PACKAGE_VERSION}
     XCODE_ATTRIBUTE_SKIP_INSTALL NO
     PUBLIC_HEADER "${PUBLIC_HEADER_FILES}"
+  )
+else()
+  # Elsewhere, ship the public headers via a HEADERS file set for install packaging.
+  target_sources(${PROJECT_NAME}
+    PUBLIC FILE_SET HEADERS
+    BASE_DIRS ${GENERATED_SOURCE_DIR} ${INCLUDE_DIR} FILES
+      ${PUBLIC_HEADER_FILES}
   )
 endif()
 
