@@ -231,8 +231,8 @@ importers:
         specifier: ^1.0.0-alpha.29
         version: 1.0.0-alpha.33
       '@expo/plist':
-        specifier: ^0.4.7
-        version: 0.4.9
+        specifier: 0.4.7
+        version: 0.4.7
       '@react-native-node-api/cli-utils':
         specifier: workspace:*
         version: link:../cli-utils
@@ -1258,8 +1258,8 @@ packages:
   '@expo/plist@0.0.18':
     resolution: {integrity: sha512-+48gRqUiz65R21CZ/IXa7RNBXgAI/uPSdvJqoN9x1hfL44DNbUoWHgHiEXTx7XelcATpDwNTz6sHLfy0iNqf+w==}
 
-  '@expo/plist@0.4.9':
-    resolution: {integrity: sha512-MPVpmKGfnQEnrCzgxuXcmPP/y/t6AVm+DcSb2Myp21LKWv1N3l8uFxMggesfF4ixAxkRlGmMMx9GyDC9M+XklQ==}
+  '@expo/plist@0.4.7':
+    resolution: {integrity: sha512-dGxqHPvCZKeRKDU1sJZMmuyVtcASuSYh1LPFVaM1DuffqPL36n6FMEL0iUqq2Tx3xhWk8wCnWl34IKplUjJDdA==}
 
   '@hapi/hoek@9.3.0':
     resolution: {integrity: sha512-/c6rf4UJlmHlC9b5BaNvzAcFv7HZ2QHaV0D4/HNlBdvFnvQq8RI4kYdhyPCl7Xj+oWvTWQ8ujhqS53LIgAe6KQ==}
@@ -6224,7 +6224,7 @@ snapshots:
       base64-js: 1.5.1
       xmlbuilder: 14.0.0
 
-  '@expo/plist@0.4.9':
+  '@expo/plist@0.4.7':
     dependencies:
       '@xmldom/xmldom': 0.8.13
       base64-js: 1.5.1

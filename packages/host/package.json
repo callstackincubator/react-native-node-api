@@ -69,7 +69,7 @@
   "license": "MIT",
   "dependencies": {
     "@bacons/xcode": "^1.0.0-alpha.29",
-    "@expo/plist": "^0.4.7",
+    "@expo/plist": "0.4.7",
     "@xmldom/xmldom": "^0.8.11",
     "@react-native-node-api/cli-utils": "workspace:*",
     "pkg-dir": "^8.0.0",
