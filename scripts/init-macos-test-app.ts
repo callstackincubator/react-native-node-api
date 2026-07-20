@@ -29,7 +29,13 @@ async function deletePreviousApp() {
 
 async function initializeReactNativeTemplate() {
   console.log("Initializing community template");
-  exec("npx", [
+  // Use `pnpm dlx` rather than `npx` here: this runs from the workspace root,
+  // whose package.json declares `devEngines.packageManager: pnpm`, and npm 11
+  // refuses (EBADDEVENGINES) to run when invoked as npm/npx. The subsequent
+  // steps run inside the scaffolded, standalone macos-test-app directory (no
+  // `workspaces` field links it to the root) and can keep using npm/npx.
+  exec("pnpm", [
+    "dlx",
     "@react-native-community/cli",
     "init",
     "MacOSTestApp",
