@@ -169,7 +169,24 @@ async function patchPodfile() {
     ],
     [
       "react_native_post_install(installer)",
-      "react_native_post_install(installer, '../node_modules/react-native-macos')",
+      `react_native_post_install(installer, '../node_modules/react-native-macos')
+
+    # Xcode 26.4 ships Apple clang 21, which enforces C++20 'consteval' more
+    # strictly and rejects fmt 11.0.2's FMT_STRING() usages with "call to
+    # consteval function ... is not a constant expression" (in fmt itself, Yoga
+    # and React-logger). React Native 0.81 bundles fmt 11.0.2 and the upstream
+    # fix (fmt 12.1.0) only reached React Native >= 0.83.9, so disable fmt's
+    # compile-time (consteval) format-string checking across all pods. fmt guards
+    # this define with '#ifndef FMT_USE_CONSTEVAL', so pre-defining it wins and it
+    # falls back to runtime format-string validation, which compiles cleanly.
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |build_config|
+        definitions = build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
+        definitions = [definitions] unless definitions.is_a?(Array)
+        definitions << 'FMT_USE_CONSTEVAL=0' unless definitions.include?('FMT_USE_CONSTEVAL=0')
+        build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
+      end
+    end`,
     ],
   ];
 
