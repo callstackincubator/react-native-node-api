@@ -88,6 +88,11 @@ async function patchPackageJson() {
 
   const transferredDependencies = new Set([
     "@rnx-kit/metro-config",
+    // `mocha-remote-server` (pulled in by `mocha-remote-cli`) requires `mocha` at
+    // runtime. It resolves fine in the workspace apps via hoisting, but this app
+    // is installed standalone, so `mocha` must be an explicit dependency here or
+    // the "Run test app" step fails with "Cannot find module 'mocha'".
+    "mocha",
     "mocha-remote-cli",
     "mocha-remote-react-native",
   ]);
@@ -175,17 +180,18 @@ async function patchPodfile() {
     # strictly and rejects fmt 11.0.2's FMT_STRING() usages with "call to
     # consteval function ... is not a constant expression" (in fmt itself, Yoga
     # and React-logger). React Native 0.81 bundles fmt 11.0.2 and the upstream
-    # fix (fmt 12.1.0) only reached React Native >= 0.83.9, so disable fmt's
-    # compile-time (consteval) format-string checking across all pods. fmt guards
-    # this define with '#ifndef FMT_USE_CONSTEVAL', so pre-defining it wins and it
-    # falls back to runtime format-string validation, which compiles cleanly.
-    installer.pods_project.targets.each do |target|
-      target.build_configurations.each do |build_config|
-        definitions = build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] || ['$(inherited)']
-        definitions = [definitions] unless definitions.is_a?(Array)
-        definitions << 'FMT_USE_CONSTEVAL=0' unless definitions.include?('FMT_USE_CONSTEVAL=0')
-        build_config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = definitions
-      end
+    # fix (fmt 12.1.0) only reached React Native >= 0.83.9, so force fmt's
+    # compile-time (consteval) format-string checking off — it falls back to
+    # runtime validation, which compiles cleanly. Patch the vendored fmt headers
+    # directly (setting FMT_USE_CONSTEVAL to 0) rather than via a build-settings
+    # define, because the define does not reliably reach every fmt-consuming
+    # translation unit.
+    fmt_root = File.join(installer.sandbox.root.to_s, 'fmt')
+    Dir.glob(File.join(fmt_root, '**', '*.h')).each do |header|
+      contents = File.read(header)
+      next unless contents.include?('FMT_USE_CONSTEVAL')
+      patched = contents.gsub(/#\\s*define\\s+FMT_USE_CONSTEVAL\\s+1\\b/, '#define FMT_USE_CONSTEVAL 0')
+      File.write(header, patched) if patched != contents
     end`,
     ],
   ];
