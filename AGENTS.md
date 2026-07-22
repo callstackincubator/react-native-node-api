@@ -36,6 +36,27 @@ See the [README.md](README.md#packages) for detailed descriptions of each packag
 - On Claude Code on the web, `.claude/hooks/session-start.sh` performs the above automatically (selecting the `.nvmrc` version via nvm) at session start.
 - **Native (iOS/Android) builds are not part of the default bootstrap.** `npm run bootstrap` and the native `bootstrap` scripts compile artifacts that require the Android NDK / Apple toolchains, which are absent on a generic Linux worker. Focus on the Node.js tooling packages; pass an explicit target (e.g. `npx ferric --apple`) only when the corresponding SDK is installed.
 
+## Prefer an upstream fix over a local workaround
+
+When a build/runtime failure looks like a known upstream bug, before writing a
+patch or workaround:
+
+1. Find where the fix actually landed and **verify at the source** — the
+   changelog, lockfile, or the dependency's own manifest/podspec for a *specific
+   installable version*, not the version list and not a related package's
+   timeline (a fork or platform variant may carry a fix on a line its upstream
+   never did).
+2. If an installable version within our constraints contains the fix, prefer the
+   **smallest** bump that includes it (patch > minor > major) over a workaround.
+3. Treat the upgrade as a hypothesis under test: say so, and be ready to revert —
+   every upgrade adds new unknown-bug surface. If it doesn't fix the issue, throw
+   it away rather than stacking a workaround on top of it.
+4. If the bump is more than a patch, or widens scope/risk, check with me before
+   committing to it.
+5. If no fixed version is reachable, a workaround is fine — but comment it with
+   the exact condition that makes it removable (e.g. "remove once dep ships
+   fmt ≥ 12.1"), and if you write that condition, verify it isn't already met.
+
 ## Critical Build Dependencies
 
 - **Custom Hermes**: Currently depends on a patched Hermes with Node-API support (see [facebook/hermes#1377](https://github.com/facebook/hermes/pull/1377))
