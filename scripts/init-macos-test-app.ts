@@ -5,7 +5,7 @@ import path from "node:path";
 import { readPackage } from "read-pkg";
 
 const REACT_NATIVE_VERSION = "0.81.5";
-const REACT_NATIVE_MACOS_VERSION = "0.81.1";
+const REACT_NATIVE_MACOS_VERSION = "0.81.8";
 const REACT_VERSION = "^19.1.4";
 
 const ROOT_PATH = path.join(import.meta.dirname, "..");
@@ -171,18 +171,7 @@ async function patchPodfile() {
     ],
     [
       "react_native_post_install(installer)",
-      `react_native_post_install(installer, '../node_modules/react-native-macos')
-
-    # Disable fmt's consteval format-string checks, which Xcode 26.4 / clang 21
-    # reject in RN 0.81's bundled fmt 11.0.2. Removable once react-native-macos
-    # ships a release carrying fmt >= 12.1.
-    fmt_root = File.join(installer.sandbox.root.to_s, 'fmt')
-    Dir.glob(File.join(fmt_root, '**', '*.h')).each do |header|
-      contents = File.read(header)
-      next unless contents.include?('FMT_USE_CONSTEVAL')
-      patched = contents.gsub(/#\\s*define\\s+FMT_USE_CONSTEVAL\\s+1\\b/, '#define FMT_USE_CONSTEVAL 0')
-      File.write(header, patched) if patched != contents
-    end`,
+      "react_native_post_install(installer, '../node_modules/react-native-macos')",
     ],
   ];
 
