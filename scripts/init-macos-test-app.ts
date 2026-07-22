@@ -4,7 +4,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { readPackage } from "read-pkg";
 
-const REACT_NATIVE_VERSION = "0.81.5";
+// react-native-macos peer-pins an exact react-native core version
+// (react-native-macos 0.81.8 -> react-native 0.81.6); keep these two in lockstep.
+const REACT_NATIVE_VERSION = "0.81.6";
 const REACT_NATIVE_MACOS_VERSION = "0.81.8";
 const REACT_VERSION = "^19.1.4";
 
