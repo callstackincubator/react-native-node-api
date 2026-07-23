@@ -205,6 +205,10 @@ importers:
         version: link:../weak-node-api
 
   packages/ferric-example:
+    dependencies:
+      react-native-node-api:
+        specifier: workspace:*
+        version: link:../host
     devDependencies:
       ferric-cli:
         specifier: workspace:*
@@ -273,6 +277,9 @@ importers:
       assert:
         specifier: ^2.1.0
         version: 2.1.0
+      react-native-node-api:
+        specifier: workspace:*
+        version: link:../host
     devDependencies:
       cmake-rn:
         specifier: workspace:*

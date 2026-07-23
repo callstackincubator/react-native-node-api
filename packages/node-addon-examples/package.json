@@ -36,6 +36,7 @@
     "weak-node-api": "workspace:*"
   },
   "dependencies": {
-    "assert": "^2.1.0"
+    "assert": "^2.1.0",
+    "react-native-node-api": "workspace:*"
   }
 }
