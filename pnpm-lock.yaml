@@ -299,6 +299,9 @@ importers:
 
   packages/node-tests:
     devDependencies:
+      assert:
+        specifier: ^2.1.0
+        version: 2.1.0
       cmake-rn:
         specifier: workspace:*
         version: link:../cmake-rn
