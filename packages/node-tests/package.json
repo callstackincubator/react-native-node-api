@@ -26,6 +26,7 @@
     "bootstrap": "node --run copy-tests && node --run gyp-to-cmake && node --run build-tests && node --run bundle && node --run generate-entrypoint"
   },
   "devDependencies": {
+    "assert": "^2.1.0",
     "cmake-rn": "workspace:*",
     "gyp-to-cmake": "workspace:*",
     "react-native-node-api": "workspace:*",

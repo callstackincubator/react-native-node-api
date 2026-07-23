@@ -23,6 +23,24 @@ function readGypTargetNames(gypFilePath: string): string[] {
   });
 }
 
+/**
+ * Fail the build on unresolved imports instead of emitting a warning:
+ * Anything the bundle can't resolve (besides the addons declared as external)
+ * would otherwise only fail at runtime on device, where Metro's runtime require
+ * masks the underlying error.
+ */
+function failOnUnresolvedImports(
+  warning: Parameters<NonNullable<RolldownOptions["onwarn"]>>[0],
+  defaultHandler: Parameters<NonNullable<RolldownOptions["onwarn"]>>[1],
+) {
+  if (warning.code === "UNRESOLVED_IMPORT") {
+    throw new Error(
+      `Unresolved import: ${warning.message} - add the package as a dependency of @react-native-node-api/node-tests`,
+    );
+  }
+  defaultHandler(warning);
+}
+
 function testSuiteConfig(suitePath: string): RolldownOptions[] {
   const testFiles = fs.globSync("*.js", {
     cwd: suitePath,
@@ -32,6 +50,7 @@ function testSuiteConfig(suitePath: string): RolldownOptions[] {
   const targetNames = readGypTargetNames(gypFilePath);
   return testFiles.map((testFile) => ({
     input: path.join(suitePath, testFile),
+    onwarn: failOnUnresolvedImports,
     output: {
       file: path.join(suitePath, path.basename(testFile, ".js") + ".bundle.js"),
     },
