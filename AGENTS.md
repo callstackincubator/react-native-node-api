@@ -43,8 +43,8 @@ When a build/runtime failure looks like a known upstream bug, before writing a
 patch or workaround:
 
 1. Find where the fix actually landed and **verify at the source** — the
-   changelog, lockfile, or the dependency's own manifest/podspec for a *specific
-   installable version*, not the version list and not a related package's
+   changelog, lockfile, or the dependency's own manifest/podspec for a _specific
+   installable version_, not the version list and not a related package's
    timeline (a fork or platform variant may carry a fix on a line its upstream
    never did).
 2. If an installable version within our constraints contains the fix, prefer the
