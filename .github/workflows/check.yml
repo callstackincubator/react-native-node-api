@@ -222,7 +222,8 @@ jobs:
         run: npx react-native bundle --entry-file index.js --platform macos --dev false --minify false --bundle-output dist/main.macos.jsbundle --assets-dest dist/res
         working-directory: apps/macos-test-app
       - name: Build test app
-        run: xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
+        # pipefail so an xcodebuild failure is not masked by xcbeautify's exit code
+        run: set -o pipefail && xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
         working-directory: apps/macos-test-app/macos
       - name: Run test app
         run: npx mocha-remote --exit-on-error -- macos/build/macos-test-app.xcarchive/Products/Applications/MacOSTestApp.app/Contents/MacOS/MacOSTestApp

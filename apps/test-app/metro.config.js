@@ -17,6 +17,15 @@ if (config.projectRoot.endsWith("macos-test-app")) {
   // duplicate react-native version and pollution of the package lock.
   const path = require("node:path");
   config.watchFolders.push(path.resolve(__dirname, "../.."));
+
+  // Resolve workspace packages (and the specifiers the babel plugin rewrites
+  // their `*.node` requires to) from this app's own node_modules, independent of
+  // the root package manager's hoisting layout.
+  config.resolver = config.resolver || {};
+  config.resolver.nodeModulesPaths = [
+    ...(config.resolver.nodeModulesPaths || []),
+    path.resolve(__dirname, "node_modules"),
+  ];
 }
 
 module.exports = config;
