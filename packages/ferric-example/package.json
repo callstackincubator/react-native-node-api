@@ -21,7 +21,10 @@
     "build": "ferric build",
     "bootstrap": "node --run build"
   },
+  "dependencies": {
+    "react-native-node-api": "workspace:*"
+  },
   "devDependencies": {
-    "ferric-cli": "*"
+    "ferric-cli": "workspace:*"
   }
 }

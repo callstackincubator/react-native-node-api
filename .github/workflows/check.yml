@@ -6,6 +6,13 @@ env:
   NDK_VERSION: 27.1.12297006
   # Enabling the Gradle test on CI (disabled by default because it downloads a lot)
   ENABLE_GRADLE_TESTS: true
+  # pnpm records GitHub git dependencies (e.g. node-addon-examples) with an SSH
+  # repo URL, which anonymous CI runners can't clone. Rewrite git@github.com: to
+  # HTTPS so the public repo is fetched over HTTPS. Provided as ad-hoc git config
+  # via env so it applies to every job without a per-job step.
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: "url.https://github.com/.insteadOf"
+  GIT_CONFIG_VALUE_0: "git@github.com:"
 
 on:
   push:
@@ -24,9 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -47,18 +56,18 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install
+      - run: pnpm run build
       # Bootstrap weak-node-api and ferric-example to get types
       # TODO: Solve this by adding an option to ferric to build only types or by committing the types into the repo as a fixture for an "init" command
-      - run: npm run bootstrap --workspace weak-node-api
-      - run: npm run bootstrap --workspace @react-native-node-api/ferric-example
-      - run: npm run lint
+      - run: pnpm --filter weak-node-api run bootstrap
+      - run: pnpm --filter @react-native-node-api/ferric-example run bootstrap
+      - run: pnpm run lint
         env:
           DEBUG: eslint:eslint
-      - run: npm run prettier:check
-      - run: npm run depcheck
-      - run: npm run publint
+      - run: pnpm run prettier:check
+      - run: pnpm run depcheck
+      - run: pnpm run publint
   unit-tests:
     strategy:
       fail-fast: false
@@ -71,9 +80,11 @@ jobs:
     name: Unit tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -92,9 +103,9 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
-      - run: npm run bootstrap
-      - run: npm test
+      - run: pnpm install
+      - run: pnpm run bootstrap
+      - run: pnpm test
   weak-node-api-tests:
     if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'weak-node-api')
     strategy:
@@ -108,9 +119,11 @@ jobs:
     name: Weak Node-API tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -119,10 +132,10 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ runner.os }}
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install
+      - run: pnpm run build
       - name: Prepare weak-node-api
-        run: npm run prebuild:prepare --workspace weak-node-api
+        run: pnpm --filter weak-node-api run prebuild:prepare
       - name: Build and run weak-node-api C++ tests
         run: |
           cmake -S . -B build -DBUILD_TESTS=ON
@@ -135,9 +148,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -156,17 +171,17 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
-      - run: npm run bootstrap
+      - run: pnpm install
+      - run: pnpm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim
-      - run: npm run pod-install
+      - run: pnpm run pod-install
         working-directory: apps/test-app
       - name: Run tests (iOS)
-        run: npm run test:ios:allTests
+        run: pnpm run test:ios:allTests
         # TODO: Enable release mode when it works
-        # run: npm run test:ios:allTests -- --mode Release
+        # run: pnpm run test:ios:allTests -- --mode Release
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
@@ -176,9 +191,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -193,19 +210,20 @@ jobs:
           java-version: "17"
           distribution: "temurin"
       - run: rustup target add x86_64-apple-darwin
-      - run: npm ci
-      - run: npm run bootstrap
+      - run: pnpm install
+      - run: pnpm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-darwin
           FERRIC_TARGETS: aarch64-apple-darwin,x86_64-apple-darwin
-      - run: npm run init-macos-test-app
+      - run: pnpm run init-macos-test-app
       - run: pod install --project-directory=macos
         working-directory: apps/macos-test-app
       - name: Bundle test app
         run: npx react-native bundle --entry-file index.js --platform macos --dev false --minify false --bundle-output dist/main.macos.jsbundle --assets-dest dist/res
         working-directory: apps/macos-test-app
       - name: Build test app
-        run: xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
+        # pipefail so an xcodebuild failure is not masked by xcbeautify's exit code
+        run: set -o pipefail && xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
         working-directory: apps/macos-test-app/macos
       - name: Run test app
         run: npx mocha-remote --exit-on-error -- macos/build/macos-test-app.xcarchive/Products/Applications/MacOSTestApp.app/Contents/MacOS/MacOSTestApp
@@ -222,9 +240,11 @@ jobs:
     runs-on: ubuntu-self-hosted
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -243,15 +263,15 @@ jobs:
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }} cmake;${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
-      - run: npm ci
-      - run: npm run bootstrap
+      - run: pnpm install
+      - run: pnpm run bootstrap
         env:
           CMAKE_RN_TRIPLETS: x86_64-linux-android
           FERRIC_TARGETS: x86_64-linux-android
       - name: Clone patched Hermes version
         shell: bash
         run: |
-          REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-hermes --silent)
+          REACT_NATIVE_OVERRIDE_HERMES_DIR=$(pnpm exec react-native-node-api vendor-hermes --silent)
           echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
         working-directory: apps/test-app
       # - name: Setup Android Emulator cache
@@ -269,9 +289,9 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Build weak-node-api for all Android architectures
-        run: npm run prebuild:build:android --workspace weak-node-api
+        run: pnpm --filter weak-node-api run prebuild:build:android
       - name: Build ferric-example for all architectures
-        run: npm run build -- --android
+        run: pnpm run build -- --android
         working-directory: packages/ferric-example
       - name: Run tests (Android)
         timeout-minutes: 75
@@ -293,7 +313,7 @@ jobs:
             adb logcat > emulator-logcat.txt 2>&1 &
             LOGCAT_PID=$!
             # Build, install and run the app
-            npm run test:android:allTests -- --mode Release
+            pnpm run test:android:allTests -- --mode Release
             # Wait a bit for the sub-process to terminate, before terminating the emulator
             sleep 5
             # Stop logcat
@@ -310,9 +330,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/krypton
+          cache: pnpm
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -328,14 +350,14 @@ jobs:
           distribution: "temurin"
       - run: rustup target add x86_64-apple-darwin x86_64-apple-ios aarch64-apple-ios aarch64-apple-ios-sim
       - run: rustup toolchain install nightly --component rust-src
-      - run: npm ci
-      - run: npm run build
+      - run: pnpm install
+      - run: pnpm run build
       - name: Build weak-node-api for all Apple architectures
         run: |
-          npm run prebuild:prepare --workspace weak-node-api
-          npm run prebuild:build:apple --workspace weak-node-api
+          pnpm --filter weak-node-api run prebuild:prepare
+          pnpm --filter weak-node-api run prebuild:build:apple
       # Build Ferric example for all Apple architectures
-      - run: npx ferric --apple
+      - run: pnpm exec ferric --apple
         working-directory: packages/ferric-example
       - name: Inspect the structure of the prebuilt binary
         run: lipo -info ferric_example.apple.node/*/libferric_example.framework/libferric_example > lipo-info.txt

@@ -4,8 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { readPackage } from "read-pkg";
 
-const REACT_NATIVE_VERSION = "0.81.5";
-const REACT_NATIVE_MACOS_VERSION = "0.81.1";
+// react-native-macos peer-pins an exact react-native core version
+// (react-native-macos 0.81.8 -> react-native 0.81.6); keep these two in lockstep.
+const REACT_NATIVE_VERSION = "0.81.6";
+const REACT_NATIVE_MACOS_VERSION = "0.81.8";
 const REACT_VERSION = "^19.1.4";
 
 const ROOT_PATH = path.join(import.meta.dirname, "..");
@@ -29,7 +31,13 @@ async function deletePreviousApp() {
 
 async function initializeReactNativeTemplate() {
   console.log("Initializing community template");
-  exec("npx", [
+  // Use `pnpm dlx` rather than `npx` here: this runs from the workspace root,
+  // whose package.json declares `devEngines.packageManager: pnpm`, and npm 11
+  // refuses (EBADDEVENGINES) to run when invoked as npm/npx. The subsequent
+  // steps run inside the scaffolded, standalone macos-test-app directory (no
+  // `workspaces` field links it to the root) and can keep using npm/npx.
+  exec("pnpm", [
+    "dlx",
     "@react-native-community/cli",
     "init",
     "MacOSTestApp",
@@ -82,6 +90,8 @@ async function patchPackageJson() {
 
   const transferredDependencies = new Set([
     "@rnx-kit/metro-config",
+    // Needed by mocha-remote-server at runtime (not hoisted for this standalone app).
+    "mocha",
     "mocha-remote-cli",
     "mocha-remote-react-native",
   ]);

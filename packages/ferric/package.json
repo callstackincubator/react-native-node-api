@@ -21,8 +21,8 @@
   },
   "dependencies": {
     "@napi-rs/cli": "~3.0.3",
-    "@react-native-node-api/cli-utils": "0.1.4",
-    "react-native-node-api": "1.0.1",
-    "weak-node-api": "0.1.1"
+    "@react-native-node-api/cli-utils": "workspace:*",
+    "react-native-node-api": "workspace:*",
+    "weak-node-api": "workspace:*"
   }
 }

@@ -6,8 +6,13 @@ import fs from "node:fs";
 import depcheck from "depcheck";
 
 function getWorkspaces() {
+  // `pnpm ls -r --depth -1 --json` lists every workspace project (including the
+  // repo root, which is skipped below as it is private) with `name`, `path` and
+  // `private` fields — the pnpm equivalent of the removed `npm query .workspace`.
   const workspaces = JSON.parse(
-    cp.execFileSync("npm", ["query", ".workspace"], { encoding: "utf8" }),
+    cp.execFileSync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], {
+      encoding: "utf8",
+    }),
   ) as unknown;
   assert(Array.isArray(workspaces));
   for (const workspace of workspaces) {
