@@ -25,16 +25,17 @@ See the [README.md](README.md#packages) for detailed descriptions of each packag
 
 ## Environment & Bootstrap
 
-- **Node.js 24 is required** — pinned in `.nvmrc` as `lts/krypton` (matching CI); `package.json`'s `devEngines` requires Node `^24` and npm `^11`, and npm refuses to install with an older runtime. With nvm: `nvm install && nvm use`.
+- **Node.js 24 is required** — pinned in `.nvmrc` as `lts/krypton` (matching CI); `package.json`'s `devEngines` requires Node `^24` and pnpm `^10`, and the package manager refuses to install with an older runtime. With nvm: `nvm install && nvm use`.
+- **pnpm is the package manager** — pinned in `package.json`'s `packageManager` field. Let Corepack (bundled with Node) provide it: `corepack enable`, then use `pnpm`.
 - Standard setup for the Node.js tooling packages:
 
   ```bash
-  npm install      # Install workspace dependencies
-  npm run build    # Incremental TypeScript build (tsc --build)
+  pnpm install     # Install workspace dependencies
+  pnpm run build   # Incremental TypeScript build (tsc --build)
   ```
 
-- On Claude Code on the web, `.claude/hooks/session-start.sh` performs the above automatically (selecting the `.nvmrc` version via nvm) at session start.
-- **Native (iOS/Android) builds are not part of the default bootstrap.** `npm run bootstrap` and the native `bootstrap` scripts compile artifacts that require the Android NDK / Apple toolchains, which are absent on a generic Linux worker. Focus on the Node.js tooling packages; pass an explicit target (e.g. `npx ferric --apple`) only when the corresponding SDK is installed.
+- On Claude Code on the web, `.claude/hooks/session-start.sh` performs the above automatically (selecting the `.nvmrc` version via nvm and pnpm via Corepack) at session start.
+- **Native (iOS/Android) builds are not part of the default bootstrap.** `pnpm run bootstrap` and the native `bootstrap` scripts compile artifacts that require the Android NDK / Apple toolchains, which are absent on a generic Linux worker. Focus on the Node.js tooling packages; pass an explicit target (e.g. `pnpm exec ferric --apple`) only when the corresponding SDK is installed.
 
 ## Prefer an upstream fix over a local workaround
 
@@ -69,7 +70,7 @@ patch or workaround:
 ### Package Development
 
 - **TypeScript project references**: Use `tsc --build` for incremental compilation
-- **Workspace scripts**: Most build/test commands use npm workspaces (`--workspace` flag)
+- **Workspace scripts**: Most build/test commands use pnpm workspaces (`--filter` flag), run in topological (dependency) order and fail fast
 - **Focus on Node.js packages**: AI development primarily targets the Node.js tooling packages rather than native mobile code
 - **No TypeScript type asserts**: You have to ask explicitly and justify if you want to add `as` type assertions.
 
@@ -99,8 +100,8 @@ Library names use double-dash separation: `package-name--path-component--addon-n
 
 ### Testing
 
-- **Individual packages**: Some packages have VS Code test tasks and others have their own `npm test` scripts for focused iteration (e.g., `npm test --workspace cmake-rn`). Use the latter only if the former is missing.
-- **Cross-package**: Use root-level `npm test` for cross-package testing once individual package tests pass
+- **Individual packages**: Some packages have VS Code test tasks and others have their own `test` scripts for focused iteration (e.g., `pnpm --filter cmake-rn run test`). Use the latter only if the former is missing.
+- **Cross-package**: Use root-level `pnpm test` for cross-package testing once individual package tests pass
 - **Mobile integration**: Available but not the primary AI development focus - ask the developer to run those tests as needed
 
 **Documentation**: Integration details, platform setup, and toolchain configuration are covered in existing repo documentation files.
