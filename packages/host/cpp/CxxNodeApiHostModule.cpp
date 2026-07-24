@@ -9,11 +9,18 @@ using namespace facebook;
 // Declared by the vendored Hermes in API/napi/hermes_napi.h. We forward declare
 // it here (rather than including that header) to avoid pulling in Hermes' own
 // node_api.h alongside the weak-node-api copy already included transitively.
-// Only the mangled name matters for linking, so passing host as nullptr is
-// enough — async work / thread-safe functions will return failure until a
+//
+// The declaration must be `extern "C"`: since facebook/hermes#2106 (included in
+// the pinned Hermes commit) the public hermes_napi.h wraps these entry points
+// in `extern "C"`, so Hermes exports the unmangled C symbol. Without matching C
+// linkage here the reference would be to the C++-mangled name and the app fails
+// to link ("Undefined symbol: hermes_napi_create_env"). Passing host as nullptr
+// is enough — async work / thread-safe functions will return failure until a
 // host integration is wired up (Phase 3).
+extern "C" {
 struct hermes_napi_host;
 napi_env hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host);
+}
 
 namespace callstack::react_native_node_api {
 
