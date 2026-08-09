@@ -50,7 +50,21 @@ def reactNativeArchitectures() {
 }
 
 apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+
+// AGP 9 ships built-in Kotlin support and enables it by default, which
+// registers the `kotlin` extension itself. Applying the Kotlin plugin on top of
+// that fails the consumer's build with "Cannot add extension with name
+// 'kotlin'", so only apply it when built-in Kotlin isn't doing the job — either
+// because the consumer is on AGP 8, or because they opted out of it while they
+// migrate. See https://developer.android.com/build/migrate-to-built-in-kotlin
+def useBuiltInKotlin() {
+  def major = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0].toInteger()
+  return major >= 9 && project.findProperty("android.builtInKotlin") != "false"
+}
+
+if (!useBuiltInKotlin()) {
+  apply plugin: "kotlin-android"
+}
 
 apply plugin: "com.facebook.react"
 
