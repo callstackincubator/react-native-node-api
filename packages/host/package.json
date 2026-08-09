@@ -85,7 +85,7 @@
   },
   "peerDependencies": {
     "@babel/core": "^7.26.10",
-    "react-native": "0.87.0-nightly-20260529-88857d22f",
+    "react-native": "0.87.0-rc.4",
     "weak-node-api": "workspace:*"
   }
 }
