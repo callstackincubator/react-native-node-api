@@ -181,7 +181,7 @@ jobs:
       - name: Run tests (iOS)
         run: pnpm run test:ios:allTests
         # TODO: Enable release mode when it works
-        # run: pnpm run test:ios:allTests -- --mode Release
+        # run: pnpm run test:ios:allTests --mode Release
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
@@ -291,7 +291,7 @@ jobs:
       - name: Build weak-node-api for all Android architectures
         run: pnpm --filter weak-node-api run prebuild:build:android
       - name: Build ferric-example for all architectures
-        run: pnpm run build -- --android
+        run: pnpm run build --android
         working-directory: packages/ferric-example
       - name: Run tests (Android)
         timeout-minutes: 75
@@ -313,7 +313,7 @@ jobs:
             adb logcat > emulator-logcat.txt 2>&1 &
             LOGCAT_PID=$!
             # Build, install and run the app
-            pnpm run test:android:allTests -- --mode Release
+            pnpm run test:android:allTests --mode Release
             # Wait a bit for the sub-process to terminate, before terminating the emulator
             sleep 5
             # Stop logcat
