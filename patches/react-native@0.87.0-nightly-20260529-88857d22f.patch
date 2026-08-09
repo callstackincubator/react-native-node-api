@@ -2,7 +2,7 @@ diff --git a/settings.gradle.kts b/settings.gradle.kts
 index 2036e0f16450b837223aad4b73cd1d556089d16d..a769520babe1423bb08399e5a932db50de7bad51 100644
 --- a/settings.gradle.kts
 +++ b/settings.gradle.kts
-@@ -35,6 +35,11 @@ project(":packages:react-native:ReactAndroid:hermes-engine").projectDir =
+@@ -35,6 +35,16 @@ project(":packages:react-native:ReactAndroid:hermes-engine").projectDir =
  // for :packages and :packages:react-native as well as otherwise the build from
  // source will fail with a missing folder exception.
  
@@ -12,8 +12,13 @@ index 2036e0f16450b837223aad4b73cd1d556089d16d..a769520babe1423bb08399e5a932db50
 +// Patched by react-native-node-api: upstream hardcodes file("/tmp"), which does
 +// not exist on Windows (there `/tmp` resolves to a non-existent <rootDir>/tmp),
 +// so the build-from-source settings fail to configure. Use the JVM temp dir,
-+// which exists on every platform (`/tmp` on posix, %TEMP% on Windows). Remove
-+// this patch once React Native stops hardcoding "/tmp" here.
++// which exists on every platform (`/tmp` on posix, %TEMP% on Windows).
++//
++// Fixed upstream in facebook/react-native#57706, landed on main as 908872a6
++// (2026-07-28) — after the 0.87 branch cut, so 0.87-stable does NOT carry it.
++// Remove this patch once we pin a react-native that contains that commit: a
++// nightly built from main on/after 2026-07-29, or the first stable line
++// branched after it (0.88+), or a 0.87.x that cherry-picks it.
 +project(":packages").projectDir = file(System.getProperty("java.io.tmpdir", "/tmp"))
 +
 +project(":packages:react-native").projectDir = file(System.getProperty("java.io.tmpdir", "/tmp"))
