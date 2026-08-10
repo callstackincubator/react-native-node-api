@@ -30,7 +30,16 @@ const HERMES_GIT_URL = "https://github.com/facebook/hermes.git";
 // framework hit "Undefined symbol: hermes_napi_create_env". We used to patch
 // the header ourselves after cloning; now that the fix is upstream at this pin,
 // no header patching is required.
-const HERMES_GIT_SHA = "efcf68e285865fd9d952070b08e751bcad63f25e";
+//
+// It also includes the immediately following commit, which flips Hermes'
+// `JSI_UNSTABLE` CMake flag back to OFF by default. With it ON, Hermes compiles
+// JSI's unstable `Serialized` / `ISerialization` APIs into `hermesvm`, but
+// React Native never defines `JSI_UNSTABLE` when building the `libjsi.so` it
+// ships in the ReactAndroid AAR. On Android the two are separate shared
+// libraries, so `libhermesvm.so` ended up with undefined references to
+// `facebook::jsi::Serialized` that nothing in the APK defined, and the app died
+// on startup with "cannot locate symbol _ZTIN8facebook3jsi10SerializedE".
+const HERMES_GIT_SHA = "5a795c9f880002c862c9254a26b57199819c97f7";
 
 const platformOption = new Option(
   "--react-native-package <package-name>",
