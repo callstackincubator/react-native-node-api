@@ -26,14 +26,17 @@ protected:
     void *moduleHandle;
     napi_addon_register_func init;
     std::string generatedName;
+
+    // The Node-API environment for this addon, created when the addon is
+    // initialized. Node creates one env per addon (see
+    // napi_module_register_by_symbol in Node's src/node_api.cc) and the env
+    // carries addon-scoped state — instance data, last error info, the addon's
+    // Node-API version — so addons must not share one. Owned by the Hermes
+    // runtime, which tears it down when the runtime is destroyed.
+    napi_env env = nullptr;
   };
   std::unordered_map<std::string, NodeAddon> nodeAddons_;
   std::shared_ptr<facebook::react::CallInvoker> callInvoker_;
-
-  // The Node-API environment backing every addon loaded into this runtime.
-  // Created lazily on first use from the underlying Hermes VM runtime and
-  // shared across all addons (Node-API expects a single env per realm).
-  napi_env env_ = nullptr;
 
   using LoaderPolicy = PosixLoader; // FIXME: HACK: This is temporary workaround
                                     // for my lazyness (work on iOS and Android)

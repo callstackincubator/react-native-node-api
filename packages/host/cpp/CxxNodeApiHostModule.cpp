@@ -127,11 +127,11 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
   // @see
   // https://github.com/callstackincubator/react-native-node-api/issues/4
 
-  // Lazily create the Node-API environment backing this runtime. Hermes binds
-  // an env to its low-level VM runtime, which we reach through the (unstable)
-  // IHermes JSI interface. The env is owned by the runtime and shared across
-  // all addons, so we create it once and cache it.
-  if (env_ == nullptr) {
+  // Create this addon's Node-API environment. Hermes binds an env to its
+  // low-level VM runtime, which we reach through the (unstable) IHermes JSI
+  // interface, and takes ownership: the env is torn down with the runtime, so
+  // there is nothing to free here. Each addon gets its own env, as in Node.
+  if (addon.env == nullptr) {
     // Fully qualified: `using namespace facebook` makes a bare `hermes`
     // ambiguous with the top-level `::hermes` (VM) namespace pulled in via
     // <jsi/hermes-interfaces.h>.
@@ -141,10 +141,10 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
                 "create a Node-API environment");
       abort();
     }
-    env_ = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), nullptr);
-    assert(env_ != nullptr);
+    addon.env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), nullptr);
+    assert(addon.env != nullptr);
   }
-  napi_env env = env_;
+  napi_env env = addon.env;
 
   // Create the "exports" object
   napi_value exports;
