@@ -185,7 +185,8 @@ jobs:
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
-    # we don't have macOS-specific code yet
+    # we don't have macOS-specific code yet. Currently also blocked on react-native-macos:
+    # https://github.com/callstackincubator/react-native-node-api/issues/392
     if: contains(github.event.pull_request.labels.*.name, 'MacOS 💻')
     name: Test app (macOS)
     runs-on: macos-latest
