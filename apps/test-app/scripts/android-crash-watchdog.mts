@@ -52,9 +52,19 @@ async function main() {
   // care about.
   await adb("logcat", "-b", "crash", "-c");
 
+  // Never let this child inherit our stderr: GitHub's `@actions/exec` resolves
+  // a step only once the stdio streams it handed out are closed, so an adb
+  // orphaned by our exit would hold the step open long after we failed it.
   const logcat = cp.spawn("adb", ["logcat", "-b", "crash"], {
-    stdio: ["ignore", "pipe", "inherit"],
+    stdio: ["ignore", "pipe", "ignore"],
   });
+
+  // ... and don't leave it running at all: killing it on the way out covers
+  // both failing on a crash and getting terminated once the tests pass.
+  process.on("exit", () => logcat.kill("SIGKILL"));
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.on(signal, () => process.exit(0));
+  }
 
   // The line naming the app is preceded by the header of the crash it belongs
   // to ("FATAL EXCEPTION: main"), so keep a few lines of lead-in around.
