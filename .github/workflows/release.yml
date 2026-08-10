@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - main
+      - next
 
 # Deliberately no workflow-level concurrency: a publish waiting for its
 # deployment approval would hold the group and keep every later push from
