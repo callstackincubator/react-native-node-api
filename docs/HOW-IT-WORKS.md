@@ -45,10 +45,16 @@ The initialization function of a Node-API module expects a `napi_env`, which we 
 
 ## The library's C++ code initialize the `exports` object
 
-An `exports` object is created for the Node-API module and both the `napi_env` and `exports` object is passed to the Node-API module's initialization function and the third party code is able to call the Node-API free functions:
+An `exports` object is created for the Node-API module and both the `napi_env` and `exports` object is passed to the Node-API module's initialization function and the third party code is able to call the Node-API free functions.
 
-- The engine-specific functions (see [js_native_api.h](https://github.com/nodejs/node/blob/main/src/js_native_api.h)) are implemented by the engine itself (currently only Hermes implements Node-API).
-- The runtime-specific functions (see [node_api.h](https://github.com/nodejs/node/blob/main/src/node_api.h)) are implemented by `react-native-node-api`.
+Hermes implements both halves of Node-API: the engine-specific functions (see [js_native_api.h](https://github.com/nodejs/node/blob/main/src/js_native_api.h)) and the runtime-specific ones (see [node_api.h](https://github.com/nodejs/node/blob/main/src/node_api.h)). Node.js implements the latter on top of libuv, which React Native doesn't have — so Hermes leaves the host to supply the primitives they need, as a `hermes_napi_host` struct passed when the environment is created:
+
+- `post_work` / `cancel_work` — run a unit of work on a worker thread and report back on the JavaScript thread. This is what backs `napi_create_async_work` and friends.
+- `post_task` — schedule a callback on the JavaScript thread, used by thread-safe functions to dispatch queued calls.
+- `ref_loop` / `unref_loop` — keep the event loop alive while a thread-safe function is referenced, modelling libuv's "ref" semantics.
+- `fatal_exception` and, for embedders that have one, a libuv loop pointer for `napi_get_uv_event_loop`.
+
+`react-native-node-api` provides that struct, backed by React Native's `CallInvoker` for anything that has to land on the JavaScript thread and a worker pool for the rest.
 
 ## `my-app` regain control and call `add`
 
