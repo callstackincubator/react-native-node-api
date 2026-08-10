@@ -185,7 +185,8 @@ jobs:
         working-directory: apps/test-app
   test-macos:
     # Disabling this on main for now, as initializing the template takes a long time and
-    # we don't have macOS-specific code yet
+    # we don't have macOS-specific code yet. Currently also blocked on react-native-macos:
+    # https://github.com/callstackincubator/react-native-node-api/issues/392
     if: contains(github.event.pull_request.labels.*.name, 'MacOS 💻')
     name: Test app (macOS)
     runs-on: macos-latest
@@ -222,8 +223,7 @@ jobs:
         run: npx react-native bundle --entry-file index.js --platform macos --dev false --minify false --bundle-output dist/main.macos.jsbundle --assets-dest dist/res
         working-directory: apps/macos-test-app
       - name: Build test app
-        # pipefail so an xcodebuild failure is not masked by xcbeautify's exit code
-        run: set -o pipefail && xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive | xcbeautify
+        run: xcodebuild archive -workspace MacOSTestApp.xcworkspace -configuration Release -scheme MacOSTestApp-macOS -destination generic/platform="macOS" -archivePath ./build/macos-test-app.xcarchive
         working-directory: apps/macos-test-app/macos
       - name: Run test app
         run: npx mocha-remote --exit-on-error -- macos/build/macos-test-app.xcarchive/Products/Applications/MacOSTestApp.app/Contents/MacOS/MacOSTestApp
