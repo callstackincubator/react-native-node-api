@@ -39,15 +39,15 @@ The native implementation of `requireNodeAddon` is responsible for loading the d
 
 In any case the native code stores the initialization function in a data-structure.
 
-## `react-native-node-api` creates a `node_env` and initialize the Node-API module
+## `react-native-node-api` creates a `napi_env` and initialize the Node-API module
 
-The initialization function of a Node-API module expects a `node_env`, which we create by calling `createNodeApiEnv` on the `jsi::Runtime`.
+The initialization function of a Node-API module expects a `napi_env`, which we create by calling `hermes_napi_create_env` with the low-level Hermes VM runtime behind the `jsi::Runtime`. As in Node.js, each addon gets its own environment.
 
 ## The library's C++ code initialize the `exports` object
 
 An `exports` object is created for the Node-API module and both the `napi_env` and `exports` object is passed to the Node-API module's initialization function and the third party code is able to call the Node-API free functions:
 
-- The engine-specific functions (see [js_native_api.h](https://github.com/nodejs/node/blob/main/src/js_native_api.h)) are implemented by the `jsi::Runtime` (currently only Hermes supports this).
+- The engine-specific functions (see [js_native_api.h](https://github.com/nodejs/node/blob/main/src/js_native_api.h)) are implemented by the engine itself (currently only Hermes implements Node-API).
 - The runtime-specific functions (see [node_api.h](https://github.com/nodejs/node/blob/main/src/node_api.h)) are implemented by `react-native-node-api`.
 
 ## `my-app` regain control and call `add`
