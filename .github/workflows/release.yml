@@ -56,3 +56,12 @@ jobs:
           publish: pnpm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Changesets shells out to `npm info` (there is no pnpm equivalent it
+          # can use) to determine what is already published. npm ≥ 11 checks the
+          # root package.json's "devEngines" on every command and errors with
+          # EBADDEVENGINES because we require pnpm as the package manager, which
+          # fails the publish before it starts. Passing force downgrades that
+          # check to a warning; the actual publishing still runs through
+          # `pnpm publish`. Remove once changesets stops using npm for this or
+          # npm offers a way to skip the devEngines check.
+          npm_config_force: true
