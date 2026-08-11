@@ -2,7 +2,25 @@
 #include "Logger.hpp"
 #include "RuntimeNodeApiAsync.hpp"
 
+#include <jsi/hermes-interfaces.h>
+
 using namespace facebook;
+
+// Declared by the vendored Hermes in API/napi/hermes_napi.h. We forward declare
+// it here (rather than including that header) to avoid pulling in Hermes' own
+// node_api.h alongside the weak-node-api copy already included transitively.
+//
+// The declaration must be `extern "C"`: since facebook/hermes#2106 (included in
+// the pinned Hermes commit) the public hermes_napi.h wraps these entry points
+// in `extern "C"`, so Hermes exports the unmangled C symbol. Without matching C
+// linkage here the reference would be to the C++-mangled name and the app fails
+// to link ("Undefined symbol: hermes_napi_create_env"). Passing host as nullptr
+// is enough — async work / thread-safe functions will return failure until a
+// host integration is wired up (Phase 3).
+extern "C" {
+struct hermes_napi_host;
+napi_env hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host);
+}
 
 namespace callstack::react_native_node_api {
 
@@ -108,7 +126,25 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
   // TODO: Read the version from the addon
   // @see
   // https://github.com/callstackincubator/react-native-node-api/issues/4
-  napi_env env = reinterpret_cast<napi_env>(rt.createNodeApiEnv(8));
+
+  // Create this addon's Node-API environment. Hermes binds an env to its
+  // low-level VM runtime, which we reach through the (unstable) IHermes JSI
+  // interface, and takes ownership: the env is torn down with the runtime, so
+  // there is nothing to free here. Each addon gets its own env, as in Node.
+  if (addon.env == nullptr) {
+    // Fully qualified: `using namespace facebook` makes a bare `hermes`
+    // ambiguous with the top-level `::hermes` (VM) namespace pulled in via
+    // <jsi/hermes-interfaces.h>.
+    auto *hermes = facebook::jsi::castInterface<facebook::hermes::IHermes>(&rt);
+    if (hermes == nullptr) {
+      log_debug("NapiHost: JSI runtime is not castable to IHermes; cannot "
+                "create a Node-API environment");
+      abort();
+    }
+    addon.env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), nullptr);
+    assert(addon.env != nullptr);
+  }
+  napi_env env = addon.env;
 
   // Create the "exports" object
   napi_value exports;

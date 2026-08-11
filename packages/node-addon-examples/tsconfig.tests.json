@@ -3,9 +3,10 @@
   "compilerOptions": {
     "composite": true,
     "noEmit": false,
-    "module": "commonjs",
     "outDir": "dist",
     "rootDir": "src",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "types": ["react-native"]
   },
   "include": ["src/*.ts"]

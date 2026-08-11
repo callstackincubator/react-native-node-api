@@ -85,10 +85,21 @@ static AsyncWorkRegistry asyncWorkRegistry;
 
 namespace callstack::react_native_node_api {
 
+// Drop an env's entry when the env is torn down with its runtime (on a reload,
+// for example). There is one env per addon, so without this the map keeps a
+// stale entry per addon per runtime for the lifetime of the process.
+static void NAPI_CDECL removeCallInvoker(void *env) {
+  callInvokers.erase(static_cast<napi_env>(env));
+}
+
 void setCallInvoker(
     napi_env env,
     const std::shared_ptr<facebook::react::CallInvoker> &invoker) {
+  const bool isFirstForEnv = !callInvokers.contains(env);
   callInvokers[env] = invoker;
+  if (isFirstForEnv) {
+    ::napi_add_env_cleanup_hook(env, removeCallInvoker, env);
+  }
 }
 
 std::weak_ptr<facebook::react::CallInvoker> getCallInvoker(napi_env env) {
