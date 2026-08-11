@@ -2,7 +2,7 @@
 
 ## Building Hermes from source
 
-Because we're using a version of Hermes patched with Node-API support, we need to build React Native from source.
+Because we build Hermes from source (a pinned commit carrying its Node-API implementation), we need to build React Native from source too.
 
 Follow [the React Native documentation on how to build from source](https://reactnative.dev/contributing/how-to-build-from-source#update-your-project-to-build-from-source).
 
@@ -23,7 +23,7 @@ In particular, you will have to edit the `android/settings.gradle` file as follo
 > + }
 > ```
 
-To download our custom version of Hermes, you need to run from your app package:
+To fetch the pinned Hermes, you need to run from your app package:
 
 ```
 npx react-native-node-api vendor-hermes
@@ -39,7 +39,7 @@ export REACT_NATIVE_OVERRIDE_HERMES_DIR=$(npx react-native-node-api vendor-herme
 
 ## Cleaning your React Native build folders
 
-If you've accidentally built your app without Hermes patched, you can clean things up by deleting the `ReactAndroid` build folder.
+If you've accidentally built your app without the vendored Hermes, you can clean things up by deleting the `ReactAndroid` build folder.
 
 ```
 rm -rf node_modules/react-native/ReactAndroid/build
