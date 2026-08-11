@@ -1,6 +1,8 @@
 import java.nio.file.Paths
 import groovy.json.JsonSlurper
+import javax.inject.Inject
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.process.ExecOperations
 
 if (!System.getenv("REACT_NATIVE_OVERRIDE_HERMES_DIR")) {
     throw new GradleException([
@@ -48,7 +50,21 @@ def reactNativeArchitectures() {
 }
 
 apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+
+// AGP 9 ships built-in Kotlin support and enables it by default, which
+// registers the `kotlin` extension itself. Applying the Kotlin plugin on top of
+// that fails the consumer's build with "Cannot add extension with name
+// 'kotlin'", so only apply it when built-in Kotlin isn't doing the job — either
+// because the consumer is on AGP 8, or because they opted out of it while they
+// migrate. See https://developer.android.com/build/migrate-to-built-in-kotlin
+def useBuiltInKotlin() {
+  def major = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize('.')[0].toInteger()
+  return major >= 9 && project.findProperty("android.builtInKotlin") != "false"
+}
+
+if (!useBuiltInKotlin()) {
+  apply plugin: "kotlin-android"
+}
 
 apply plugin: "com.facebook.react"
 
@@ -161,17 +177,25 @@ dependencies {
 def commandLinePrefix = OperatingSystem.current().isWindows() ? ["cmd", "/c", "node"] : []
 def cliPath = file("../bin/react-native-node-api.mjs")
 
+// Gradle 9 removed Project.exec(), so the ExecOperations service has to be
+// injected and used explicitly instead of the bare `exec {}` closure.
+interface InjectedExecOps {
+  @Inject
+  ExecOperations getExecOps()
+}
+def injectedExecOps = project.objects.newInstance(InjectedExecOps)
+
 // Custom task to fetch jniLibs paths via CLI
 task linkNodeApiModules {
   doLast {
-    exec {
+    injectedExecOps.execOps.exec {
       commandLine commandLinePrefix + [cliPath, 'link', '--android', rootProject.rootDir.absolutePath]
       standardOutput = System.out
       errorOutput = System.err
       // Enable color output
       environment "FORCE_COLOR", "1"
     }
-    
+
     android.sourceSets.main.jniLibs.srcDirs += file("../auto-linked/android").listFiles()
   }
 }
