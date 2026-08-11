@@ -1,5 +1,20 @@
 # ferric-cli
 
+## 0.4.0
+
+### Minor Changes
+
+- 7349c34: Add support for building versioned frameworks for Apple Darwin / macOS
+
+### Patch Changes
+
+- ea26287: Add support for source maps across CLI bins
+- Updated dependencies [ea26287]
+- Updated dependencies [7349c34]
+- Updated dependencies [80ae73b]
+  - react-native-node-api@1.1.0
+  - weak-node-api@0.1.1
+
 ## 0.3.11
 
 ### Patch Changes

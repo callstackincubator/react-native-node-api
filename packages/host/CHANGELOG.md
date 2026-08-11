@@ -1,5 +1,17 @@
 # react-native-node-api
 
+## 1.1.0
+
+### Minor Changes
+
+- 7349c34: Add support for building versioned frameworks for Apple Darwin / macOS
+- 80ae73b: Modify Xcode project to add a build phase to the main project app to link Node-API frameworks directly
+
+### Patch Changes
+
+- ea26287: Add support for source maps across CLI bins
+  - weak-node-api@0.1.1
+
 ## 1.0.1
 
 ### Patch Changes
