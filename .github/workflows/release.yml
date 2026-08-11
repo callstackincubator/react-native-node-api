@@ -62,6 +62,8 @@ jobs:
           # EBADDEVENGINES because we require pnpm as the package manager, which
           # fails the publish before it starts. Passing force downgrades that
           # check to a warning; the actual publishing still runs through
-          # `pnpm publish`. Remove once changesets stops using npm for this or
-          # npm offers a way to skip the devEngines check.
+          # `pnpm publish`. Changesets v3 fixes this properly by running
+          # `pnpm info` when pnpm is detected, but it needs changesets/action v2
+          # to go with it and both are prereleases for now — remove this once we
+          # upgrade to those.
           npm_config_force: true
