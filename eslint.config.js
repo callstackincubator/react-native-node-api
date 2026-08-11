@@ -10,6 +10,7 @@ export default tseslint.config(
   globalIgnores([
     "**/dist/**",
     "**/build/**",
+    "**/build-tests/**",
     "apps/test-app/ios/**",
     "apps/macos-test-app/**",
     "packages/host/hermes/**",

@@ -6,6 +6,8 @@
     "noEmit": false,
     "outDir": "dist",
     "rootDir": "src",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "types": ["react-native"]
   },
   "include": ["src/react-native"]

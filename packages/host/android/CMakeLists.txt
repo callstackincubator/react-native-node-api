@@ -28,7 +28,7 @@ target_link_libraries(node-api-host
   log
   ReactAndroid::reactnative
   ReactAndroid::jsi
-  hermes-engine::libhermes
+  hermes-engine::hermesvm
   weak-node-api
   # react_codegen_NodeApiHostSpec
 )

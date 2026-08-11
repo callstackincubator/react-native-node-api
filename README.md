@@ -19,8 +19,9 @@
 ## How does this work?
 
 > [!IMPORTANT]
-> This library is currently dependent on a custom version of Hermes and therefore has a very limited range of supported React Native versions.
-> Once the [PR adding Node-API support to Hermes](https://github.com/facebook/hermes/pull/1377) merges, we expect this restriction to be lifted.
+> This library builds Hermes from a pinned commit on its `static_h` branch, which carries [Hermes' first-party Node-API implementation](https://github.com/facebook/hermes/tree/static_h/API/napi).
+> React Native has not shipped that Hermes yet, so the range of supported React Native versions is very limited — see the `react-native` peer dependency of the [host package](packages/host/package.json) for the version we currently build against.
+> We expect this restriction to be lifted once React Native ships a Hermes with Node-API included.
 
 > [!NOTE]
 > This library only works for iOS and Android and we want to eventually support React Native for Windows, macOS, visionOS and other out-of-tree platforms too.
@@ -35,10 +36,9 @@ This mono-repository hosts the development of a few packages:
 
 Responsible for adding Node-API support to your React Native application:
 
-- Declares a Podspec which downloads a special version of Hermes, with Node-API support,
-  - instructing React Native's Hermes Podspecs to compile from this custom source-code.
-  - patching React Native's JSI copy, with the updates introduced by our special version of Hermes.
-  - we expect this to eventually be removed, as Node-API support gets merged into Hermes upstream.
+- Declares a Podspec which vendors Hermes from a pinned commit on its `static_h` branch, where Node-API is implemented,
+  - instructing React Native's Hermes Podspecs to compile from this checkout.
+  - we expect this to eventually be removed, as React Native starts shipping a Hermes with Node-API included.
 - Automatically discovers and adds Node-API binaries, matching the [the prebuilt binary specification](./docs/PREBUILDS.md)
   - This is driven by the platform specific build tools (through the Podspec on iOS and eventually Gradle on Android)
 - Implements a TurboModule with a `requireNodeAddon` function responsible for
