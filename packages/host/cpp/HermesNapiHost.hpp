@@ -71,11 +71,15 @@ namespace callstack::react_native_node_api {
 /// machinery can be exercised by plain C++ tests.
 class HostContext : public std::enable_shared_from_this<HostContext> {
 public:
-  /// Dispatches a function onto the JS thread. Implementations must be safe
-  /// to call from arbitrary threads, must never run the function inline and
-  /// must deliver functions one at a time, in order, on the single JS thread.
-  /// Dropping a function is only acceptable once the JS runtime is gone.
-  using JsDispatcher = std::function<void(std::function<void()> &&)>;
+  /// Dispatches a function onto the JS thread, returning whether it was
+  /// accepted for delivery. Implementations must be safe to call from
+  /// arbitrary threads, must never run the function inline and must deliver
+  /// accepted functions one at a time, in order, on the single JS thread.
+  /// Returning false (and dropping the function) is only acceptable once the
+  /// JS runtime is gone — callers use the verdict to report outcomes
+  /// truthfully, e.g. cancel_work only claims success while the cancelled
+  /// completion can actually be delivered.
+  using JsDispatcher = std::function<bool(std::function<void()> &&)>;
 
   static std::shared_ptr<HostContext> create(JsDispatcher dispatchToJs);
 
@@ -93,7 +97,14 @@ public:
   /// The struct to pass to hermes_napi_create_env. Owned by this context.
   hermes_napi_host *host() { return &host_; }
 
-  void dispatchToJs(std::function<void()> &&fn) { dispatchToJs_(std::move(fn)); }
+  bool dispatchToJs(std::function<void()> &&fn) {
+    return dispatchToJs_(std::move(fn));
+  }
+
+  // host_.data points at this object and the static callbacks cast it back,
+  // so a copied or moved instance would service callbacks meant for another.
+  HostContext(const HostContext &) = delete;
+  HostContext &operator=(const HostContext &) = delete;
 
 private:
   explicit HostContext(JsDispatcher dispatchToJs);

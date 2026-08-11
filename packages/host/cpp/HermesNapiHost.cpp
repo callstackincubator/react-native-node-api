@@ -15,13 +15,14 @@ namespace {
 
 struct WorkItem {
   // Identifies the HostContext that posted the item; matched together with
-  // workData on cancellation, since the pool is shared by all runtimes and a
-  // freed napi_async_work address could be reused by another env.
+  // workData on cancellation. All envs of one runtime share one context, so
+  // the pair only disambiguates across runtimes (i.e. reloads), where a freed
+  // napi_async_work address could be reused by a new runtime's env.
   void *loopData = nullptr;
-  // The dispatcher may expire while an item is in flight (React Native
-  // reload); the completion is then dropped, which is safe because the env it
-  // targets is torn down with its runtime.
-  std::weak_ptr<HostContext> context;
+  // Held strongly: contexts are retained for the process lifetime anyway, and
+  // whether the item's runtime can still receive its completion is reported
+  // by the context's dispatcher, not by this pointer's liveness.
+  std::shared_ptr<HostContext> context;
   void *workData = nullptr;
   void (*execute)(void *work_data) = nullptr;
   void (*complete)(void *work_data, napi_status status) = nullptr;
@@ -44,11 +45,14 @@ public:
         if (queued.loopData == item.loopData &&
             queued.workData == item.workData) {
           // Queueing the same napi_async_work twice is undefined behavior in
-          // Node (libuv asserts); warn instead of crashing.
-          log_warning(
-              "NapiHost: napi_async_work %p was queued while already queued",
+          // Node (libuv asserts). Drop the duplicate instead of crashing:
+          // enqueueing it would produce two completions for one work item,
+          // and the second is a use-after-free once the addon has called
+          // napi_delete_async_work from inside the first.
+          log_warning("NapiHost: dropping napi_async_work %p, queued while "
+                      "already queued",
               item.workData);
-          break;
+          return;
         }
       }
       queue_.push_back(std::move(item));
@@ -93,14 +97,13 @@ private:
       // or removed by tryRemove (complete gets napi_cancelled) — never both,
       // as both happen under the queue mutex.
       item.execute(item.workData);
-      if (auto context = item.context.lock()) {
-        context->dispatchToJs(
-            [workData = item.workData, complete = item.complete] {
-              // No pool state refers to workData at this point, so the
-              // complete callback is free to napi_delete_async_work it.
-              complete(workData, napi_ok);
-            });
-      } else {
+      bool accepted = item.context->dispatchToJs(
+          [workData = item.workData, complete = item.complete] {
+            // No pool state refers to workData at this point, so the
+            // complete callback is free to napi_delete_async_work it.
+            complete(workData, napi_ok);
+          });
+      if (!accepted) {
         log_warning("NapiHost: dropping an async work completion posted after "
                     "runtime teardown");
       }
@@ -185,11 +188,9 @@ void HostContext::postWork(void *loop_data, void *work_data,
                            void (*complete)(void *work_data,
                                             napi_status status)) noexcept {
   auto *self = static_cast<HostContext *>(loop_data);
-  // Called on the JS thread (napi_queue_async_work) while the env — and
-  // therefore this context — is alive, so weak_from_this() is populated.
   WorkerPool::instance().enqueue(WorkItem{
       .loopData = loop_data,
-      .context = self->weak_from_this(),
+      .context = self->shared_from_this(),
       .workData = work_data,
       .execute = execute,
       .complete = complete,
@@ -203,17 +204,16 @@ bool HostContext::cancelWork(void *loop_data, void *work_data) noexcept {
     // and Hermes surfaces napi_generic_failure, like Node.
     return false;
   }
-  if (auto context = item.context.lock()) {
-    // Deliver the cancelled completion asynchronously, matching Node, where a
-    // cancelled complete callback still runs on a later loop tick.
-    context->dispatchToJs([workData = item.workData, complete = item.complete] {
-      complete(workData, napi_cancelled);
-    });
-    return true;
-  }
-  // The runtime is being torn down; the complete callback can never run, so
-  // report the cancellation as failed.
-  return false;
+  // Deliver the cancelled completion asynchronously, matching Node, where a
+  // cancelled complete callback still runs on a later loop tick. Success is
+  // only reported while the dispatcher accepts the delivery: once the runtime
+  // is torn down the complete callback can never run, and claiming success
+  // would leave the addon waiting for a complete(napi_cancelled) that never
+  // arrives.
+  return item.context->dispatchToJs(
+      [workData = item.workData, complete = item.complete] {
+        complete(workData, napi_cancelled);
+      });
 }
 
 void HostContext::postTask(void *loop_data, void *task_data,
@@ -223,8 +223,13 @@ void HostContext::postTask(void *loop_data, void *task_data,
   // Hermes' tsfnDispatch re-posts itself from inside the callback. The
   // dispatcher never runs the callback inline (JS would run off-thread) and
   // never drops it while the runtime is alive — a dropped dispatch would
-  // permanently wedge the tsfn, as its dispatch_pending flag stays set.
-  self->dispatchToJs_([task_data, callback] { callback(task_data); });
+  // permanently wedge the tsfn, as its dispatch_pending flag stays set. A
+  // rejected dispatch therefore implies the runtime (and with it the tsfn's
+  // env) is gone, making the wedged flag unobservable.
+  if (!self->dispatchToJs_([task_data, callback] { callback(task_data); })) {
+    log_warning("NapiHost: dropping a thread-safe function dispatch posted "
+                "after runtime teardown");
+  }
 }
 
 void HostContext::fatalException(void *, napi_env env,
@@ -234,6 +239,11 @@ void HostContext::fatalException(void *, napi_env env,
   // error and abort — the same observable outcome as Hermes' null-host
   // default, but surfaced through the host logger. `err` is only valid for
   // the duration of this call, so it is stringified before returning.
+  // TODO: Route through React Native's error handling (ErrorUtils / LogBox),
+  // with abort() as the fallback, to get closer to Node's observable and
+  // handleable 'uncaughtException' — note node-addon-api calls
+  // napi_fatal_exception whenever an exception escapes a thread-safe
+  // function callback, so today a single throwing tsfn callback is fatal.
   log_error("napi_fatal_exception: %s", describeError(env, err).c_str());
   abort();
 }

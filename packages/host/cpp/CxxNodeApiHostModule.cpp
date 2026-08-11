@@ -17,17 +17,35 @@ CxxNodeApiHostModule::CxxNodeApiHostModule(
 
   // The JS-thread dispatcher behind the hermes_napi_host integration:
   // CallInvoker::invokeAsync is callable from any thread, never runs the
-  // function inline and delivers in order on the JS thread. The CallInvoker
-  // is captured weakly so tasks in flight during a runtime teardown are
-  // dropped instead of dispatched into a dead runtime.
+  // function inline and delivers in order on the JS thread.
+  //
+  // Teardown is the load-bearing case. What the host integration needs is
+  // that a function handed to this dispatcher either runs on the JS thread
+  // while the runtime is alive, or is dropped — never invoked against a
+  // destroyed runtime. In bridgeless React Native the CallInvoker received
+  // here is a RuntimeSchedulerCallInvoker holding a std::weak_ptr to the
+  // RuntimeScheduler; the ReactInstance owns scheduler and runtime together
+  // and invokeAsync no-ops once the scheduler is gone, so work cannot outlive
+  // the runtime it targets. The weak capture below covers the remaining
+  // window where this module (and its CallInvoker reference) is released
+  // during instance teardown.
+  //
+  // Dropping is safe precisely because a drop implies that teardown: every
+  // env this host serves is owned by that same runtime and destroyed with it,
+  // so the completion or tsfn dispatch being dropped has no live observer.
+  // The one caller that could still see the difference —
+  // napi_cancel_async_work — receives the verdict through this dispatcher's
+  // return value (see HostContext::cancelWork).
   hostContext_ = HostContext::create(
       [weakInvoker = std::weak_ptr(callInvoker_)](std::function<void()> &&fn) {
-        if (auto invoker = weakInvoker.lock()) {
-          invoker->invokeAsync(std::move(fn));
-        } else {
+        auto invoker = weakInvoker.lock();
+        if (!invoker) {
           log_warning(
               "NapiHost: dropping a task posted after runtime teardown");
+          return false;
         }
+        invoker->invokeAsync(std::move(fn));
+        return true;
       });
   HostContext::retainForProcessLifetime(hostContext_);
 }

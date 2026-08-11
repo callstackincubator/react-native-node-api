@@ -22,17 +22,25 @@ using namespace std::chrono_literals;
 namespace {
 
 // Stands in for the JS thread: functions are queued by the dispatcher (from
-// any thread) and only run when the test drains the queue.
+// any thread) and only run when the test drains the queue. Flipping
+// setAccepting(false) models the CallInvoker expiring on runtime teardown:
+// the dispatcher rejects the function and drops it.
 struct FakeJsQueue {
   HostContext::JsDispatcher dispatcher() {
-    return [this](std::function<void()> &&fn) {
+    return [this](std::function<void()> &&fn) -> bool {
+      if (!accepting_.load()) {
+        return false;
+      }
       {
         std::lock_guard lock(mutex_);
         queue_.push_back(std::move(fn));
       }
       cv_.notify_all();
+      return true;
     };
   }
+
+  void setAccepting(bool accepting) { accepting_.store(accepting); }
 
   // Runs queued functions one at a time until the queue is empty, including
   // functions queued reentrantly while draining. Returns how many ran.
@@ -65,6 +73,7 @@ struct FakeJsQueue {
   }
 
 private:
+  std::atomic<bool> accepting_{true};
   std::mutex mutex_;
   std::condition_variable cv_;
   std::deque<std::function<void()>> queue_;
@@ -114,6 +123,23 @@ struct GatedWork {
 // workers keeps a subsequently posted item deterministically queued.
 constexpr int kWorkerCount = 4;
 
+// Fills every pool worker with its own gate-blocked job, so a subsequently
+// posted item deterministically stays queued. Jobs are heap-allocated and
+// deliberately leaked: their completions may never run (e.g. when delivery is
+// rejected) and workers may still touch them when a test ends.
+std::vector<GatedWork *> saturatePool(hermes_napi_host *host) {
+  std::vector<GatedWork *> jobs;
+  for (int i = 0; i < kWorkerCount; i++) {
+    auto *job = new GatedWork();
+    host->post_work(host->data, job, GatedWork::execute, GatedWork::complete);
+    jobs.push_back(job);
+  }
+  for (auto *job : jobs) {
+    job->waitForStarted(1);
+  }
+  return jobs;
+}
+
 } // namespace
 
 TEST_CASE("post_work runs execute off the posting thread and delivers "
@@ -160,14 +186,9 @@ TEST_CASE("cancel_work cancels queued items and rejects started items") {
 
   SECTION("a queued item is cancelled: execute skipped, complete gets "
           "napi_cancelled, a second cancel fails") {
-    auto *busy = new GatedWork();
-    for (int i = 0; i < kWorkerCount; i++) {
-      host->post_work(host->data, busy, GatedWork::execute,
-                      GatedWork::complete);
-    }
-    busy->waitForStarted(kWorkerCount);
+    auto busy = saturatePool(host);
 
-    // Every worker is blocked on the gate, so this item stays queued.
+    // Every worker is blocked on a gate, so this item stays queued.
     auto *target = new GatedWork();
     host->post_work(host->data, target, GatedWork::execute,
                     GatedWork::complete);
@@ -181,12 +202,14 @@ TEST_CASE("cancel_work cancels queued items and rejects started items") {
     REQUIRE(target->lastStatus == napi_cancelled);
     REQUIRE(target->executions.load() == 0);
 
-    busy->openGate();
+    for (auto *job : busy) {
+      job->openGate();
+    }
     REQUIRE(js.waitForItems(kWorkerCount));
     REQUIRE(js.drain() == kWorkerCount);
-    REQUIRE(busy->completions.load() == kWorkerCount);
-    delete busy;
-    delete target;
+    for (auto *job : busy) {
+      REQUIRE(job->completions.load() == 1);
+    }
   }
 
   SECTION("an item that started executing cannot be cancelled") {
@@ -203,6 +226,36 @@ TEST_CASE("cancel_work cancels queued items and rejects started items") {
     REQUIRE(target->executions.load() == 1);
     delete target;
   }
+}
+
+TEST_CASE("queueing the same work item twice drops the duplicate") {
+  FakeJsQueue js;
+  auto context = HostContext::create(js.dispatcher());
+  hermes_napi_host *host = context->host();
+
+  auto busy = saturatePool(host);
+
+  auto *target = new GatedWork();
+  host->post_work(host->data, target, GatedWork::execute, GatedWork::complete);
+  // Double-queueing is undefined behavior in Node (libuv aborts); the pool
+  // drops the duplicate so the one-completion invariant holds.
+  host->post_work(host->data, target, GatedWork::execute, GatedWork::complete);
+
+  // Exactly one queue entry exists: the first cancel claims it, the second
+  // finds nothing, and precisely one napi_cancelled completion arrives.
+  REQUIRE(host->cancel_work(host->data, target));
+  REQUIRE(!host->cancel_work(host->data, target));
+  REQUIRE(js.waitForItems(1));
+  REQUIRE(js.drain() == 1);
+  REQUIRE(target->completions.load() == 1);
+  REQUIRE(target->lastStatus == napi_cancelled);
+  REQUIRE(target->executions.load() == 0);
+
+  for (auto *job : busy) {
+    job->openGate();
+  }
+  REQUIRE(js.waitForItems(kWorkerCount));
+  REQUIRE(js.drain() == kWorkerCount);
 }
 
 TEST_CASE("cancel_work racing worker pickup yields exactly one outcome") {
@@ -320,26 +373,54 @@ TEST_CASE("post_task delivers exactly once, in order and never inline") {
   }
 }
 
-TEST_CASE("work completing after its context died is dropped, not crashed") {
+TEST_CASE("a dispatcher that stops accepting (runtime teardown) fails "
+          "cancellations and drops completions") {
+  // Models the state production actually reaches: the HostContext is retained
+  // for the process lifetime, but its dispatcher's CallInvoker expires with
+  // the runtime, so dispatchToJs starts returning false.
   FakeJsQueue js;
   auto context = HostContext::create(js.dispatcher());
   hermes_napi_host *host = context->host();
 
-  // Leaked deliberately: complete never runs, so nothing would free it, and
-  // the worker may still be inside execute when the assertions run.
-  auto *work = new GatedWork();
-  host->post_work(host->data, work, GatedWork::execute, GatedWork::complete);
-  work->waitForStarted(1);
+  SECTION("cancel_work reports failure when the cancelled completion can no "
+          "longer be delivered") {
+    auto busy = saturatePool(host);
 
-  // Simulates a React Native runtime teardown: in production the context is
-  // retained for the process lifetime, but the dispatcher's CallInvoker —
-  // modelled here by the context itself — can die while work is in flight.
-  context.reset();
-  work->openGate();
+    auto *target = new GatedWork();
+    host->post_work(host->data, target, GatedWork::execute,
+                    GatedWork::complete);
+    js.setAccepting(false);
+    // The item is removed from the queue, but the cancelled completion cannot
+    // be delivered — so the cancellation must not claim success.
+    REQUIRE(!host->cancel_work(host->data, target));
+    for (auto *job : busy) {
+      job->openGate();
+    }
+    std::this_thread::sleep_for(100ms);
+    REQUIRE(js.size() == 0);
+    REQUIRE(target->executions.load() == 0);
+    REQUIRE(target->completions.load() == 0);
+  }
 
-  // The completion cannot be delivered anywhere; give the worker a moment to
-  // hit the drop path and assert nothing was queued and nothing crashed.
-  std::this_thread::sleep_for(100ms);
-  REQUIRE(js.size() == 0);
-  REQUIRE(work->completions.load() == 0);
+  SECTION("a completion for executed work is dropped, not crashed") {
+    auto *work = new GatedWork();
+    host->post_work(host->data, work, GatedWork::execute, GatedWork::complete);
+    work->waitForStarted(1);
+    js.setAccepting(false);
+    work->openGate();
+    std::this_thread::sleep_for(100ms);
+    REQUIRE(js.size() == 0);
+    REQUIRE(work->completions.load() == 0);
+  }
+
+  SECTION("a rejected post_task is dropped, not crashed") {
+    js.setAccepting(false);
+    std::atomic<int> runs{0};
+    host->post_task(host->data, &runs, [](void *data) {
+      static_cast<std::atomic<int> *>(data)->fetch_add(1);
+    });
+    REQUIRE(js.size() == 0);
+    REQUIRE(js.drain() == 0);
+    REQUIRE(runs.load() == 0);
+  }
 }
