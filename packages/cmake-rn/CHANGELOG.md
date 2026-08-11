@@ -1,5 +1,23 @@
 # cmake-rn
 
+## 0.7.0
+
+### Minor Changes
+
+- 7349c34: Add support for building versioned frameworks for Apple Darwin / macOS
+- bfd07ee: Detect ccache and use when building for Android and Apple
+
+### Patch Changes
+
+- d43350e: Fix auto-linking failures due to lack of padding when renaming install name of libraries, by passing headerpad_max_install_names argument to linker.
+- ea26287: Add support for source maps across CLI bins
+- 9c3dfb4: Error early when using conflicting architectures for across triplets
+- Updated dependencies [ea26287]
+- Updated dependencies [7349c34]
+- Updated dependencies [80ae73b]
+  - react-native-node-api@1.1.0
+  - weak-node-api@0.1.1
+
 ## 0.6.3
 
 ### Patch Changes

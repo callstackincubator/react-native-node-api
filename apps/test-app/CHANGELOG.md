@@ -1,5 +1,18 @@
 # react-native-node-api-test-app
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [ea26287]
+- Updated dependencies [7349c34]
+- Updated dependencies [80ae73b]
+  - react-native-node-api@1.1.0
+  - @react-native-node-api/node-addon-examples@0.1.2
+  - @react-native-node-api/node-tests@0.1.1
+  - weak-node-api@0.1.1
+  - @react-native-node-api/ferric-example@0.1.3
+
 ## 0.2.2
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # gyp-to-cmake
 
+## 0.5.4
+
+### Patch Changes
+
+- ea26287: Add support for source maps across CLI bins
+- 178f205: Fixed escaping bundle ids to no longer contain "\_"
+
 ## 0.5.3
 
 ### Patch Changes
