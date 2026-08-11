@@ -15,39 +15,36 @@ import {
 import { packageDirectory } from "pkg-dir";
 import { readPackage } from "read-pkg";
 
-// FIXME: make this configurable with reasonable fallback before public release
-const HERMES_GIT_URL = "https://github.com/kraenhansen/hermes.git";
+const HERMES_GIT_URL = "https://github.com/facebook/hermes.git";
+
+// Pinned commit on the `static_h` branch, which carries the first-party
+// Node-API implementation under `API/napi`. Bump deliberately: the JSI
+// accessor we rely on (`getVMRuntimeUnsafe`) is documented as unstable, so we
+// vendor a known-good commit rather than tracking a moving branch.
+//
+// This commit includes facebook/hermes#2106 ("give hermes_napi.h public API C
+// linkage"), which wraps the public `hermes_napi_*` entry points (e.g.
+// `hermes_napi_create_env`) in `extern "C"`. Without it those declarations got
+// C++ linkage: the mangled symbols stayed out of the framework's export table
+// under Hermes' global `-fvisibility=hidden`, and consumers linking the
+// framework hit "Undefined symbol: hermes_napi_create_env". We used to patch
+// the header ourselves after cloning; now that the fix is upstream at this pin,
+// no header patching is required.
+//
+// It also includes the immediately following commit, which flips Hermes'
+// `JSI_UNSTABLE` CMake flag back to OFF by default. With it ON, Hermes compiles
+// JSI's unstable `Serialized` / `ISerialization` APIs into `hermesvm`, but
+// React Native never defines `JSI_UNSTABLE` when building the `libjsi.so` it
+// ships in the ReactAndroid AAR. On Android the two are separate shared
+// libraries, so `libhermesvm.so` ended up with undefined references to
+// `facebook::jsi::Serialized` that nothing in the APK defined, and the app died
+// on startup with "cannot locate symbol _ZTIN8facebook3jsi10SerializedE".
+const HERMES_GIT_SHA = "5a795c9f880002c862c9254a26b57199819c97f7";
 
 const platformOption = new Option(
   "--react-native-package <package-name>",
   "The React Native package to vendor Hermes into",
 ).default("react-native");
-
-type PatchJSIHeadersOptions = {
-  reactNativePath: string;
-  hermesJsiPath: string;
-  silent: boolean;
-};
-
-async function patchJsiHeaders({
-  reactNativePath,
-  hermesJsiPath,
-  silent,
-}: PatchJSIHeadersOptions) {
-  const reactNativeJsiPath = path.join(reactNativePath, "ReactCommon/jsi/jsi/");
-  await oraPromise(
-    fs.promises.cp(hermesJsiPath, reactNativeJsiPath, {
-      recursive: true,
-    }),
-    {
-      text: `Copying JSI from patched Hermes to React Native`,
-      successText: "Copied JSI from patched Hermes to React Native",
-      failText: (err) =>
-        `Failed to copy JSI from Hermes to React Native: ${err.message}`,
-      isEnabled: !silent,
-    },
-  );
-}
 
 export const command = new Command("vendor-hermes")
   .argument("[from]", "Path to a file inside the app package", process.cwd())
@@ -75,19 +72,8 @@ export const command = new Command("vendor-hermes")
           paths: [appPackageRoot],
         }),
       );
-      const hermesVersionPath = path.join(
-        reactNativePath,
-        "sdks",
-        ".hermesversion",
-      );
-      assert(
-        fs.existsSync(hermesVersionPath),
-        `Expected a file with a Hermes version at ${prettyPath(hermesVersionPath)}`,
-      );
-
-      const hermesVersion = fs.readFileSync(hermesVersionPath, "utf8").trim();
       if (!silent) {
-        console.log(`Using Hermes version: ${hermesVersion}`);
+        console.log(`Vendoring Hermes at ${HERMES_GIT_SHA}`);
       }
 
       const hermesPath = path.join(reactNativePath, "sdks", "node-api-hermes");
@@ -104,53 +90,49 @@ export const command = new Command("vendor-hermes")
         );
       }
       if (!fs.existsSync(hermesPath)) {
-        const patchedTag = `node-api-${hermesVersion}`;
         try {
+          // GitHub allows fetching a reachable commit by SHA, so we can clone
+          // the pinned commit shallowly without downloading the whole history.
           await oraPromise(
-            spawn(
-              "git",
-              [
-                "clone",
+            (async () => {
+              await fs.promises.mkdir(hermesPath, { recursive: true });
+              const git = (args: string[]) =>
+                spawn("git", args, {
+                  cwd: hermesPath,
+                  outputMode: "buffered",
+                });
+              await git(["init", "--quiet"]);
+              await git(["remote", "add", "origin", HERMES_GIT_URL]);
+              await git(["fetch", "--depth", "1", "origin", HERMES_GIT_SHA]);
+              await git(["checkout", "--quiet", "FETCH_HEAD"]);
+              await git([
+                "submodule",
+                "update",
+                "--init",
                 "--recursive",
                 "--depth",
                 "1",
-                "--branch",
-                patchedTag,
-                HERMES_GIT_URL,
-                hermesPath,
-              ],
-              {
-                outputMode: "buffered",
-              },
-            ),
+              ]);
+            })(),
             {
-              text: `Cloning custom Hermes into ${prettyPath(hermesPath)}`,
-              successText: "Cloned custom Hermes",
-              failText: (err) =>
-                `Failed to clone custom Hermes: ${err.message}`,
+              text: `Cloning Hermes into ${prettyPath(hermesPath)}`,
+              successText: "Cloned Hermes",
+              failText: (err) => `Failed to clone Hermes: ${err.message}`,
               isEnabled: !silent,
             },
           );
         } catch (error) {
-          throw new UsageError("Failed to clone custom Hermes", {
+          // A failed clone can leave a partial checkout behind, which would
+          // make the existence check above skip re-cloning on the next run.
+          await fs.promises.rm(hermesPath, { recursive: true, force: true });
+          throw new UsageError("Failed to clone Hermes", {
             cause: error,
             fix: {
-              instructions: `Check the network connection and ensure this ${chalk.bold("react-native")} version is supported by ${chalk.bold("react-native-node-api")}.`,
+              instructions: `Check the network connection and that the pinned Hermes commit ${chalk.bold(HERMES_GIT_SHA)} is still reachable on ${chalk.bold(HERMES_GIT_URL)}.`,
             },
           });
         }
       }
-      const hermesJsiPath = path.join(hermesPath, "API/jsi/jsi");
-
-      assert(
-        fs.existsSync(hermesJsiPath),
-        `Hermes JSI path does not exist: ${hermesJsiPath}`,
-      );
-      await patchJsiHeaders({
-        reactNativePath,
-        hermesJsiPath,
-        silent,
-      });
       console.log(hermesPath);
     }),
   );

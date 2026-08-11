@@ -60,7 +60,7 @@ patch or workaround:
 
 ## Critical Build Dependencies
 
-- **Custom Hermes**: Currently depends on a patched Hermes with Node-API support (see [facebook/hermes#1377](https://github.com/facebook/hermes/pull/1377))
+- **Vendored Hermes**: Builds Hermes from a pinned commit on the `static_h` branch, which carries Hermes' first-party Node-API implementation (`API/napi`, target `hermesNapi`). The pin lives in `packages/host/src/node/cli/hermes.ts` and is fetched by the `vendor-hermes` command.
 - **Prebuilt Binary Spec**: All tools must output to the exact naming scheme:
   - Android: `*.android.node/` with jniLibs structure + `react-native-node-api-module` marker file
   - iOS: `*.apple.node` (XCFramework renamed) + marker file
