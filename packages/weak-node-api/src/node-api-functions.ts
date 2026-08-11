@@ -78,24 +78,25 @@ export function getNodeApiHeaderAST(version: NodeApiVersion) {
 
 export type FunctionDecl = {
   name: string;
-  kind: "engine" | "runtime";
   returnType: string;
   noReturn: boolean;
   argumentTypes: string[];
-  libraryPath: string;
   fallbackReturnStatement: string;
 };
 
-export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
+export function getNodeApiFunctions(version: NodeApiVersion = "v10") {
   const root = getNodeApiHeaderAST(version);
   assert.equal(root.kind, "TranslationUnitDecl");
   assert(Array.isArray(root.inner));
   const foundSymbols = new Set();
 
+  // Both interfaces are now sourced from the same host (hermesNapi provides
+  // every symbol), so there is no engine/runtime distinction to preserve.
   const symbolsPerInterface = nodeApiHeaders.symbols[version];
-  const engineSymbols = new Set(symbolsPerInterface.js_native_api_symbols);
-  const runtimeSymbols = new Set(symbolsPerInterface.node_api_symbols);
-  const allSymbols = new Set([...engineSymbols, ...runtimeSymbols]);
+  const allSymbols = new Set([
+    ...symbolsPerInterface.js_native_api_symbols,
+    ...symbolsPerInterface.node_api_symbols,
+  ]);
 
   const nodeApiFunctions: FunctionDecl[] = [];
 
@@ -131,14 +132,9 @@ export function getNodeApiFunctions(version: NodeApiVersion = "v8") {
         name,
         returnType,
         noReturn: node.type.qualType.includes("__attribute__((noreturn))"),
-        kind: engineSymbols.has(name) ? "engine" : "runtime",
         argumentTypes: argumentTypes
           .split(",")
           .map((arg) => arg.trim().replace("_Bool", "bool")),
-        // Defer to the right library
-        libraryPath: engineSymbols.has(name)
-          ? "libhermes.so"
-          : "libnode-api-host.so",
         fallbackReturnStatement:
           returnType === "void"
             ? "abort();"
