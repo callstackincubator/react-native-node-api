@@ -38,7 +38,10 @@ function loadTests({
     )) {
       describe(suiteName, () => {
         for (const [exampleName, requireExample] of Object.entries(examples)) {
-          it(exampleName, async () => {
+          it(exampleName, async function () {
+            // Some examples (the threadsafe-function suite in particular)
+            // marshal thousands of values across threads.
+            this.timeout(30_000);
             const test = requireExample();
             if (test instanceof Function) {
               const result = test();

@@ -1,26 +1,9 @@
 #include "CxxNodeApiHostModule.hpp"
 #include "Logger.hpp"
-#include "RuntimeNodeApiAsync.hpp"
 
 #include <jsi/hermes-interfaces.h>
 
 using namespace facebook;
-
-// Declared by the vendored Hermes in API/napi/hermes_napi.h. We forward declare
-// it here (rather than including that header) to avoid pulling in Hermes' own
-// node_api.h alongside the weak-node-api copy already included transitively.
-//
-// The declaration must be `extern "C"`: since facebook/hermes#2106 (included in
-// the pinned Hermes commit) the public hermes_napi.h wraps these entry points
-// in `extern "C"`, so Hermes exports the unmangled C symbol. Without matching C
-// linkage here the reference would be to the C++-mangled name and the app fails
-// to link ("Undefined symbol: hermes_napi_create_env"). Passing host as nullptr
-// is enough — async work / thread-safe functions will return failure until a
-// host integration is wired up (Phase 3).
-extern "C" {
-struct hermes_napi_host;
-napi_env hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host);
-}
 
 namespace callstack::react_native_node_api {
 
@@ -31,6 +14,22 @@ CxxNodeApiHostModule::CxxNodeApiHostModule(
       MethodMetadata{1, &CxxNodeApiHostModule::requireNodeAddon};
 
   callInvoker_ = std::move(jsInvoker);
+
+  // The JS-thread dispatcher behind the hermes_napi_host integration:
+  // CallInvoker::invokeAsync is callable from any thread, never runs the
+  // function inline and delivers in order on the JS thread. The CallInvoker
+  // is captured weakly so tasks in flight during a runtime teardown are
+  // dropped instead of dispatched into a dead runtime.
+  hostContext_ = HostContext::create(
+      [weakInvoker = std::weak_ptr(callInvoker_)](std::function<void()> &&fn) {
+        if (auto invoker = weakInvoker.lock()) {
+          invoker->invokeAsync(std::move(fn));
+        } else {
+          log_warning(
+              "NapiHost: dropping a task posted after runtime teardown");
+        }
+      });
+  HostContext::retainForProcessLifetime(hostContext_);
 }
 
 jsi::Value
@@ -141,7 +140,8 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
                 "create a Node-API environment");
       abort();
     }
-    addon.env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), nullptr);
+    addon.env =
+        hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), hostContext_->host());
     assert(addon.env != nullptr);
   }
   napi_env env = addon.env;
@@ -163,7 +163,6 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
       napi_set_named_property(env, global, addon.generatedName.data(), exports);
   assert(status == napi_ok);
 
-  callstack::react_native_node_api::setCallInvoker(env, callInvoker_);
   return true;
 }
 
