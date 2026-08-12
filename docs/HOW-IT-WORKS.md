@@ -54,7 +54,7 @@ Hermes implements both halves of Node-API: the engine-specific functions (see [j
 - `ref_loop` / `unref_loop` — keep the event loop alive while a thread-safe function is referenced, modelling libuv's "ref" semantics.
 - `fatal_exception` and, for embedders that have one, a libuv loop pointer for `napi_get_uv_event_loop`.
 
-`react-native-node-api` provides that struct, backed by React Native's `CallInvoker` for anything that has to land on the JavaScript thread and a worker pool for the rest.
+`react-native-node-api` provides that struct (see `packages/host/cpp/HermesNapiHost.cpp`), backed by React Native's `CallInvoker` for anything that has to land on the JavaScript thread and a process-global worker pool (four threads, like libuv's default) for the rest. `ref_loop` / `unref_loop` and the libuv loop pointer are deliberately left null: React Native's JavaScript thread has no ref-counted event-loop lifetime to model, so thread-safe function ref/unref are tracked but inert, and `napi_get_uv_event_loop` returns `napi_generic_failure` as upstream documents for hosts without libuv.
 
 ## `my-app` regain control and call `add`
 
