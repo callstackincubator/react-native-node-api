@@ -1,0 +1,20 @@
+version: 2
+
+updates:
+  # Keeps the actions used by .github/workflows in step with their upstream
+  # releases. Without this, majors drift until a runner deprecation (such as the
+  # Node.js 20 removal) turns the drift into a warning on every run.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # One pull request for the whole set: these are updated together anyway, and
+    # a separate pull request per action would drown the queue.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - Dependencies
