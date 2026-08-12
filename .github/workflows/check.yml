@@ -25,18 +25,18 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Two actions below are deliberately held back from their newest release, both
-# because of the Node.js 20 deprecation:
+# Every job sets Node.js up before pnpm, which is the opposite of what pnpm's
+# own docs suggest. pnpm/action-setup v6 bootstraps pnpm by shelling out to
+# `npm ci`, and it finds npm on PATH — on our self-hosted Linux runner the only
+# npm there is the broken copy in the runner's own Node.js 24 externals, so the
+# setup step dies with "Cannot find module '../lib/cli.js'". Running setup-node
+# first puts a working npm ahead of it. The usual ordering exists so that
+# setup-node's `cache: pnpm` can shell out to `pnpm store path`; pnpm's own
+# `cache: true` caches the same store without needing pnpm to already exist.
 #
-# - pnpm/action-setup is pinned to v5, not v6. v6 rewrote the self-installer to
-#   shell out to `npm ci`, and our self-hosted Linux runner has no npm on PATH
-#   beyond the runner's own Node.js 24 externals — where it is broken. v5 is a
-#   Node.js 24 action too, and still bootstraps from a bundled pnpm, so it
-#   clears the deprecation without the new npm dependency. Move to v6 once that
-#   runner has a working npm.
-# - hendrikmuhs/ccache-action is pinned to an exact patch because its floating
-#   v1 / v1.2 tags still point at a Node.js 20 build. Float again once upstream
-#   moves them to >= v1.2.22.
+# hendrikmuhs/ccache-action is pinned to an exact patch, not a floating major:
+# its v1 / v1.2 tags still point at a Node.js 20 build, which the runners now
+# warn about. Float again once upstream moves them to >= v1.2.22.
 
 jobs:
   lint:
@@ -44,11 +44,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -93,11 +94,12 @@ jobs:
     name: Unit tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -132,11 +134,12 @@ jobs:
     name: Weak Node-API tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -161,11 +164,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -205,11 +209,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -253,11 +258,12 @@ jobs:
     runs-on: ubuntu-self-hosted
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -343,11 +349,12 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:

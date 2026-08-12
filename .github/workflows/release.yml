@@ -20,8 +20,8 @@ on:
 # refreshing the "Version Packages" pull request until someone approves. The
 # two jobs that must not overlap carry their own groups instead.
 
-# pnpm/action-setup is pinned to v5 and hendrikmuhs/ccache-action to an exact
-# patch, both for Node.js 20 deprecation reasons. See the note in check.yml.
+# Node.js is set up before pnpm, and hendrikmuhs/ccache-action is pinned to an
+# exact patch rather than a floating major. See the note in check.yml for why.
 
 jobs:
   # changesets/action's sub-actions split the "what should happen?" decision out
@@ -39,11 +39,12 @@ jobs:
       mode: ${{ steps.select.outputs.mode }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       # select-mode runs the locally installed @changesets/cli, so the workspace
       # has to be installed before it.
       - run: pnpm install
@@ -71,11 +72,12 @@ jobs:
       pull-requests: write # the "Version Packages" pull request
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - run: pnpm install
 
       - name: Create Release Pull Request
@@ -98,11 +100,12 @@ jobs:
       id-token: write # NPM trusted publishing
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-          cache: pnpm
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
