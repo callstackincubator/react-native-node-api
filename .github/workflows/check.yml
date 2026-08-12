@@ -25,13 +25,26 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Two actions below are deliberately held back from their newest release, both
+# because of the Node.js 20 deprecation:
+#
+# - pnpm/action-setup is pinned to v5, not v6. v6 rewrote the self-installer to
+#   shell out to `npm ci`, and our self-hosted Linux runner has no npm on PATH
+#   beyond the runner's own Node.js 24 externals — where it is broken. v5 is a
+#   Node.js 24 action too, and still bootstraps from a bundled pnpm, so it
+#   clears the deprecation without the new npm dependency. Move to v6 once that
+#   runner has a working npm.
+# - hendrikmuhs/ccache-action is pinned to an exact patch because its floating
+#   v1 / v1.2 tags still point at a Node.js 20 build. Float again once upstream
+#   moves them to >= v1.2.22.
+
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -41,8 +54,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
@@ -82,7 +93,7 @@ jobs:
     name: Unit tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -92,8 +103,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
@@ -123,7 +132,7 @@ jobs:
     name: Weak Node-API tests (${{ matrix.runner }})
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -133,8 +142,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
@@ -154,7 +161,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -164,8 +171,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
@@ -200,7 +205,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -210,8 +215,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
@@ -250,7 +253,7 @@ jobs:
     runs-on: ubuntu-self-hosted
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -260,8 +263,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
@@ -342,7 +343,7 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -352,8 +353,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}

@@ -20,6 +20,9 @@ on:
 # refreshing the "Version Packages" pull request until someone approves. The
 # two jobs that must not overlap carry their own groups instead.
 
+# pnpm/action-setup is pinned to v5 and hendrikmuhs/ccache-action to an exact
+# patch, both for Node.js 20 deprecation reasons. See the note in check.yml.
+
 jobs:
   # changesets/action's sub-actions split the "what should happen?" decision out
   # of the doing, which is what lets only the publish half sit behind the "main"
@@ -36,7 +39,7 @@ jobs:
       mode: ${{ steps.select.outputs.mode }}
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -68,7 +71,7 @@ jobs:
       pull-requests: write # the "Version Packages" pull request
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -95,7 +98,7 @@ jobs:
       id-token: write # NPM trusted publishing
     steps:
       - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
@@ -105,8 +108,6 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
-        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
