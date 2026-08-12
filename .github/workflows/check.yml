@@ -170,8 +170,20 @@ jobs:
       - uses: pnpm/action-setup@v6
         with:
           cache: true
+      # The device lineup changes with every Xcode release, so pick the first
+      # available iPhone instead of hard-coding one.
       - name: Boot the simulator
-        run: xcrun simctl boot 'iPhone 17'
+        run: |
+          SIMULATOR_UDID=$(xcrun simctl list devices available --json | node -e "
+            const { devices } = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
+            const runtimes = Object.keys(devices).filter((r) => r.includes('iOS')).sort();
+            const device = runtimes.flatMap((r) => devices[r]).find((d) => d.name.startsWith('iPhone'));
+            if (!device) throw new Error('Found no available iPhone simulator');
+            console.log(device.udid);
+          ")
+          echo "Booting $SIMULATOR_UDID"
+          xcrun simctl bootstatus "$SIMULATOR_UDID" -b
+          echo "SIMULATOR_UDID=$SIMULATOR_UDID" >> $GITHUB_ENV
       - name: Setup cpp tools
         uses: aminya/setup-cpp@v1
         with:
@@ -213,9 +225,9 @@ jobs:
       - name: Run test app
         run: |
           # Install the app
-          xcrun simctl install booted ./ios/build/test-app.xcarchive/Products/Applications/ReactTestApp.app
+          xcrun simctl install "$SIMULATOR_UDID" ./ios/build/test-app.xcarchive/Products/Applications/ReactTestApp.app
           # Run Mocha Remote wrapping the launch of the app
-          pnpm exec mocha-remote --exit-on-error -- xcrun simctl launch --terminate-running-process --console-pty booted com.microsoft.ReactTestApp
+          pnpm exec mocha-remote --exit-on-error -- xcrun simctl launch --terminate-running-process --console-pty "$SIMULATOR_UDID" com.microsoft.ReactTestApp
         working-directory: apps/test-app
         env:
           MOCHA_REMOTE_CONTEXT: allTests
