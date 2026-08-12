@@ -58,19 +58,19 @@ jobs:
 
       - name: Create Release Pull Request or Publish to NPM
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          publish: pnpm run release
+          publish-script: pnpm run release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Changesets shells out to `npm info` (there is no pnpm equivalent it
-          # can use) to determine what is already published. npm ≥ 11 checks the
-          # root package.json's "devEngines" on every command and errors with
-          # EBADDEVENGINES because we require pnpm as the package manager, which
-          # fails the publish before it starts. Passing force downgrades that
-          # check to a warning; the actual publishing still runs through
-          # `pnpm publish`. Changesets v3 fixes this properly by running
-          # `pnpm info` when pnpm is detected, but it needs changesets/action v2
-          # to go with it and both are prereleases for now — remove this once we
-          # upgrade to those.
+          # changeset publish detects the pnpm lockfile and correctly shells out
+          # to `pnpm info`/`pnpm pack`/`pnpm publish` instead of npm's — but
+          # `pnpm info` is itself a documented passthrough to the real npm CLI
+          # (confirmed by strace: `pnpm info <pkg>` execs `npm info <pkg>`), so
+          # it still runs into npm ≥ 11 validating this repo's own root
+          # package.json on every invocation and failing with EBADDEVENGINES
+          # (we declare devEngines.packageManager: pnpm, but the process
+          # running is npm). `pnpm pack`/`pnpm publish` don't shell out to npm
+          # and are unaffected. Passing force downgrades the devEngines error
+          # to a warning; this is pnpm's own `info` implementation, so there's
+          # no changesets- or pnpm-version bump that removes the need for it.
           npm_config_force: true
