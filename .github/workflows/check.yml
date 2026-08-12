@@ -220,6 +220,9 @@ jobs:
         env:
           USE_CCACHE: 1
       - name: Build test app
+        # `shell: bash` for pipefail, so xcbeautify's exit code can't mask a
+        # failing xcodebuild. A bare `run:` uses `bash -e` without pipefail.
+        shell: bash
         run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES | xcbeautify
         working-directory: apps/test-app/ios
       - name: Run test app
