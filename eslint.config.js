@@ -62,6 +62,9 @@ export default tseslint.config(
       },
       globals: {
         ...globals.commonjs,
+        // Timers provided by React Native's runtime, where these files run.
+        setTimeout: "readonly",
+        setImmediate: "readonly",
       },
     },
     rules: {
