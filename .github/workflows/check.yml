@@ -193,13 +193,20 @@ jobs:
           echo "CCACHE_DIR=`ccache --get-config cache_dir`" >> $GITHUB_ENV
           echo "CCACHE_MAXSIZE=`ccache --get-config max_size`" >> $GITHUB_ENV
           echo "CCACHE_COMPILERCHECK=`ccache --get-config compiler_check`" >> $GITHUB_ENV
+      # Bundling has to happen *before* `pod install`: react-native-test-app
+      # resolves the resources declared in app.json when it generates the
+      # workspace, warning about and skipping the ones that don't exist yet.
+      # Bundling afterwards leaves the app without an embedded JS bundle, so it
+      # expects a Metro dev server at runtime.
+      # `--assets-dest dist` places the assets in dist/assets, where app.json
+      # expects them (dist/res is the Android convention).
+      - name: Bundle test app
+        run: pnpm exec react-native bundle --entry-file index.ts --platform ios --dev false --minify false --bundle-output dist/main.ios.jsbundle --assets-dest dist
+        working-directory: apps/test-app
       - run: pnpm run pod-install
         working-directory: apps/test-app
         env:
           USE_CCACHE: 1
-      - name: Bundle test app
-        run: pnpm exec react-native bundle --entry-file index.ts --platform ios --dev false --minify false --bundle-output dist/main.ios.jsbundle --assets-dest dist/res
-        working-directory: apps/test-app
       - name: Build test app
         run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES | xcbeautify
         working-directory: apps/test-app/ios
