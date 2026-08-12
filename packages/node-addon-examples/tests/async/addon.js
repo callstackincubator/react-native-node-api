@@ -41,6 +41,78 @@ const doRepeatedWork = (count = 0) =>
     test_async.DoRepeatedWork(workDone);
   });
 
-module.exports = () => {
-  return Promise.all([test(), testCancel(), doRepeatedWork()]);
+const testExecuteThread = () =>
+  new Promise((resolve, reject) => {
+    test_async.TestExecuteThread((executeOffJsThread, completeOnJsThread) => {
+      try {
+        assert.strictEqual(
+          executeOffJsThread,
+          true,
+          "expected execute to run off the JS thread",
+        );
+        assert.strictEqual(
+          completeOnJsThread,
+          true,
+          "expected complete to run on the JS thread",
+        );
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const waitForExecuteStart = async () => {
+  while (!test_async.HasStarted()) {
+    await delay(1);
+  }
+};
+
+const testBlockingExecute = async () => {
+  let completed = false;
+  const completion = new Promise((resolve, reject) => {
+    test_async.TestBlockingExecute((status) => {
+      completed = true;
+      try {
+        assert.strictEqual(status, 0 /* napi_ok */);
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+  await waitForExecuteStart();
+  assert.strictEqual(completed, false);
+  test_async.ReleaseGate();
+  await completion;
+};
+
+const testCancelRunning = async () => {
+  const completion = new Promise((resolve, reject) => {
+    test_async.TestBlockingExecute((status) => {
+      try {
+        assert.strictEqual(status, 0 /* napi_ok */);
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+  await waitForExecuteStart();
+  // The work is executing, so cancellation must fail (unlike TestCancel,
+  // which cancels work that is still queued).
+  const status = test_async.CancelGated();
+  assert.strictEqual(status, 9 /* napi_generic_failure */);
+  test_async.ReleaseGate();
+  await completion;
+};
+
+module.exports = async () => {
+  await Promise.all([test(), testCancel(), doRepeatedWork()]);
+  // The gated tests share state in the addon, so they run sequentially.
+  await testExecuteThread();
+  await testBlockingExecute();
+  await testCancelRunning();
 };
