@@ -47,7 +47,7 @@ The plugin rewrites the `require("./addon.node")` (and `require("bindings")("add
 ### 3. Build your app
 
 - **iOS:** run `pod install` as usual — addons found in your dependencies are linked as part of it. Re-run it whenever you add or remove a dependency shipping an addon.
-- **Android:** requires a few extra steps, since React Native has to be built from source against the patched Hermes. See [the Android documentation](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/ANDROID.md).
+- **Android:** requires a few extra steps, since React Native has to be built from source against the vendored Hermes. See [the Android documentation](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/ANDROID.md).
 
 ## Usage
 
@@ -79,6 +79,6 @@ This prints every Node-API module it finds in your dependencies and the name it 
 ## Documentation
 
 - [Auto-linking](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/AUTO-LINKING.md) — how prebuilt binaries are discovered, copied and renamed.
-- [Android support](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/ANDROID.md) — building React Native from source with the patched Hermes.
+- [Android support](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/ANDROID.md) — building React Native from source with the vendored Hermes.
 - [Usage](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/USAGE.md) — for library authors wanting to ship a Node-API module.
 - [How it works](https://github.com/callstackincubator/react-native-node-api/blob/main/docs/HOW-IT-WORKS.md) — the path from `import` to native code.
