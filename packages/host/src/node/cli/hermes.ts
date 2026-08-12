@@ -39,6 +39,11 @@ const HERMES_GIT_URL = "https://github.com/facebook/hermes.git";
 // libraries, so `libhermesvm.so` ended up with undefined references to
 // `facebook::jsi::Serialized` that nothing in the APK defined, and the app died
 // on startup with "cannot locate symbol _ZTIN8facebook3jsi10SerializedE".
+//
+// When bumping this pin, re-diff the `hermes_napi_host` mirror in
+// cpp/HermesNapiHost.hpp against `API/napi/hermes_napi.h` at the new commit:
+// the struct is mirrored there (not included) and any change to its member
+// order or signatures is an ABI break the compiler cannot catch.
 const HERMES_GIT_SHA = "5a795c9f880002c862c9254a26b57199819c97f7";
 
 const platformOption = new Option(

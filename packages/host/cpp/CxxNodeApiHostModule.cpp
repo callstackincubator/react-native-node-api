@@ -1,26 +1,9 @@
 #include "CxxNodeApiHostModule.hpp"
 #include "Logger.hpp"
-#include "RuntimeNodeApiAsync.hpp"
 
 #include <jsi/hermes-interfaces.h>
 
 using namespace facebook;
-
-// Declared by the vendored Hermes in API/napi/hermes_napi.h. We forward declare
-// it here (rather than including that header) to avoid pulling in Hermes' own
-// node_api.h alongside the weak-node-api copy already included transitively.
-//
-// The declaration must be `extern "C"`: since facebook/hermes#2106 (included in
-// the pinned Hermes commit) the public hermes_napi.h wraps these entry points
-// in `extern "C"`, so Hermes exports the unmangled C symbol. Without matching C
-// linkage here the reference would be to the C++-mangled name and the app fails
-// to link ("Undefined symbol: hermes_napi_create_env"). Passing host as nullptr
-// is enough — async work / thread-safe functions will return failure until a
-// host integration is wired up (Phase 3).
-extern "C" {
-struct hermes_napi_host;
-napi_env hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host);
-}
 
 namespace callstack::react_native_node_api {
 
@@ -31,6 +14,40 @@ CxxNodeApiHostModule::CxxNodeApiHostModule(
       MethodMetadata{1, &CxxNodeApiHostModule::requireNodeAddon};
 
   callInvoker_ = std::move(jsInvoker);
+
+  // The JS-thread dispatcher behind the hermes_napi_host integration:
+  // CallInvoker::invokeAsync is callable from any thread, never runs the
+  // function inline and delivers in order on the JS thread.
+  //
+  // Teardown is the load-bearing case. What the host integration needs is
+  // that a function handed to this dispatcher either runs on the JS thread
+  // while the runtime is alive, or is dropped — never invoked against a
+  // destroyed runtime. In bridgeless React Native the CallInvoker received
+  // here is a RuntimeSchedulerCallInvoker holding a std::weak_ptr to the
+  // RuntimeScheduler; the ReactInstance owns scheduler and runtime together
+  // and invokeAsync no-ops once the scheduler is gone, so work cannot outlive
+  // the runtime it targets. The weak capture below covers the remaining
+  // window where this module (and its CallInvoker reference) is released
+  // during instance teardown.
+  //
+  // Dropping is safe precisely because a drop implies that teardown: every
+  // env this host serves is owned by that same runtime and destroyed with it,
+  // so the completion or tsfn dispatch being dropped has no live observer.
+  // The one caller that could still see the difference —
+  // napi_cancel_async_work — receives the verdict through this dispatcher's
+  // return value (see HostContext::cancelWork).
+  hostContext_ = HostContext::create(
+      [weakInvoker = std::weak_ptr(callInvoker_)](std::function<void()> &&fn) {
+        auto invoker = weakInvoker.lock();
+        if (!invoker) {
+          log_warning(
+              "NapiHost: dropping a task posted after runtime teardown");
+          return false;
+        }
+        invoker->invokeAsync(std::move(fn));
+        return true;
+      });
+  HostContext::retainForProcessLifetime(hostContext_);
 }
 
 jsi::Value
@@ -141,7 +158,8 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
                 "create a Node-API environment");
       abort();
     }
-    addon.env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), nullptr);
+    addon.env =
+        hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), hostContext_->host());
     assert(addon.env != nullptr);
   }
   napi_env env = addon.env;
@@ -163,7 +181,6 @@ bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
       napi_set_named_property(env, global, addon.generatedName.data(), exports);
   assert(status == napi_ok);
 
-  callstack::react_native_node_api::setCallInvoker(env, callInvoker_);
   return true;
 }
 
