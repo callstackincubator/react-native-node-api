@@ -5,6 +5,7 @@
 #include <node_api.h>
 
 #include "AddonLoaders.hpp"
+#include "HermesNapiHost.hpp"
 
 namespace callstack::react_native_node_api {
 
@@ -37,6 +38,9 @@ protected:
   };
   std::unordered_map<std::string, NodeAddon> nodeAddons_;
   std::shared_ptr<facebook::react::CallInvoker> callInvoker_;
+  // The hermes_napi_host integration passed to every env this module creates.
+  // Also retained process-wide, as the envs outlive this module on teardown.
+  std::shared_ptr<HostContext> hostContext_;
 
   using LoaderPolicy = PosixLoader; // FIXME: HACK: This is temporary workaround
                                     // for my lazyness (work on iOS and Android)
