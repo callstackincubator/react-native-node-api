@@ -17,6 +17,7 @@
     "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake run test",
     "bootstrap": "node --run build && pnpm --recursive run bootstrap",
     "changeset": "changeset",
+    "unpublished-packages": "node scripts/unpublished-packages.ts",
     "release": "node --run prerelease && changeset publish",
     "prerelease": "node --run build && pnpm --recursive run prerelease && node --run publint",
     "init-macos-test-app": "node scripts/init-macos-test-app.ts"

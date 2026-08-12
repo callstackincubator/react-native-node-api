@@ -18,16 +18,54 @@ on:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  release:
-    name: Release
+  # Opening (or updating) the "Version Packages" pull request touches nothing
+  # outside this repository, so it deliberately runs without the "main"
+  # environment: only the publish job below waits for a deployment approval.
+  # Passing no publish-script also means changesets/action can never publish
+  # from here — with changesets pending it opens the pull request, and without
+  # it exits early, leaving the decision to the publish job.
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the version branch
+      pull-requests: write # the "Version Packages" pull request
+    outputs:
+      has-changesets: ${{ steps.changesets.outputs.has-changesets }}
+      unpublished: ${{ steps.unpublished.outputs.unpublished }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/krypton
+          cache: pnpm
+      - run: pnpm install
+
+      - name: Create Release Pull Request
+        id: changesets
+        uses: changesets/action@v2
+
+      # Merging the "Version Packages" pull request is not the only way to land
+      # a commit without changesets — chores, docs and CI changes do it too, and
+      # those must not queue up a deployment approval for a no-op publish. Ask
+      # the registry whether anything is actually missing from it instead.
+      - name: Check for unpublished package versions
+        id: unpublished
+        if: steps.changesets.outputs.has-changesets == 'false'
+        run: pnpm run unpublished-packages
+
+  publish:
+    name: Publish
+    needs: version
+    if: needs.version.outputs.has-changesets == 'false' && needs.version.outputs.unpublished == 'true'
     runs-on: macos-latest
     environment: main
     # Publishing to NPM happens through trusted publishing, which needs an OIDC
     # token. Declaring permissions at all narrows them to exactly what is listed,
-    # so the two the changesets action already relied on are spelled out too.
+    # so the one the changesets action already relied on is spelled out too.
     permissions:
-      contents: write # version commits, git tags and GitHub releases
-      pull-requests: write # the "Version Packages" pull request
+      contents: write # git tags and GitHub releases
       id-token: write # NPM trusted publishing
     steps:
       - uses: actions/checkout@v4
@@ -56,8 +94,7 @@ jobs:
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: pnpm install
 
-      - name: Create Release Pull Request or Publish to NPM
-        id: changesets
+      - name: Publish to NPM
         uses: changesets/action@v2
         with:
           publish-script: pnpm run release
