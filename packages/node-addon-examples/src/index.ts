@@ -77,13 +77,16 @@ export const suites: Record<
       }, ["hello world"]),
   },
   "5-async-work": {
-    // TODO: This crashes (SIGABRT)
-    // "async_work_thread_safe_function": () => require("../examples/5-async-work/async_work_thread_safe_function/napi/index.js"),
+    async_work_thread_safe_function: () => {
+      require("../examples/5-async-work/async_work_thread_safe_function/napi/index.js");
+    },
   },
   tests: {
     buffers: () => {
       require("../tests/buffers/addon.js");
     },
     async: () => require("../tests/async/addon.js") as () => Promise<void>,
+    "threadsafe-function": () =>
+      require("../tests/threadsafe-function/addon.js") as () => Promise<void>,
   },
 };

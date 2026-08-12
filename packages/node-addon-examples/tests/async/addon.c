@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <node_api.h>
+#include <pthread.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -242,11 +244,152 @@ static napi_value DoRepeatedWork(napi_env env, napi_callback_info info) {
   return NULL;
 }
 
+// The thread the addon was initialized on, i.e. the JS thread.
+static pthread_t js_thread;
+
+typedef struct {
+  pthread_t execute_thread;
+  napi_ref callback;
+  napi_async_work work;
+} thread_check_carrier;
+
+static thread_check_carrier thread_check;
+
+static void ThreadCheckExecute(napi_env env, void* data) {
+  thread_check_carrier* c = (thread_check_carrier*)data;
+  c->execute_thread = pthread_self();
+}
+
+static void ThreadCheckComplete(napi_env env, napi_status status, void* data) {
+  thread_check_carrier* c = (thread_check_carrier*)data;
+  napi_value argv[2];
+  NODE_API_CALL_RETURN_VOID(env,
+      napi_get_boolean(
+          env, !pthread_equal(c->execute_thread, js_thread), &argv[0]));
+  NODE_API_CALL_RETURN_VOID(env,
+      napi_get_boolean(env, pthread_equal(pthread_self(), js_thread), &argv[1]));
+  napi_value callback;
+  NODE_API_CALL_RETURN_VOID(
+      env, napi_get_reference_value(env, c->callback, &callback));
+  napi_value global;
+  NODE_API_CALL_RETURN_VOID(env, napi_get_global(env, &global));
+  NODE_API_CALL_RETURN_VOID(
+      env, napi_call_function(env, global, callback, 2, argv, NULL));
+  NODE_API_CALL_RETURN_VOID(env, napi_delete_reference(env, c->callback));
+  NODE_API_CALL_RETURN_VOID(env, napi_delete_async_work(env, c->work));
+}
+
+// Queues work whose execute records its thread; the callback receives
+// (executeRanOffJsThread, completeRanOnJsThread) booleans.
+static napi_value TestExecuteThread(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value cb, resource_name;
+  NODE_API_CALL(env, napi_get_cb_info(env, info, &argc, &cb, NULL, NULL));
+  NODE_API_CALL(env, napi_create_reference(env, cb, 1, &thread_check.callback));
+  NODE_API_CALL(env,
+      napi_create_string_utf8(
+          env, "TestExecuteThread", NAPI_AUTO_LENGTH, &resource_name));
+  NODE_API_CALL(env,
+      napi_create_async_work(env,
+          NULL,
+          resource_name,
+          ThreadCheckExecute,
+          ThreadCheckComplete,
+          &thread_check,
+          &thread_check.work));
+  NODE_API_CALL(env, napi_queue_async_work(env, thread_check.work));
+  return NULL;
+}
+
+static atomic_bool gate_open;
+static atomic_bool gate_started;
+
+typedef struct {
+  napi_ref callback;
+  napi_async_work work;
+} gated_carrier;
+
+static gated_carrier gated;
+
+static void GatedExecute(napi_env env, void* data) {
+  atomic_store(&gate_started, true);
+  while (!atomic_load(&gate_open)) {
+    sleep_ms(1);
+  }
+}
+
+static void GatedComplete(napi_env env, napi_status status, void* data) {
+  gated_carrier* c = (gated_carrier*)data;
+  napi_value argv[1];
+  NODE_API_CALL_RETURN_VOID(
+      env, napi_create_uint32(env, (uint32_t)status, &argv[0]));
+  napi_value callback;
+  NODE_API_CALL_RETURN_VOID(
+      env, napi_get_reference_value(env, c->callback, &callback));
+  napi_value global;
+  NODE_API_CALL_RETURN_VOID(env, napi_get_global(env, &global));
+  NODE_API_CALL_RETURN_VOID(
+      env, napi_call_function(env, global, callback, 1, argv, NULL));
+  NODE_API_CALL_RETURN_VOID(env, napi_delete_reference(env, c->callback));
+  NODE_API_CALL_RETURN_VOID(env, napi_delete_async_work(env, c->work));
+}
+
+// Queues work whose execute blocks until ReleaseGate() is called from JS. If
+// execute ran on the JS thread (as the pre-hermes_napi_host implementation
+// did), the JS thread could never call ReleaseGate and the test would hang.
+static napi_value TestBlockingExecute(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value cb, resource_name;
+  atomic_store(&gate_open, false);
+  atomic_store(&gate_started, false);
+  NODE_API_CALL(env, napi_get_cb_info(env, info, &argc, &cb, NULL, NULL));
+  NODE_API_CALL(env, napi_create_reference(env, cb, 1, &gated.callback));
+  NODE_API_CALL(env,
+      napi_create_string_utf8(
+          env, "TestBlockingExecute", NAPI_AUTO_LENGTH, &resource_name));
+  NODE_API_CALL(env,
+      napi_create_async_work(env,
+          NULL,
+          resource_name,
+          GatedExecute,
+          GatedComplete,
+          &gated,
+          &gated.work));
+  NODE_API_CALL(env, napi_queue_async_work(env, gated.work));
+  return NULL;
+}
+
+static napi_value HasStarted(napi_env env, napi_callback_info info) {
+  napi_value result;
+  NODE_API_CALL(env, napi_get_boolean(env, atomic_load(&gate_started), &result));
+  return result;
+}
+
+static napi_value ReleaseGate(napi_env env, napi_callback_info info) {
+  atomic_store(&gate_open, true);
+  return NULL;
+}
+
+// Attempts to cancel the gated work and returns napi_cancel_async_work's
+// status as a number, so JS can assert cancelling running work fails.
+static napi_value CancelGated(napi_env env, napi_callback_info info) {
+  napi_status status = napi_cancel_async_work(env, gated.work);
+  napi_value result;
+  NODE_API_CALL(env, napi_create_uint32(env, (uint32_t)status, &result));
+  return result;
+}
+
 static napi_value Init(napi_env env, napi_value exports) {
+  js_thread = pthread_self();
   napi_property_descriptor properties[] = {
       DECLARE_NODE_API_PROPERTY("Test", Test),
       DECLARE_NODE_API_PROPERTY("TestCancel", TestCancel),
       DECLARE_NODE_API_PROPERTY("DoRepeatedWork", DoRepeatedWork),
+      DECLARE_NODE_API_PROPERTY("TestExecuteThread", TestExecuteThread),
+      DECLARE_NODE_API_PROPERTY("TestBlockingExecute", TestBlockingExecute),
+      DECLARE_NODE_API_PROPERTY("HasStarted", HasStarted),
+      DECLARE_NODE_API_PROPERTY("ReleaseGate", ReleaseGate),
+      DECLARE_NODE_API_PROPERTY("CancelGated", CancelGated),
   };
 
   NODE_API_CALL(env,

@@ -159,6 +159,42 @@ jobs:
           cmake --build build
           ctest --test-dir build --output-on-failure
         working-directory: packages/weak-node-api
+  host-cpp-tests:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'host')
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+    runs-on: ${{ matrix.runner }}
+    name: Host C++ tests (${{ matrix.runner }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/krypton
+          cache: pnpm
+      - name: Setup cpp tools
+        uses: aminya/setup-cpp@v1
+        with:
+          clang-format: true
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ runner.os }}
+      - run: pnpm install
+      - run: pnpm run build
+      - name: Prepare weak-node-api
+        run: pnpm --filter weak-node-api run prebuild:prepare
+      - name: Build and run react-native-node-api host C++ tests
+        run: |
+          cmake -S tests -B tests/build
+          cmake --build tests/build
+          ctest --test-dir tests/build --output-on-failure
+        working-directory: packages/host
   test-ios:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
     name: Test app (iOS)
