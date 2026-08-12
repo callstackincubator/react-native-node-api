@@ -449,14 +449,19 @@ jobs:
           # Verify every binary depends on the weak-node-api framework.
           # otool -L prints one header line per file, or one per architecture
           # when the file is fat, so the number of headers is exactly the number
-          # of "@rpath/weak-node-api.framework/weak-node-api" lines we expect.
-          # Deriving it beats hard-coding a count, which silently rots whenever
-          # a triplet is added or dropped.
+          # of weak-node-api dependencies we expect. Deriving it beats
+          # hard-coding a count, which silently rots whenever a triplet is added
+          # or dropped.
+          # macOS frameworks use the versioned bundle layout, so their install
+          # name is .../weak-node-api.framework/Versions/<version>/weak-node-api
+          # where the embedded platforms get the flat
+          # .../weak-node-api.framework/weak-node-api — hence the optional
+          # "Versions/<version>/" in the pattern.
           SLICE_COUNT=$(grep -c "^ferric_example\.apple\.node/.*:$" otool-output.txt || true)
-          WEAK_NODE_API_COUNT=$(grep -c "@rpath/weak-node-api\.framework/weak-node-api" otool-output.txt || true)
+          WEAK_NODE_API_COUNT=$(grep -cE "@rpath/weak-node-api\.framework/(Versions/[^/]+/)?weak-node-api" otool-output.txt || true)
           echo "Found $WEAK_NODE_API_COUNT weak-node-api dependencies across $SLICE_COUNT binaries"
           if [ "$SLICE_COUNT" -eq 0 ] || [ "$WEAK_NODE_API_COUNT" -ne "$SLICE_COUNT" ]; then
-            echo "Expected $SLICE_COUNT occurrences of @rpath/weak-node-api.framework/weak-node-api (one per binary), found $WEAK_NODE_API_COUNT"
+            echo "Expected $SLICE_COUNT dependencies on the weak-node-api framework (one per binary), found $WEAK_NODE_API_COUNT"
             cat otool-output.txt
             exit 1
           fi
