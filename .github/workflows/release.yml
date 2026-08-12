@@ -15,24 +15,57 @@ on:
     branches:
       - main
 
-concurrency: ${{ github.workflow }}-${{ github.ref }}
+# Deliberately no workflow-level concurrency: a publish waiting for its
+# deployment approval would hold the group and keep every later push from
+# refreshing the "Version Packages" pull request until someone approves. The
+# two jobs that must not overlap carry their own groups instead.
 
 jobs:
+  # changesets/action's sub-actions split the "what should happen?" decision out
+  # of the doing, which is what lets only the publish half sit behind the "main"
+  # environment. select-mode answers with 'version' (changesets are pending),
+  # 'publish' (no changesets and the registry is missing one of our versions) or
+  # 'none' — the last being every chore, docs and CI commit, which now finishes
+  # here instead of queuing a deployment approval for a no-op publish.
+  mode:
+    name: Select mode
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.select.outputs.mode }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/krypton
+          cache: pnpm
+      # select-mode runs the locally installed @changesets/cli, so the workspace
+      # has to be installed before it.
+      - run: pnpm install
+
+      - id: select
+        uses: changesets/action/select-mode@v2
+        env:
+          # select-mode shells out to `changeset publish-plan`, which asks the
+          # registry which versions are missing — and that goes through
+          # `pnpm info`, so it needs the same escape hatch as publishing does.
+          # See the comment on the publish job below.
+          npm_config_force: true
+
   # Opening (or updating) the "Version Packages" pull request touches nothing
   # outside this repository, so it deliberately runs without the "main"
   # environment: only the publish job below waits for a deployment approval.
-  # Passing no publish-script also means changesets/action can never publish
-  # from here — with changesets pending it opens the pull request, and without
-  # it exits early, leaving the decision to the publish job.
   version:
     name: Version
+    needs: mode
+    if: needs.mode.outputs.mode == 'version'
     runs-on: ubuntu-latest
+    concurrency: ${{ github.workflow }}-version-${{ github.ref }}
     permissions:
       contents: write # the version branch
       pull-requests: write # the "Version Packages" pull request
-    outputs:
-      has-changesets: ${{ steps.changesets.outputs.has-changesets }}
-      unpublished: ${{ steps.unpublished.outputs.unpublished }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -43,24 +76,17 @@ jobs:
       - run: pnpm install
 
       - name: Create Release Pull Request
-        id: changesets
-        uses: changesets/action@v2
-
-      # Merging the "Version Packages" pull request is not the only way to land
-      # a commit without changesets — chores, docs and CI changes do it too, and
-      # those must not queue up a deployment approval for a no-op publish. Ask
-      # the registry whether anything is actually missing from it instead.
-      - name: Check for unpublished package versions
-        id: unpublished
-        if: steps.changesets.outputs.has-changesets == 'false'
-        run: pnpm run unpublished-packages
+        uses: changesets/action/version@v2
 
   publish:
     name: Publish
-    needs: version
-    if: needs.version.outputs.has-changesets == 'false' && needs.version.outputs.unpublished == 'true'
+    needs: mode
+    if: needs.mode.outputs.mode == 'publish'
     runs-on: macos-latest
     environment: main
+    concurrency:
+      group: ${{ github.workflow }}-publish-${{ github.ref }}
+      cancel-in-progress: false # never interrupt a release that is mid-flight
     # Publishing to NPM happens through trusted publishing, which needs an OIDC
     # token. Declaring permissions at all narrows them to exactly what is listed,
     # so the one the changesets action already relied on is spelled out too.
@@ -95,9 +121,9 @@ jobs:
       - run: pnpm install
 
       - name: Publish to NPM
-        uses: changesets/action@v2
+        uses: changesets/action/publish@v2
         with:
-          publish-script: pnpm run release
+          script: pnpm run release
         env:
           # changeset publish detects the pnpm lockfile and correctly shells out
           # to `pnpm info`/`pnpm pack`/`pnpm publish` instead of npm's — but
@@ -110,4 +136,6 @@ jobs:
           # and are unaffected. Passing force downgrades the devEngines error
           # to a warning; this is pnpm's own `info` implementation, so there's
           # no changesets- or pnpm-version bump that removes the need for it.
+          # Scoped to this step on purpose: as workflow-level env it would also
+          # reach `pnpm install`, where force means "recreate the lockfile".
           npm_config_force: true
