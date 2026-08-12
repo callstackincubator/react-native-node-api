@@ -90,7 +90,7 @@ export const command = new Command("vendor-hermes")
             successText: "Removed existing Hermes clone",
             failText: (error) =>
               `Failed to remove existing Hermes clone: ${error.message}`,
-            isEnabled: !silent,
+            isSilent: silent,
           },
         );
       }
@@ -123,7 +123,7 @@ export const command = new Command("vendor-hermes")
               text: `Cloning Hermes into ${prettyPath(hermesPath)}`,
               successText: "Cloned Hermes",
               failText: (err) => `Failed to clone Hermes: ${err.message}`,
-              isEnabled: !silent,
+              isSilent: silent,
             },
           );
         } catch (error) {
