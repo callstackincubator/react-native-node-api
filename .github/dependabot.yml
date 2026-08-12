@@ -16,3 +16,5 @@ updates:
           - "*"
     commit-message:
       prefix: "ci"
+    labels:
+      - Dependencies
