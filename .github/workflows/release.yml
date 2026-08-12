@@ -41,9 +41,13 @@ jobs:
         with:
           node-version: lts/krypton
           cache: pnpm
-      # select-mode runs the locally installed @changesets/cli, so the workspace
-      # has to be installed before it.
-      - run: pnpm install
+      # select-mode runs the locally installed @changesets/cli, which resolves
+      # from the repo root — and the changesets CLI reads the workspace from
+      # pnpm-workspace.yaml and the package.json files on disk, not from
+      # node_modules. Installing only the root project is therefore enough, and
+      # skips ~250 packages the two changesets jobs never load. Revisit if a
+      # `script` input is ever passed to one of them.
+      - run: pnpm install --filter "{.}"
 
       - id: select
         uses: changesets/action/select-mode@v2
@@ -73,7 +77,11 @@ jobs:
         with:
           node-version: lts/krypton
           cache: pnpm
-      - run: pnpm install
+      # Root-only, for the same reason as the select job above. `changeset
+      # version` rewrites package.json versions and CHANGELOG.md files; it
+      # leaves pnpm-lock.yaml alone, because every internal dependency here is
+      # declared as `workspace:*` and so records no version to bump.
+      - run: pnpm install --filter "{.}"
 
       - name: Create Release Pull Request
         uses: changesets/action/version@v2
