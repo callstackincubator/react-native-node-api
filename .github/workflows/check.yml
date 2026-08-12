@@ -30,9 +30,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -41,18 +41,20 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
       # TODO: Remove this once we have a way to run linting without building the native code
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android
@@ -79,9 +81,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     name: Unit tests (${{ matrix.runner }})
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -90,16 +92,18 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
@@ -118,9 +122,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     name: Weak Node-API tests (${{ matrix.runner }})
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -129,7 +133,9 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - run: pnpm install
@@ -147,9 +153,9 @@ jobs:
     name: Test app (iOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -158,16 +164,18 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
@@ -191,9 +199,9 @@ jobs:
     name: Test app (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -202,11 +210,13 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
@@ -239,9 +249,9 @@ jobs:
     name: Test app (Android)
     runs-on: ubuntu-self-hosted
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -250,16 +260,18 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: tools platform-tools ndk;${{ env.NDK_VERSION }} cmake;${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
@@ -275,7 +287,7 @@ jobs:
           echo "REACT_NATIVE_OVERRIDE_HERMES_DIR=$REACT_NATIVE_OVERRIDE_HERMES_DIR" >> $GITHUB_ENV
         working-directory: apps/test-app
       # - name: Setup Android Emulator cache
-      #   uses: actions/cache@v4
+      #   uses: actions/cache@v6
       #   id: avd-cache
       #   with:
       #     path: |
@@ -320,7 +332,7 @@ jobs:
             kill $LOGCAT_PID || true
       - name: Upload device logs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: emulator-logcat
           path: apps/test-app/emulator-logcat.txt
@@ -329,9 +341,9 @@ jobs:
     name: Test ferric Apple triplets
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
           cache: pnpm
@@ -340,11 +352,13 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
+        # Pinned to an exact patch: the floating v1 / v1.2 tags still point at a
+        # Node.js 20 build. Float again once upstream moves them to >= v1.2.22.
+        uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v5
         with:
           java-version: "17"
           distribution: "temurin"
@@ -363,7 +377,7 @@ jobs:
         run: lipo -info ferric_example.apple.node/*/libferric_example.framework/libferric_example > lipo-info.txt
         working-directory: packages/ferric-example
       - name: Upload lipo info
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: lipo-info
           path: packages/ferric-example/lipo-info.txt
