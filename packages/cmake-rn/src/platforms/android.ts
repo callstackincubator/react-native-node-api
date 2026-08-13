@@ -14,7 +14,7 @@ import {
 import * as cmakeFileApi from "cmake-file-api";
 
 import type { BaseOpts, Platform } from "./types.js";
-import { toDefineArguments } from "../helpers.js";
+import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
   getWeakNodeApiVariables,
@@ -201,7 +201,6 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     await Promise.all(
       triplets.map(async ({ triplet, spawn }) => {
         const buildPath = getBuildPath(build, triplet, configuration);
-        const outputPath = path.join(buildPath, "out");
         // We want to use the CMake File API to query information later
         await cmakeFileApi.createSharedStatelessQuery(
           buildPath,
@@ -226,7 +225,6 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
             ...commonDefinitions,
             {
               // "CPACK_SYSTEM_NAME": `Android-${architecture}`,
-              CMAKE_LIBRARY_OUTPUT_DIRECTORY: outputPath,
               ANDROID_ABI: ANDROID_ARCHITECTURES[triplet],
             },
           ]),
@@ -247,13 +245,20 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
   async postBuild(
-    outputPath,
+    resolveOutputPath,
     triplets,
     { autoLink, configuration, target, build, strip, ndkVersion },
   ) {
+    // Keyed by CMake target name, which CMake guarantees to be unique within a
+    // project. The artifact name is not: every addon of a multi-addon project
+    // may well build an "addon.node".
     const prebuilds: Record<
       string,
-      { triplet: Triplet; libraryPath: string }[]
+      {
+        artifactName: string;
+        targetSourceDir: string;
+        libraries: { triplet: Triplet; libraryPath: string }[];
+      }
     > = {};
 
     for (const { triplet, spawn } of triplets) {
@@ -269,47 +274,51 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           type === "SHARED_LIBRARY" &&
           (target.length === 0 || target.includes(name)),
       );
-      assert.equal(
-        sharedLibraries.length,
-        1,
-        "Expected exactly one shared library",
-      );
-      const [sharedLibrary] = sharedLibraries;
-      const { artifacts } = sharedLibrary;
-      assert(
-        artifacts && artifacts.length === 1,
-        "Expected exactly one artifact",
-      );
-      const [artifact] = artifacts;
-      // Add prebuild entry, creating a new entry if needed
-      if (!(sharedLibrary.name in prebuilds)) {
-        prebuilds[sharedLibrary.name] = [];
-      }
-      const libraryPath = path.join(buildPath, artifact.path);
-      assert(
-        fs.existsSync(libraryPath),
-        `Expected built library at ${libraryPath}`,
-      );
+      await Promise.all(
+        sharedLibraries.map(async (sharedLibrary) => {
+          const { artifacts } = sharedLibrary;
+          assert(
+            artifacts && artifacts.length === 1,
+            "Expected exactly one artifact",
+          );
+          const [artifact] = artifacts;
+          // Add prebuild entry, creating a new entry if needed
+          if (!(sharedLibrary.name in prebuilds)) {
+            prebuilds[sharedLibrary.name] = {
+              artifactName: getArtifactName(artifact.path),
+              targetSourceDir: sharedLibrary.paths.source,
+              libraries: [],
+            };
+          }
+          const libraryPath = path.join(buildPath, artifact.path);
+          assert(
+            fs.existsSync(libraryPath),
+            `Expected built library at ${libraryPath}`,
+          );
 
-      if (strip) {
-        const llvmBinPath = getNdkLlvmBinPath(getNdkPath(ndkVersion));
-        const stripToolPath = path.join(llvmBinPath, `llvm-strip`);
-        assert(
-          fs.existsSync(stripToolPath),
-          `Expected llvm-strip to exist at ${stripToolPath}`,
-        );
-        await spawn(stripToolPath, [libraryPath]);
-      }
-      prebuilds[sharedLibrary.name].push({
-        triplet,
-        libraryPath,
-      });
+          if (strip) {
+            const llvmBinPath = getNdkLlvmBinPath(getNdkPath(ndkVersion));
+            const stripToolPath = path.join(llvmBinPath, `llvm-strip`);
+            assert(
+              fs.existsSync(stripToolPath),
+              `Expected llvm-strip to exist at ${stripToolPath}`,
+            );
+            await spawn(stripToolPath, [libraryPath]);
+          }
+          prebuilds[sharedLibrary.name].libraries.push({
+            triplet,
+            libraryPath,
+          });
+        }),
+      );
     }
 
-    for (const [libraryName, libraries] of Object.entries(prebuilds)) {
+    for (const { artifactName, targetSourceDir, libraries } of Object.values(
+      prebuilds,
+    )) {
       const prebuildOutputPath = path.resolve(
-        outputPath,
-        `${libraryName}.android.node`,
+        resolveOutputPath(targetSourceDir),
+        `${artifactName}.android.node`,
       );
       await oraPromise(
         createAndroidLibsDirectory({
@@ -318,10 +327,10 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           autoLink,
         }),
         {
-          text: `Assembling Android libs directory (${libraryName})`,
-          successText: `Android libs directory (${libraryName}) assembled into ${prettyPath(prebuildOutputPath)}`,
+          text: `Assembling Android libs directory (${artifactName})`,
+          successText: `Android libs directory (${artifactName}) assembled into ${prettyPath(prebuildOutputPath)}`,
           failText: ({ message }) =>
-            `Failed to assemble Android libs directory (${libraryName}): ${message}`,
+            `Failed to assemble Android libs directory (${artifactName}): ${message}`,
         },
       );
     }

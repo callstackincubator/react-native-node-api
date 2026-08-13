@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 import cp from "node:child_process";
+import { promisify } from "node:util";
 
 import {
   assertFixable,
@@ -18,7 +19,7 @@ import {
 
 import type { Platform } from "./types.js";
 import * as cmakeFileApi from "cmake-file-api";
-import { toDefineArguments } from "../helpers.js";
+import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
   getWeakNodeApiVariables,
@@ -35,17 +36,16 @@ const XcodeListOutput = z.object({
   }),
 });
 
-function listXcodeProject(cwd: string): z.infer<typeof XcodeListOutput> {
-  const result = cp.spawnSync("xcodebuild", ["-list", "-json"], {
+const execFile = promisify(cp.execFile);
+
+async function listXcodeProject(
+  cwd: string,
+): Promise<z.infer<typeof XcodeListOutput>> {
+  const { stdout } = await execFile("xcodebuild", ["-list", "-json"], {
     encoding: "utf-8",
     cwd,
   });
-  assert.equal(
-    result.status,
-    0,
-    `Failed to run xcodebuild -list: ${result.stderr}`,
-  );
-  const parsed = JSON.parse(result.stdout) as unknown;
+  const parsed = JSON.parse(stdout) as unknown;
   return XcodeListOutput.parse(parsed);
 }
 
@@ -176,7 +176,7 @@ function getBuildPath(baseBuildPath: string, triplet: Triplet) {
   return path.join(baseBuildPath, triplet.replace(/;/g, "_"));
 }
 
-async function readCmakeSharedLibraryTarget(
+async function readCmakeSharedLibraryTargets(
   buildPath: string,
   configuration: string,
   target: string[],
@@ -186,18 +186,11 @@ async function readCmakeSharedLibraryTarget(
     configuration,
     "2.0",
   );
-  const sharedLibraries = targets.filter(
+  return targets.filter(
     ({ type, name }) =>
       type === "SHARED_LIBRARY" &&
       (target.length === 0 || target.includes(name)),
   );
-  assert.equal(
-    sharedLibraries.length,
-    1,
-    "Expected exactly one shared library",
-  );
-  const [sharedLibrary] = sharedLibraries;
-  return sharedLibrary;
 }
 
 const SIMULATOR_TRIPLET_SUFFIXES = [
@@ -363,8 +356,22 @@ export const platform: Platform<Triplet[], AppleOpts> = {
               // where an unexpanded variable would emitted in the artifact paths.
               // This is okay, since we're generating per triplet build directories anyway.
               // https://gitlab.kitware.com/cmake/cmake/-/issues/24161
-              CMAKE_LIBRARY_OUTPUT_DIRECTORY: path.join(buildPath, "out"),
-              CMAKE_ARCHIVE_OUTPUT_DIRECTORY: path.join(buildPath, "out"),
+              //
+              // The directory is per target: a project declaring multiple addons
+              // gives every target the same OUTPUT_NAME (see gyp-to-cmake's
+              // --namespaced-targets), so a shared directory would have them
+              // overwrite each other's framework and every prebuild would end up
+              // assembled from whichever target happened to build last.
+              CMAKE_LIBRARY_OUTPUT_DIRECTORY: path.join(
+                buildPath,
+                "out",
+                "$<TARGET_PROPERTY:NAME>",
+              ),
+              CMAKE_ARCHIVE_OUTPUT_DIRECTORY: path.join(
+                buildPath,
+                "out",
+                "$<TARGET_PROPERTY:NAME>",
+              ),
             },
           ]),
         ]);
@@ -375,70 +382,58 @@ export const platform: Platform<Triplet[], AppleOpts> = {
     { spawn, triplet },
     { build, target, configuration, appleBundleIdentifier, codeSigningAllowed },
   ) {
-    // We expect the final application to sign these binaries
-    if (target.length > 1) {
-      throw new Error("Building for multiple targets is not supported yet");
-    }
-
     const buildPath = getBuildPath(build, triplet);
 
-    const sharedLibrary = await readCmakeSharedLibraryTarget(
+    const sharedLibraries = await readCmakeSharedLibraryTargets(
       buildPath,
       configuration,
       target,
     );
 
-    const isFramework = sharedLibrary.nameOnDisk?.includes(".framework/");
+    const frameworkTargets = sharedLibraries.filter(({ nameOnDisk }) =>
+      nameOnDisk?.includes(".framework/"),
+    );
+    const libraryTargets = sharedLibraries.filter(
+      ({ nameOnDisk }) => !nameOnDisk?.includes(".framework/"),
+    );
 
-    if (isFramework) {
-      const { project } = listXcodeProject(buildPath);
+    if (frameworkTargets.length > 0) {
+      const { project } = await listXcodeProject(buildPath);
 
       const schemes = project.schemes.filter(
         (scheme) => scheme !== "ALL_BUILD" && scheme !== "ZERO_CHECK",
       );
 
-      assert(
-        schemes.length === 1,
-        `Expected exactly one buildable scheme, got ${schemes.join(", ")}`,
-      );
-
-      const [scheme] = schemes;
-
-      if (target.length === 1) {
-        assert.equal(
-          scheme,
-          target[0],
-          "Expected the only scheme to match the requested target",
+      // Note: These run in sequence on purpose. Concurrent invocations of
+      // xcodebuild against the same Xcode project (and its derived data) are
+      // not reliable, and every target of a triplet shares a single project.
+      for (const { name } of frameworkTargets) {
+        assert(
+          schemes.includes(name),
+          `Expected to find a scheme for ${name}, got ${schemes.join(", ")}`,
         );
-      }
 
-      await spawn(
-        "xcodebuild",
-        [
-          "archive",
-          "-scheme",
-          scheme,
-          "-configuration",
-          configuration,
-          "-destination",
-          DESTINATION_BY_TRIPLET[triplet],
-        ],
-        buildPath,
-      );
-      await spawn(
-        "xcodebuild",
-        [
-          "install",
-          "-scheme",
-          scheme,
-          "-configuration",
-          configuration,
-          "-destination",
-          DESTINATION_BY_TRIPLET[triplet],
-        ],
-        buildPath,
-      );
-    } else {
+        for (const action of ["archive", "install"] as const) {
+          await spawn(
+            "xcodebuild",
+            [
+              action,
+              "-scheme",
+              name,
+              "-configuration",
+              configuration,
+              "-destination",
+              DESTINATION_BY_TRIPLET[triplet],
+            ],
+            buildPath,
+          );
+        }
+      }
+    }
+
+    if (libraryTargets.length > 0) {
+      // A single invocation builds every requested target, so this is hoisted
+      // out of the per-target loop below.
       await spawn("cmake", [
         "--build",
         buildPath,
@@ -452,115 +447,146 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         // --code-signing-allowed.
         `CODE_SIGNING_ALLOWED=${codeSigningAllowed ? "YES" : "NO"}`,
       ]);
-      // Create a framework
-      const { artifacts } = sharedLibrary;
-      assert(
-        artifacts && artifacts.length === 1,
-        "Expected exactly one artifact",
+
+      // We expect the final application to sign these binaries
+      await Promise.all(
+        libraryTargets.map(async ({ artifacts }) => {
+          assert(
+            artifacts && artifacts.length === 1,
+            "Expected exactly one artifact",
+          );
+          const [artifact] = artifacts;
+          await createAppleFramework({
+            libraryPath: path.join(buildPath, artifact.path),
+            kind: triplet.endsWith("-darwin") ? "versioned" : "flat",
+            bundleIdentifier: appleBundleIdentifier,
+          });
+        }),
       );
-      const [artifact] = artifacts;
-      await createAppleFramework({
-        libraryPath: path.join(buildPath, artifact.path),
-        kind: triplet.endsWith("-darwin") ? "versioned" : "flat",
-        bundleIdentifier: appleBundleIdentifier,
-      });
     }
   },
   isSupportedByHost: function (): boolean | Promise<boolean> {
     return process.platform === "darwin";
   },
   async postBuild(
-    outputPath,
+    resolveOutputPath,
     triplets,
     { configuration, autoLink, xcframeworkExtension, target, build, strip },
   ) {
-    const libraryNames = new Set<string>();
-    const frameworkPaths: string[] = [];
+    // Keyed by CMake target name, which CMake guarantees to be unique within a
+    // project. The artifact name is not: every addon of a multi-addon project
+    // may well build an "addon.node".
+    const prebuilds: Record<
+      string,
+      {
+        artifactName: string;
+        targetSourceDir: string;
+        frameworkPaths: string[];
+      }
+    > = {};
+    // TODO: Run this in parallel
     for (const { spawn, triplet } of triplets) {
       const buildPath = getBuildPath(build, triplet);
       assert(fs.existsSync(buildPath), `Expected a directory at ${buildPath}`);
-      const sharedLibrary = await readCmakeSharedLibraryTarget(
+      const sharedLibraries = await readCmakeSharedLibraryTargets(
         buildPath,
         configuration,
         target,
       );
-      const { artifacts } = sharedLibrary;
-      assert(
-        artifacts && artifacts.length === 1,
-        "Expected exactly one artifact",
+
+      await Promise.all(
+        sharedLibraries.map(async (sharedLibrary) => {
+          const { name, paths, artifacts } = sharedLibrary;
+          assert(
+            artifacts && artifacts.length === 1,
+            "Expected exactly one artifact",
+          );
+          const [artifact] = artifacts;
+          const artifactName = getArtifactName(artifact.path);
+
+          const artifactPath = path.join(buildPath, artifact.path);
+
+          if (strip) {
+            // -r: All relocation entries.
+            // -S: All symbol table entries.
+            // -T: All text relocation entries.
+            // -x: All local symbols.
+            await spawn("strip", ["-rSTx", artifactPath]);
+          }
+
+          // Locate the path of the framework, if a free dynamic library was built
+          let frameworkPath: string;
+          if (artifact.path.includes(".framework/")) {
+            frameworkPath = path.dirname(artifactPath);
+          } else {
+            // createAppleFramework names the framework after the artifact file,
+            // keeping any "lib" prefix, so this is derived the same way rather
+            // than from the (prefix-stripped) name of the prebuild.
+            frameworkPath = path.join(
+              buildPath,
+              path.dirname(artifact.path),
+              `${path.basename(
+                artifact.path,
+                path.extname(artifact.path),
+              )}.framework`,
+            );
+            assert(
+              fs.existsSync(frameworkPath),
+              `Expected to find a framework at: ${frameworkPath}`,
+            );
+          }
+
+          if (name in prebuilds) {
+            prebuilds[name].frameworkPaths.push(frameworkPath);
+          } else {
+            prebuilds[name] = {
+              artifactName,
+              targetSourceDir: paths.source,
+              frameworkPaths: [frameworkPath],
+            };
+          }
+        }),
       );
-      const [artifact] = artifacts;
-
-      const artifactPath = path.join(buildPath, artifact.path);
-
-      if (strip) {
-        // -r: All relocation entries.
-        // -S: All symbol table entries.
-        // -T: All text relocation entries.
-        // -x: All local symbols.
-        await spawn("strip", ["-rSTx", artifactPath]);
-      }
-
-      libraryNames.add(sharedLibrary.name);
-      // Locate the path of the framework, if a free dynamic library was built
-      if (artifact.path.includes(".framework/")) {
-        frameworkPaths.push(path.dirname(artifactPath));
-      } else {
-        const libraryName = path.basename(
-          artifact.path,
-          path.extname(artifact.path),
-        );
-        const frameworkPath = path.join(
-          buildPath,
-          path.dirname(artifact.path),
-          `${libraryName}.framework`,
-        );
-        assert(
-          fs.existsSync(frameworkPath),
-          `Expected to find a framework at: ${frameworkPath}`,
-        );
-        frameworkPaths.push(frameworkPath);
-      }
     }
 
-    // Make sure none of the frameworks are symlinks
-    // We do this before creating an xcframework to avoid symlink paths being invalidated
-    // as the xcframework might be moved to a different location
-    await Promise.all(
-      frameworkPaths.map(async (frameworkPath) => {
-        const stat = await fs.promises.lstat(frameworkPath);
-        if (stat.isSymbolicLink()) {
-          await dereferenceDirectory(frameworkPath);
-        }
-      }),
-    );
+    for (const {
+      artifactName,
+      targetSourceDir,
+      frameworkPaths,
+    } of Object.values(prebuilds)) {
+      // Make sure none of the frameworks are symlinks
+      // We do this before creating an xcframework to avoid symlink paths being invalidated
+      // as the xcframework might be moved to a different location
+      await Promise.all(
+        frameworkPaths.map(async (frameworkPath) => {
+          const stat = await fs.promises.lstat(frameworkPath);
+          if (stat.isSymbolicLink()) {
+            await dereferenceDirectory(frameworkPath);
+          }
+        }),
+      );
 
-    const extension = xcframeworkExtension ? ".xcframework" : ".apple.node";
+      const extension = xcframeworkExtension ? ".xcframework" : ".apple.node";
 
-    assert(
-      libraryNames.size === 1,
-      "Expected all libraries to have the same name",
-    );
-    const [libraryName] = libraryNames;
+      // Create the xcframework
+      const xcframeworkOutputPath = path.resolve(
+        resolveOutputPath(targetSourceDir),
+        `${artifactName}${extension}`,
+      );
 
-    // Create the xcframework
-    const xcframeworkOutputPath = path.resolve(
-      outputPath,
-      `${libraryName}${extension}`,
-    );
-
-    await oraPromise(
-      createXCframework({
-        outputPath: xcframeworkOutputPath,
-        frameworkPaths,
-        autoLink,
-      }),
-      {
-        text: `Assembling XCFramework (${libraryName})`,
-        successText: `XCFramework (${libraryName}) assembled into ${prettyPath(xcframeworkOutputPath)}`,
-        failText: ({ message }) =>
-          `Failed to assemble XCFramework (${libraryName}): ${message}`,
-      },
-    );
+      await oraPromise(
+        createXCframework({
+          outputPath: xcframeworkOutputPath,
+          frameworkPaths,
+          autoLink,
+        }),
+        {
+          text: `Assembling XCFramework (${artifactName})`,
+          successText: `XCFramework (${artifactName}) assembled into ${prettyPath(xcframeworkOutputPath)}`,
+          failText: ({ message }) =>
+            `Failed to assemble XCFramework (${artifactName}): ${message}`,
+        },
+      );
+    }
   },
 };

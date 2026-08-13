@@ -21,9 +21,10 @@
   },
   "scripts": {
     "copy-examples": "tsx scripts/copy-examples.mts",
-    "gyp-to-cmake": "gyp-to-cmake --weak-node-api .",
-    "build": "tsx scripts/build-examples.mts",
-    "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run build",
+    "gyp-to-cmake": "gyp-to-cmake --namespaced-targets --weak-node-api .",
+    "generate-root-project": "tsx scripts/generate-root-project.mts",
+    "build": "cmake-rn --configuration RelWithDebInfo",
+    "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run generate-root-project && node --run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
     "test": "node --run copy-and-build && node --run verify",
     "bootstrap": "node --run copy-and-build"

@@ -29,6 +29,14 @@ export type Spawn = (
   cwd?: string,
 ) => Promise<void>;
 
+/**
+ * Resolve the directory a target's final artifact should be emitted into.
+ * @param targetSourceDir The target's source directory, as reported by the CMake
+ * File API: relative to the top-level source directory, or absolute if the
+ * target lives outside of it.
+ */
+export type ResolveOutputPath = (targetSourceDir: string) => string;
+
 export type Platform<
   Triplets extends string[] = string[],
   Opts extends cli.OptionValues = Record<string, unknown>,
@@ -86,9 +94,9 @@ export type Platform<
    */
   postBuild(
     /**
-     * Location of the final prebuilt artefact.
+     * Resolve the location of the final prebuilt artefact, per target.
      */
-    outputPath: string,
+    resolveOutputPath: ResolveOutputPath,
     triplets: TripletContext<Triplet>[],
     options: BaseOpts & Opts,
   ): Promise<void>;

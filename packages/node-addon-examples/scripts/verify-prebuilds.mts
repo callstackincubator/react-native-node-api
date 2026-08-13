@@ -2,7 +2,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
-import { EXAMPLES_DIR } from "./cmake-projects.mjs";
+import { DIRS } from "./cmake-projects.mjs";
 
 const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
 
@@ -82,17 +82,28 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
   }
 }
 
-for await (const dirent of fs.promises.glob("**/*.*.node", {
-  cwd: EXAMPLES_DIR,
-  withFileTypes: true,
-})) {
-  if (dirent.name.endsWith(".android.node")) {
-    await verifyAndroidPrebuild(dirent);
-  } else if (dirent.name.endsWith(".apple.node")) {
-    await verifyApplePrebuild(dirent);
-  } else {
-    throw new Error(
-      `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`,
-    );
+let verified = 0;
+
+for (const cwd of DIRS) {
+  for await (const dirent of fs.promises.glob("**/*.*.node", {
+    cwd,
+    withFileTypes: true,
+  })) {
+    if (dirent.name.endsWith(".android.node")) {
+      await verifyAndroidPrebuild(dirent);
+    } else if (dirent.name.endsWith(".apple.node")) {
+      await verifyApplePrebuild(dirent);
+    } else {
+      throw new Error(
+        `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`,
+      );
+    }
+    verified++;
   }
 }
+
+// Without this, the script passes by simply not finding any prebuilds, which is
+// exactly what happens if they stop being emitted next to the sources they were
+// built from.
+assert(verified > 0, `Found no prebuilds in ${DIRS.join(", ")}`);
+console.log(`Verified ${verified} prebuilds`);
