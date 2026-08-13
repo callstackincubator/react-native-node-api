@@ -3,10 +3,3 @@
 /*.xcframework/
 /*.apple.node/
 /*.android.node/
-
-# ferric_example.d.ts and ferric_example.js are intentionally NOT ignored: they're
-# committed as a fixture so `pnpm run lint` (which apps/test-app's App.tsx needs for
-# its `typeof import("@react-native-node-api/ferric-example")`) doesn't have to run a
-# native `cargo build` to get them. See #414. Regenerate with `pnpm run build:types`
-# after changing packages/ferric-example/src/lib.rs, and let the "Test app (Android)"
-# / "Test ferric Apple triplets" jobs' drift check catch anyone who forgets.
