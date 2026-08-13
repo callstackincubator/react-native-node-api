@@ -191,6 +191,10 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
+          # The action defaults to 500M, which a from-source React Native build
+          # fills mid-build: it evicted 88 times in one run, discarding most of
+          # what it had just cached.
+          max-size: 3G
       - run: rustup target add aarch64-apple-ios-sim x86_64-apple-ios
       - run: pnpm install
       - run: pnpm run bootstrap
