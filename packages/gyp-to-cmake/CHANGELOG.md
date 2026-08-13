@@ -1,5 +1,21 @@
 # gyp-to-cmake
 
+## 0.6.0-rc.0
+
+### Minor Changes
+
+- 1ab6a11: Add --namespaced-targets to allow a root project to add many sub-projects.
+
+  CMake requires target names to be unique across a project tree, so sub-projects
+  that each declare an `addon` target cannot be added to a single root project. This
+  prefixes the target name with the project name, while setting `OUTPUT_NAME` so the
+  artifact keeps the name a `require` resolves against.
+
+### Patch Changes
+
+- Updated dependencies [48fa7fc]
+  - @react-native-node-api/cli-utils@0.1.5-rc.0
+
 ## 0.5.4
 
 ### Patch Changes
