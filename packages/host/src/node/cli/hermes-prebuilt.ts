@@ -27,13 +27,25 @@ const RELEASES_URL =
 
 export const DEFAULT_PLATFORMS = ["iphoneos", "iphonesimulator"];
 
-// Passed to Hermes' build-apple-framework.sh, which errors out rather than
-// assume one. These match React Native's own podspec declarations.
-const DEPLOYMENT_TARGETS = {
-  IOS_DEPLOYMENT_TARGET: "15.1",
-  MAC_DEPLOYMENT_TARGET: "10.15",
-  XROS_DEPLOYMENT_TARGET: "1.0",
-};
+/**
+ * The deployment target build-apple-framework.sh reads for a platform — it
+ * errors out rather than assume one. These match React Native's own podspec
+ * declarations.
+ *
+ * Only the variable that platform needs is passed. XROS_DEPLOYMENT_TARGET is
+ * also a clang driver variable, so leaking it into a build that isn't for
+ * visionOS makes clang target visionOS against whatever sysroot it was given —
+ * and every API marked unavailable there then fails to compile.
+ */
+function getDeploymentTarget(platform: string): Record<string, string> {
+  if (platform === "macosx") {
+    return { MAC_DEPLOYMENT_TARGET: "10.15" };
+  } else if (platform === "xros" || platform === "xrsimulator") {
+    return { XROS_DEPLOYMENT_TARGET: "1.0" };
+  } else {
+    return { IOS_DEPLOYMENT_TARGET: "15.1" };
+  }
+}
 
 export const BUILD_TYPES = ["debug", "release"] as const;
 export type BuildType = (typeof BUILD_TYPES)[number];
@@ -162,15 +174,19 @@ async function buildArchive({
   // vendored copy: the framework and the app linking it share jsi::Runtime.
   const jsiPath = path.join(reactNativePath, "ReactCommon", "jsi");
 
-  const run = (command: string, args: string[]) =>
+  const run = (
+    command: string,
+    args: string[],
+    extraEnv: Record<string, string> = {},
+  ) =>
     spawn(command, args, {
       cwd: hermesPath,
       outputMode: "inherit",
       // Keeps the build log off stdout, which callers parse for the final path.
       stdout: process.stderr,
       env: {
-        ...DEPLOYMENT_TARGETS,
         ...process.env,
+        ...extraEnv,
         JSI_PATH: jsiPath,
         BUILD_TYPE: buildType === "debug" ? "Debug" : "Release",
         HERMES_OVERRIDE_HERMESC_PATH: importHostCompilersPath,
@@ -202,7 +218,11 @@ async function buildArchive({
   }
 
   for (const platform of platforms) {
-    await run("./utils/build-apple-framework.sh", [platform]);
+    await run(
+      "./utils/build-apple-framework.sh",
+      [platform],
+      getDeploymentTarget(platform),
+    );
   }
 
   const frameworksPath = path.join(

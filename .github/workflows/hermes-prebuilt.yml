@@ -67,6 +67,37 @@ jobs:
         run: |
           path=$(pnpm exec react-native-node-api prebuilt-hermes --no-download)
           echo "path=$path" >> "$GITHUB_OUTPUT"
+      # CMake reports a failed feature check as a bare "not found", with the
+      # compiler's actual complaint only in its configure log. Surface that log
+      # here so a failure is diagnosable without another round trip.
+      - name: Dump CMake configure log
+        if: failure()
+        run: |
+          log=$(find "$PWD" -name CMakeConfigureLog.yaml -path '*build_host_hermesc*' | head -1)
+          if [ -z "$log" ]; then
+            echo "No CMakeConfigureLog.yaml found"
+            find "$PWD" -name 'CMakeError.log' -path '*build_host_hermesc*' -exec cat {} \;
+            exit 0
+          fi
+          echo "::group::Environment seen by CMake"
+          env | sort
+          xcode-select --print-path
+          xcrun --show-sdk-path || true
+          echo "::endgroup::"
+          echo "::group::unistd.h check"
+          grep -n -B 5 -A 45 'unistd\.h' "$log" | head -150
+          echo "::endgroup::"
+          echo "::group::atomics check"
+          grep -n -B 5 -A 60 'HAVE_CXX_ATOMICS_WITHOUT_LIB' "$log" | head -180
+          echo "::endgroup::"
+          cp "$log" "$RUNNER_TEMP/CMakeConfigureLog.yaml"
+      - name: Upload CMake configure log
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hermesc-cmake-configure-log
+          path: ${{ runner.temp }}/CMakeConfigureLog.yaml
+          if-no-files-found: ignore
       # --latest=false keeps these out of the "latest release" slot, which
       # belongs to the package releases changesets publishes.
       - name: Publish as a release asset
