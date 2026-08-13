@@ -63,13 +63,18 @@ void log_message_internal(LogLevel level, const char *format, va_list args) {
 
 namespace callstack::react_native_node_api {
 
+// See the comment on the declaration in Logger.hpp: in release (NDEBUG)
+// builds log_debug is an inline no-op defined in the header, so this
+// definition only exists (and only needs to exist) outside of NDEBUG.
+#ifndef NDEBUG
 void log_debug(const char *format, ...) {
-  // TODO: Disable logging in release builds
   va_list args;
   va_start(args, format);
   log_message_internal(LogLevel::Debug, format, args);
   va_end(args);
 }
+#endif
+
 void log_warning(const char *format, ...) {
   va_list args;
   va_start(args, format);
