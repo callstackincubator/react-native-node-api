@@ -198,8 +198,8 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim,x86_64-apple-ios
-      # Because the Xcode project injects its own CCACHE_CONFIGPATH,
-      # the configuration set by the ccache action doesn't propagate.
+      # Pin the ccache action's configuration into the environment, so it
+      # applies to the ccache that Xcode launches during the build too.
       - name: Expose Ccache config to Xcode
         run: |
           echo "CCACHE_DIR=`ccache --get-config cache_dir`" >> $GITHUB_ENV
@@ -215,23 +215,25 @@ jobs:
       - name: Bundle test app
         run: pnpm exec react-native bundle --entry-file index.ts --platform ios --dev false --minify false --bundle-output dist/main.ios.jsbundle --assets-dest dist
         working-directory: apps/test-app
+      # Deliberately *not* setting USE_CCACHE here: that makes React Native
+      # point CC/CXX/LD/LDPLUSPLUS at scripts/xcode/ccache-clang{,++}.sh, which
+      # run `exec $CCACHE_BINARY clang` — a bare `clang` off PATH. This job puts
+      # an LLVM toolchain on PATH (setup-cpp), so that resolves to a compiler
+      # which is not Xcode's, and building against the iOS SDK then trips
+      # Apple's mismatch trap: "module '_c_standard_library_obsolete' requires
+      # feature 'found_incompatible_headers__check_search_paths'", followed by
+      # every system module failing. Ccache is wired up on the xcodebuild
+      # invocation below instead.
       - run: pnpm run pod-install
         working-directory: apps/test-app
-        env:
-          USE_CCACHE: 1
       - name: Build test app
         # `shell: bash` for pipefail, so xcbeautify's exit code can't mask a
         # failing xcodebuild. A bare `run:` uses `bash -e` without pipefail.
         shell: bash
-        # CLANG_ENABLE_EXPLICIT_MODULES=NO because USE_CCACHE makes React Native
-        # point CC/CXX at its ccache-clang.sh wrappers, which Xcode's explicit
-        # modules doesn't recognise as a compiler ("Explicit modules is enabled
-        # but the compiler was not recognized"), and every system module then
-        # fails to build. Remove once React Native configures ccache through
-        # C_COMPILER_LAUNCHER instead of overriding CC/CXX, which would let us
-        # keep explicit modules via
-        # CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES.
-        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES CLANG_ENABLE_EXPLICIT_MODULES=NO | xcbeautify
+        # C_COMPILER_LAUNCHER keeps Xcode's own clang and merely prefixes it
+        # with ccache, so the compiler still matches the SDK. Explicit modules
+        # needs opting in for a launcher, hence the second setting.
+        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES C_COMPILER_LAUNCHER=ccache CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES | xcbeautify
         working-directory: apps/test-app/ios
       - name: Run test app
         run: |
