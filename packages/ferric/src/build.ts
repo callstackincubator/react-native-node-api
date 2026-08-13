@@ -25,7 +25,7 @@ import {
   determineLibraryBasename,
 } from "react-native-node-api";
 
-import { ensureCargo, build } from "./cargo.js";
+import { ensureCargo, build, determineCargoLibraryName } from "./cargo.js";
 import {
   ALL_TARGETS,
   ANDROID_TARGETS,
@@ -104,6 +104,10 @@ const xcframeworkExtensionOption = new Option(
   "--xcframework-extension",
   "Don't rename the xcframework to .apple.node",
 ).default(false);
+const dtsOnlyOption = new Option(
+  "--dts-only",
+  "Only generate the TypeScript declarations, skipping the native build entirely (no Android/Apple toolchain needed)",
+).default(false);
 
 const outputPathOption = new Option(
   "--output <path>",
@@ -153,6 +157,7 @@ export const buildCommand = new Command("build")
   .addOption(appleBundleIdentifierOption)
   .addOption(concurrencyOption)
   .addOption(verboseOption)
+  .addOption(dtsOnlyOption)
   .action(
     wrapAction(
       async ({
@@ -167,7 +172,53 @@ export const buildCommand = new Command("build")
         appleBundleIdentifier,
         concurrency,
         verbose,
+        dtsOnly,
       }) => {
+        if (dtsOnly) {
+          assertFixable(
+            targetArg.length === 0 && !apple && !android && !clean,
+            "The --dts-only flag cannot be combined with --target, --apple, --android or --clean",
+            {
+              instructions:
+                "Drop --dts-only to build native binaries, or remove the other flags to only generate TypeScript declarations",
+            },
+          );
+          ensureCargo();
+          const libraryName = determineCargoLibraryName(process.cwd());
+          const declarationsFilename = `${libraryName}.d.ts`;
+          const declarationsPath = path.join(outputPath, declarationsFilename);
+          await oraPromise(
+            generateTypeScriptDeclarations({
+              outputFilename: declarationsFilename,
+              createPath: process.cwd(),
+              outputPath,
+            }),
+            {
+              text: "Generating TypeScript declarations",
+              successText: `Generated TypeScript declarations ${prettyPath(
+                declarationsPath,
+              )}`,
+              failText: (error) =>
+                `Failed to generate TypeScript declarations: ${error.message}`,
+            },
+          );
+          const entrypointPath = path.join(outputPath, `${libraryName}.js`);
+          await oraPromise(
+            generateEntrypoint({
+              libraryName,
+              outputPath: entrypointPath,
+            }),
+            {
+              text: `Generating entrypoint`,
+              successText: `Generated entrypoint into ${prettyPath(
+                entrypointPath,
+              )}`,
+              failText: (error) =>
+                `Failed to generate entrypoint: ${error.message}`,
+            },
+          );
+          return;
+        }
         if (clean) {
           await oraPromise(
             () => spawn("cargo", ["clean"], { outputMode: "buffered" }),
