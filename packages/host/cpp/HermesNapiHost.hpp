@@ -56,6 +56,16 @@ struct hermes_napi_host {
 };
 
 napi_env hermes_napi_create_env(void *hermes_runtime, hermes_napi_host *host);
+
+/// Opens the shared library at `path`, resolves its init function (either the
+/// exported `napi_register_module_v1` or, failing that, the `napi_module`
+/// passed to a `napi_module_register` call made while loading), calls it with
+/// a fresh `exports` object and hands the result back through `result`.
+///
+/// Requires an open handle scope on `env`. On failure it returns a non-`ok`
+/// status and leaves an exception pending on `env`.
+napi_status hermes_napi_load_module(napi_env env, const char *path,
+                                    napi_value *result);
 }
 
 namespace callstack::react_native_node_api {
