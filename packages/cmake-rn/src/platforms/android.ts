@@ -91,6 +91,56 @@ function getNdkLlvmBinPath(ndkPath: string) {
   return path.join(prebuiltPath, platforms[0], "bin");
 }
 
+const DEFAULT_ANDROID_STL = "c++_shared";
+
+/**
+ * Builds the list of CMake cache variable definitions common to every
+ * triplet's configure step.
+ *
+ * `define` (populated from the repeatable `-D`/`--define` CLI option) is
+ * spread last, so a consumer's explicit `-D ANDROID_STL=c++_static` (or any
+ * other variable set here by default) takes precedence over our own
+ * defaults: CMake resolves a cache variable passed multiple times via `-D`
+ * to its last occurrence on the command line.
+ */
+export function buildCommonDefinitions({
+  configuration,
+  ndkPath,
+  androidSdkVersion,
+  ccachePath,
+  define,
+}: {
+  configuration: BaseOpts["configuration"];
+  ndkPath: string;
+  androidSdkVersion: string;
+  ccachePath: BaseOpts["ccachePath"];
+  define: BaseOpts["define"];
+}) {
+  return [
+    {
+      CMAKE_BUILD_TYPE: configuration,
+      CMAKE_SYSTEM_NAME: "Android",
+      // "CMAKE_INSTALL_PREFIX": installPath,
+      CMAKE_MAKE_PROGRAM: "ninja",
+      ANDROID_NDK: ndkPath,
+      ANDROID_TOOLCHAIN: "clang",
+      ANDROID_PLATFORM: androidSdkVersion,
+      // Defaults to c++_shared, matching what React Native itself uses.
+      // Override with -D/--define ANDROID_STL=c++_static (or another value
+      // accepted by the NDK's CMake toolchain) when an addon must match a
+      // prebuilt third-party dependency's STL.
+      ANDROID_STL: DEFAULT_ANDROID_STL,
+    },
+    ccachePath
+      ? {
+          CMAKE_C_COMPILER_LAUNCHER: ccachePath,
+          CMAKE_CXX_COMPILER_LAUNCHER: ccachePath,
+        }
+      : {},
+    ...define,
+  ];
+}
+
 export const platform: Platform<Triplet[], AndroidOpts> = {
   id: "android",
   name: "Android",
@@ -140,26 +190,13 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     const ndkPath = getNdkPath(ndkVersion);
     const toolchainPath = getNdkToolchainPath(ndkPath);
 
-    const commonDefinitions = [
-      ...define,
-      {
-        CMAKE_BUILD_TYPE: configuration,
-        CMAKE_SYSTEM_NAME: "Android",
-        // "CMAKE_INSTALL_PREFIX": installPath,
-        CMAKE_MAKE_PROGRAM: "ninja",
-        ANDROID_NDK: ndkPath,
-        ANDROID_TOOLCHAIN: "clang",
-        ANDROID_PLATFORM: androidSdkVersion,
-        // TODO: Make this configurable
-        ANDROID_STL: "c++_shared",
-      },
-      ccachePath
-        ? {
-            CMAKE_C_COMPILER_LAUNCHER: ccachePath,
-            CMAKE_CXX_COMPILER_LAUNCHER: ccachePath,
-          }
-        : {},
-    ];
+    const commonDefinitions = buildCommonDefinitions({
+      configuration,
+      ndkPath,
+      androidSdkVersion,
+      ccachePath,
+      define,
+    });
 
     await Promise.all(
       triplets.map(async ({ triplet, spawn }) => {
