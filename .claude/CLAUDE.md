@@ -12,7 +12,7 @@ jobs are gated behind a label check evaluated against that triggering
 event's payload, e.g.:
 
 ```yaml
-if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'host')
+if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Host 🏡')
 ```
 
 A label added after the PR is already open does nothing on its own — there
@@ -20,6 +20,14 @@ is no new `opened`/`synchronize`/`reopened` event for the workflow to
 re-evaluate against, so the gated job silently never runs, and that gap is
 easy to miss since the Check run still shows green (the job wasn't
 skipped-and-failed, it just never triggered).
+
+The label name in the `if:` condition has to match a real, currently-existing
+GitHub label exactly (name and emoji). `host-cpp-tests` checked for a label
+literally named `host` for a while, when the repository's real label was
+`Host 🏡` — the condition never matched anything anyone would actually apply,
+so the job silently only ran on pushes to `main`/`next`. Confirm the label
+exists (e.g. via the GitHub MCP `get_label` tool) before trusting a condition
+or table like the one below.
 
 The `create_pull_request` GitHub MCP tool has no `labels` parameter, so
 labels can only be attached in a follow-up call after the PR exists — which
@@ -37,7 +45,7 @@ is exactly the case above. **Whenever you open a PR here:**
 
 | Label           | Gated job(s)                                                                                                                                                                              | Attach when the diff touches                                                                                                                                                                              |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `host`          | Host C++ tests                                                                                                                                                                            | `packages/host/cpp/`, `packages/host/android/CMakeLists.txt`, the generated injector, or anything in `packages/weak-node-api` that the host links against                                                 |
+| `Host 🏡`       | Host C++ tests                                                                                                                                                                            | `packages/host/cpp/`, `packages/host/android/CMakeLists.txt`, the generated injector, or anything in `packages/weak-node-api` that the host links against                                                 |
 | `Apple 🍎`      | iOS test app build/run                                                                                                                                                                    | iOS/macOS/tvOS/visionOS build config, XCFrameworks, Cocoapods, Xcode project files, or any change to Node-API behavior addons rely on (buffers, fatal-error handling, etc.) that device tests would catch |
 | `Android 🤖`    | Android test app build/run (self-hosted runner; currently label-gated even on `main`/`next`, see the `if:` comment in `check.yml` — check whether that's still true before relying on it) | Gradle, NDK, Android SDK, `.android.node` packaging, or the same cross-platform Node-API behavior changes as above                                                                                        |
 | `MacOS 💻`      | macOS test app                                                                                                                                                                            | `react-native-macos`-specific code paths                                                                                                                                                                  |
@@ -45,7 +53,7 @@ is exactly the case above. **Whenever you open a PR here:**
 | `weak-node-api` | weak-node-api tests                                                                                                                                                                       | `packages/weak-node-api`                                                                                                                                                                                  |
 
 A PR can need more than one label — e.g. a change to `RuntimeNodeApi.cpp`
-that alters buffer semantics warrants `host` plus `Apple 🍎` and
+that alters buffer semantics warrants `Host 🏡` plus `Apple 🍎` and
 `Android 🤖`, since the actual behavior change can only be verified on a
 real device.
 
