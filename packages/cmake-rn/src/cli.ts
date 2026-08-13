@@ -12,6 +12,7 @@ import {
   assertFixable,
   wrapAction,
   pLimit,
+  InvalidArgumentError,
 } from "@react-native-node-api/cli-utils";
 
 import {
@@ -22,6 +23,7 @@ import {
 } from "./platforms.js";
 import { Platform } from "./platforms/types.js";
 import { getCcachePath } from "./ccache.js";
+import { createOutputPathResolver, expandTemplate } from "./output-path.js";
 
 const verboseOption = new Option(
   "--verbose",
@@ -73,8 +75,8 @@ const cleanOption = new Option(
 
 const outPathOption = new Option(
   "--out <path>",
-  "Specify the output directory to store the final build artifacts",
-).default("{build}/{configuration}");
+  "Specify the output directory to store the final build artifacts. Supports the {targetSourceDir} placeholder, which expands to the source directory of the target being emitted",
+).default("{targetSourceDir}/build/{configuration}");
 
 const defineOption = new Option(
   "-D,--define <entry...>",
@@ -131,10 +133,16 @@ const concurrencyOption = new Option(
   "--concurrency <limit>",
   "Limit the number of concurrent tasks",
 )
-  .argParser((value) => parseInt(value, 10))
+  .argParser((value) => {
+    const result = Number(value);
+    if (!Number.isSafeInteger(result) || result < 1) {
+      throw new InvalidArgumentError("Expected a positive integer.");
+    }
+    return result;
+  })
   .default(
-    os.availableParallelism(),
-    `${os.availableParallelism()} or 1 when verbose is enabled`,
+    undefined,
+    `${os.availableParallelism()} or 1 when --verbose is enabled`,
   );
 
 let program = new Command("cmake-rn")
@@ -164,25 +172,15 @@ for (const platform of platforms) {
   program = platform.amendCommand(program);
 }
 
-function expandTemplate(
-  input: string,
-  values: Record<string, unknown>,
-): string {
-  return input.replaceAll(/{([^}]+)}/g, (_, key: string) =>
-    typeof values[key] === "string" ? values[key] : "",
-  );
-}
-
 program = program.action(
   wrapAction(async ({ triplet: requestedTriplets, ...baseOptions }) => {
     baseOptions.build = path.resolve(
       process.cwd(),
       expandTemplate(baseOptions.build, baseOptions),
     );
-    baseOptions.out = path.resolve(
-      process.cwd(),
-      expandTemplate(baseOptions.out, baseOptions),
-    );
+    // Note: {targetSourceDir} is deliberately left unexpanded here, as it is
+    // only known per target, once the CMake File API has been read.
+    baseOptions.out = expandTemplate(baseOptions.out, baseOptions);
     const {
       verbose,
       clean,
@@ -190,7 +188,6 @@ program = program.action(
       out,
       build: buildPath,
       ccachePath,
-      concurrency,
     } = baseOptions;
 
     assertFixable(
@@ -242,7 +239,12 @@ program = program.action(
       }
     }
 
+    // Interleaved output from concurrent builds is unreadable, so verbose
+    // builds default to running one task at a time.
+    const concurrency =
+      baseOptions.concurrency ?? (verbose ? 1 : os.availableParallelism());
     const limit = pLimit(concurrency);
+    const resolveOutputPath = createOutputPathResolver(out, source);
 
     const tripletContexts = [...triplets].map((triplet) => {
       const platform = findPlatformForTriplet(triplet);
@@ -347,7 +349,11 @@ program = program.action(
       if (relevantTriplets.length == 0) {
         continue;
       }
-      await platform.postBuild(out, relevantTriplets, baseOptions);
+      await platform.postBuild(
+        resolveOutputPath,
+        relevantTriplets,
+        baseOptions,
+      );
     }
   }),
 );

@@ -14,7 +14,7 @@ import {
 import * as cmakeFileApi from "cmake-file-api";
 
 import type { BaseOpts, Platform } from "./types.js";
-import { toDefineArguments } from "../helpers.js";
+import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
   getWeakNodeApiVariables,
@@ -245,13 +245,20 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
     return typeof ANDROID_HOME === "string" && fs.existsSync(ANDROID_HOME);
   },
   async postBuild(
-    outputPath,
+    resolveOutputPath,
     triplets,
     { autoLink, configuration, target, build, strip, ndkVersion },
   ) {
+    // Keyed by CMake target name, which CMake guarantees to be unique within a
+    // project. The artifact name is not: every addon of a multi-addon project
+    // may well build an "addon.node".
     const prebuilds: Record<
       string,
-      { triplet: Triplet; libraryPath: string }[]
+      {
+        artifactName: string;
+        targetSourceDir: string;
+        libraries: { triplet: Triplet; libraryPath: string }[];
+      }
     > = {};
 
     for (const { triplet, spawn } of triplets) {
@@ -277,7 +284,11 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           const [artifact] = artifacts;
           // Add prebuild entry, creating a new entry if needed
           if (!(sharedLibrary.name in prebuilds)) {
-            prebuilds[sharedLibrary.name] = [];
+            prebuilds[sharedLibrary.name] = {
+              artifactName: getArtifactName(artifact.path),
+              targetSourceDir: sharedLibrary.paths.source,
+              libraries: [],
+            };
           }
           const libraryPath = path.join(buildPath, artifact.path);
           assert(
@@ -294,7 +305,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
             );
             await spawn(stripToolPath, [libraryPath]);
           }
-          prebuilds[sharedLibrary.name].push({
+          prebuilds[sharedLibrary.name].libraries.push({
             triplet,
             libraryPath,
           });
@@ -302,10 +313,12 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       );
     }
 
-    for (const [libraryName, libraries] of Object.entries(prebuilds)) {
+    for (const { artifactName, targetSourceDir, libraries } of Object.values(
+      prebuilds,
+    )) {
       const prebuildOutputPath = path.resolve(
-        outputPath,
-        `${libraryName}.android.node`,
+        resolveOutputPath(targetSourceDir),
+        `${artifactName}.android.node`,
       );
       await oraPromise(
         createAndroidLibsDirectory({
@@ -314,10 +327,10 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           autoLink,
         }),
         {
-          text: `Assembling Android libs directory (${libraryName})`,
-          successText: `Android libs directory (${libraryName}) assembled into ${prettyPath(prebuildOutputPath)}`,
+          text: `Assembling Android libs directory (${artifactName})`,
+          successText: `Android libs directory (${artifactName}) assembled into ${prettyPath(prebuildOutputPath)}`,
           failText: ({ message }) =>
-            `Failed to assemble Android libs directory (${libraryName}): ${message}`,
+            `Failed to assemble Android libs directory (${artifactName}): ${message}`,
         },
       );
     }

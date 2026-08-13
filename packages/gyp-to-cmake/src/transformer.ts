@@ -129,6 +129,13 @@ export function bindingGypToCmakeLists({
       ? `${projectName}-${targetName}`
       : targetName;
 
+    // Namespacing only disambiguates the CMake target name: the artifact on disk
+    // keeps the name the JS `require` expects, which is what cmake-rn derives the
+    // final prebuild name from.
+    const outputNameProperties: Record<string, string> = namespacedTargets
+      ? { OUTPUT_NAME: targetName }
+      : {};
+
     function setTargetPropertiesLines(
       properties: Record<string, string>,
       indent = "",
@@ -161,6 +168,9 @@ export function bindingGypToCmakeLists({
             MACOSX_FRAMEWORK_SHORT_VERSION_STRING: "1.0",
             MACOSX_FRAMEWORK_BUNDLE_VERSION: "1.0",
             XCODE_ATTRIBUTE_SKIP_INSTALL: "NO",
+            // CMake names the framework bundle after OUTPUT_NAME, so this has to
+            // be set here too for the artifact to keep its non-namespaced name.
+            ...outputNameProperties,
           },
           "  ",
         ),
@@ -169,8 +179,7 @@ export function bindingGypToCmakeLists({
           {
             PREFIX: "",
             SUFFIX: ".node",
-            // Ensure the final library use the non-namespaced target name
-            ...(actualTargetName ? { OUTPUT_NAME: targetName } : {}),
+            ...outputNameProperties,
           },
           "  ",
         ),
@@ -182,6 +191,7 @@ export function bindingGypToCmakeLists({
         ...setTargetPropertiesLines({
           PREFIX: "",
           SUFFIX: ".node",
+          ...outputNameProperties,
         }),
       );
     }
