@@ -22,14 +22,15 @@ import {
 } from "../path-utils";
 
 import { command as vendorHermes } from "./hermes";
+import { command as prebuiltHermes } from "./hermes-prebuilt";
 import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
 import { ensureXcodeBuildPhase, createAppleLinker } from "./apple";
 import { linkAndroidDir } from "./android";
 
-export const program = new Command("react-native-node-api").addCommand(
-  vendorHermes,
-);
+export const program = new Command("react-native-node-api")
+  .addCommand(vendorHermes)
+  .addCommand(prebuiltHermes);
 
 async function createLinker(platform: PlatformName): Promise<ModuleLinker> {
   if (platform === "android") {
