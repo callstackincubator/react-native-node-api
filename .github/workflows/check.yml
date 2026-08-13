@@ -170,8 +170,7 @@ jobs:
       - uses: pnpm/action-setup@v6
         with:
           cache: true
-      # The device lineup changes with every Xcode release, so pick the first
-      # available iPhone instead of hard-coding one.
+      # Device names change with every Xcode release, so pick one dynamically.
       - name: Boot the simulator
         run: |
           SIMULATOR_UDID=$(xcrun simctl list devices available --json | node -e "
@@ -198,41 +197,25 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim,x86_64-apple-ios
-      # Pin the ccache action's configuration into the environment, so it
-      # applies to the ccache that Xcode launches during the build too.
+      # So the ccache action's config applies to the ccache Xcode launches too.
       - name: Expose Ccache config to Xcode
         run: |
           echo "CCACHE_DIR=`ccache --get-config cache_dir`" >> $GITHUB_ENV
           echo "CCACHE_MAXSIZE=`ccache --get-config max_size`" >> $GITHUB_ENV
           echo "CCACHE_COMPILERCHECK=`ccache --get-config compiler_check`" >> $GITHUB_ENV
-      # Bundling has to happen *before* `pod install`: react-native-test-app
-      # resolves the resources declared in app.json when it generates the
-      # workspace, warning about and skipping the ones that don't exist yet.
-      # Bundling afterwards leaves the app without an embedded JS bundle, so it
-      # expects a Metro dev server at runtime.
-      # `--assets-dest dist` places the assets in dist/assets, where app.json
-      # expects them (dist/res is the Android convention).
+      # Must precede `pod install`: react-native-test-app embeds the resources
+      # declared in app.json when generating the workspace, skipping missing
+      # ones, and the app would then expect a Metro dev server at runtime.
+      # `--assets-dest dist` lands assets in dist/assets, as app.json expects.
       - name: Bundle test app
         run: pnpm exec react-native bundle --entry-file index.ts --platform ios --dev false --minify false --bundle-output dist/main.ios.jsbundle --assets-dest dist
         working-directory: apps/test-app
-      # Deliberately *not* setting USE_CCACHE here: that makes React Native
-      # point CC/CXX/LD/LDPLUSPLUS at scripts/xcode/ccache-clang{,++}.sh, which
-      # run `exec $CCACHE_BINARY clang` — a bare `clang` off PATH. This job puts
-      # an LLVM toolchain on PATH (setup-cpp), so that resolves to a compiler
-      # which is not Xcode's, and building against the iOS SDK then trips
-      # Apple's mismatch trap: "module '_c_standard_library_obsolete' requires
-      # feature 'found_incompatible_headers__check_search_paths'", followed by
-      # every system module failing. Ccache is wired up on the xcodebuild
-      # invocation below instead.
+      # No USE_CCACHE: it points CC/CXX at React Native's ccache-clang.sh, whose
+      # bare `clang` resolves to setup-cpp's LLVM instead of Xcode's, breaking
+      # every system module. Ccache goes on the xcodebuild invocation instead.
       #
-      # CocoaPods also dies intermittently with "pathname contains null byte"
-      # while generating the Pods project. That is an unresolved upstream bug
-      # specific to pnpm monorepos (CocoaPods/CocoaPods#12866, #12798) which hit
-      # roughly half the runs on this branch, so retry — but only on that exact
-      # failure, leaving a genuine pod install error to fail the step, and
-      # annotate each retry so the flake stays visible rather than silently
-      # absorbed. Remove once a CocoaPods release later than 1.17.0 (the latest
-      # at the time of writing, and the one that fails) carries a fix.
+      # Retries the intermittent CocoaPods/CocoaPods#12866 "pathname contains
+      # null byte" crash, and only that. Drop once CocoaPods > 1.17.0 fixes it.
       - name: Install pods
         shell: bash
         working-directory: apps/test-app
@@ -249,17 +232,10 @@ jobs:
           done
           echo "::error::pod install kept failing with CocoaPods/CocoaPods#12866"
           exit 1
+      # Raw xcodebuild output, not piped through xcbeautify — see #391.
+      # C_COMPILER_LAUNCHER keeps Xcode's own clang and just prefixes it with
+      # ccache; explicit modules needs opting in when a launcher is used.
       - name: Build test app
-        # Not piped through xcbeautify, for the reasons #391 gave when dropping
-        # it from the macOS job: on a failure it prints the summary but not the
-        # failing phase's own output, and block-buffers what it does print, so
-        # the log arrives truncated and out of order. Raw xcodebuild output is
-        # verbose but complete and correctly ordered, and the step's exit code
-        # is xcodebuild's own, so no `set -o pipefail` guard is needed.
-        #
-        # C_COMPILER_LAUNCHER keeps Xcode's own clang and merely prefixes it
-        # with ccache, so the compiler still matches the SDK. Explicit modules
-        # needs opting in for a launcher, hence the second setting.
         run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES C_COMPILER_LAUNCHER=ccache CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES
         working-directory: apps/test-app/ios
       - name: Run test app
