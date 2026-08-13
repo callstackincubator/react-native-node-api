@@ -1,0 +1,14 @@
+{
+  "name": "module-register-test",
+  "version": "0.0.0",
+  "description": "Tests of the deprecated napi_module_register registration",
+  "main": "addon.js",
+  "private": true,
+  "dependencies": {
+    "bindings": "~1.5.0"
+  },
+  "scripts": {
+    "test": "node addon.js"
+  },
+  "gypfile": true
+}
