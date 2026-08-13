@@ -2,9 +2,67 @@
 
 This document will outline what happens throughout the various parts of the system, when the app calls the `add` method on the library introduced in the ["usage" document](./USAGE.md).
 
-<!-- TODO: Add Clone this repo: ... -->
-<!-- TODO: Add C++ code snippet -->
-<!-- TODO: Add JS code snippet on requiring and calling it -->
+If you want to follow along with the source code referenced throughout this document (such as `packages/host/cpp/HermesNapiHost.cpp`), clone this repo:
+
+```bash
+git clone https://github.com/callstackincubator/react-native-node-api.git
+```
+
+`calculator-lib`'s native code is a small Node-API addon written in C (see the ["usage" document](./USAGE.md#implement-native-code) for the full walkthrough of writing and building it):
+
+```cpp
+// addon.c
+
+#include <assert.h>
+#include <node_api.h>
+
+static napi_value Add(napi_env env, napi_callback_info info) {
+  napi_status status;
+
+  size_t argc = 2;
+  napi_value args[2];
+  status = napi_get_cb_info(env, info, &argc, args, NULL, NULL);
+  assert(status == napi_ok);
+
+  double value0, value1;
+  status = napi_get_value_double(env, args[0], &value0);
+  assert(status == napi_ok);
+  status = napi_get_value_double(env, args[1], &value1);
+  assert(status == napi_ok);
+
+  napi_value sum;
+  status = napi_create_double(env, value0 + value1, &sum);
+  assert(status == napi_ok);
+
+  return sum;
+}
+
+#define DECLARE_NAPI_METHOD(name, func)                                       \
+  { name, 0, func, 0, 0, 0, napi_default, 0 }
+
+NAPI_MODULE_INIT(/* napi_env env, napi_value exports */) {
+  napi_status status;
+
+  napi_property_descriptor addDescriptor = DECLARE_NAPI_METHOD("add", Add);
+  status = napi_define_properties(env, exports, 1, &addDescriptor);
+  assert(status == napi_ok);
+
+  return exports;
+}
+```
+
+`calculator-lib`'s JavaScript entrypoint requires the prebuilt binary produced from that C code:
+
+```javascript
+module.exports = require("./prebuild.node");
+```
+
+And `my-app` imports and calls it:
+
+```javascript
+import { add } from "calculator-lib";
+console.log("1 + 2 =", add(1, 2));
+```
 
 ## `my-app` makes an `import`
 
