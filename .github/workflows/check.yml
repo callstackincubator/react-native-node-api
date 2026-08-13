@@ -197,12 +197,17 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim,x86_64-apple-ios
-      # So the ccache action's config applies to the ccache Xcode launches too.
-      - name: Expose Ccache config to Xcode
+      # Mirrors React Native's scripts/xcode/ccache.conf, which only applied
+      # while ccache ran through their wrapper script (it sets CCACHE_CONFIGPATH
+      # to it) and so no longer does now that it runs as a compiler launcher.
+      # Without this sloppiness Xcode's modules, PCH and index-store flags leave
+      # ccache treating almost every compile as uncacheable.
+      - name: Tune ccache for Xcode
         run: |
-          echo "CCACHE_DIR=`ccache --get-config cache_dir`" >> $GITHUB_ENV
-          echo "CCACHE_MAXSIZE=`ccache --get-config max_size`" >> $GITHUB_ENV
-          echo "CCACHE_COMPILERCHECK=`ccache --get-config compiler_check`" >> $GITHUB_ENV
+          ccache --set-config sloppiness=clang_index_store,file_stat_matches,include_file_ctime,include_file_mtime,ivfsoverlay,pch_defines,modules,system_headers,time_macros
+          ccache --set-config file_clone=true
+          ccache --set-config depend_mode=true
+          ccache --set-config inode_cache=true
       # Must precede `pod install`: react-native-test-app embeds the resources
       # declared in app.json when generating the workspace, skipping missing
       # ones, and the app would then expect a Metro dev server at runtime.
