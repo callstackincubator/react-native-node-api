@@ -74,7 +74,10 @@ export function getPrebuiltDirectory() {
  * Identifies an archive by everything that changes its contents. The React
  * Native version is part of it because Hermes is compiled against that
  * package's ReactCommon/jsi: a JSI mismatch between the framework and the app
- * linking it is an ABI break.
+ * linking it is an ABI break. The host architecture is part of it because the
+ * hermesc in destroot/bin is a native binary for whichever Mac built it, so a
+ * host of the other architecture has to build its own rather than download one
+ * it cannot execute.
  */
 export function getArchiveName({
   reactNativeVersion,
@@ -89,7 +92,7 @@ export function getArchiveName({
   // GitHub rewrites every character outside [A-Za-z0-9._-] in a release asset
   // name, so the name has to stay within that set to survive a round-trip.
   const platformSuffix = [...platforms].sort().join("-");
-  return `hermes-${shortSha}-rn${reactNativeVersion}-${buildType}-${platformSuffix}.tar.gz`;
+  return `hermes-${shortSha}-rn${reactNativeVersion}-${buildType}-${platformSuffix}-${process.arch}.tar.gz`;
 }
 
 export function getReleaseTag() {
@@ -174,9 +177,11 @@ async function buildArchive({
       },
     });
 
-  // Configured here instead of letting build-apple-framework.sh's
-  // build_host_hermesc do it: that one takes no architectures, and the hermesc
-  // we ship has to run on both Apple Silicon and Intel Macs.
+  // Configured here rather than by build-apple-framework.sh's
+  // build_host_hermesc only so the build type is explicit — the pinned Hermes
+  // hard-errors without one. Do not add CMAKE_OSX_ARCHITECTURES: a multi-arch
+  // host configure makes llvh's try-compiles fail, down to "Host compiler
+  // appears to require libatomic, but cannot find it".
   if (!fs.existsSync(importHostCompilersPath)) {
     await run("cmake", [
       "-S",
@@ -185,7 +190,6 @@ async function buildArchive({
       hermescPath,
       `-DJSI_DIR=${jsiPath}`,
       "-DCMAKE_BUILD_TYPE=Release",
-      "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64",
     ]);
     await run("cmake", [
       "--build",
