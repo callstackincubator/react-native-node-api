@@ -250,13 +250,17 @@ jobs:
           echo "::error::pod install kept failing with CocoaPods/CocoaPods#12866"
           exit 1
       - name: Build test app
-        # `shell: bash` for pipefail, so xcbeautify's exit code can't mask a
-        # failing xcodebuild. A bare `run:` uses `bash -e` without pipefail.
-        shell: bash
+        # Not piped through xcbeautify, for the reasons #391 gave when dropping
+        # it from the macOS job: on a failure it prints the summary but not the
+        # failing phase's own output, and block-buffers what it does print, so
+        # the log arrives truncated and out of order. Raw xcodebuild output is
+        # verbose but complete and correctly ordered, and the step's exit code
+        # is xcodebuild's own, so no `set -o pipefail` guard is needed.
+        #
         # C_COMPILER_LAUNCHER keeps Xcode's own clang and merely prefixes it
         # with ccache, so the compiler still matches the SDK. Explicit modules
         # needs opting in for a launcher, hence the second setting.
-        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES C_COMPILER_LAUNCHER=ccache CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES | xcbeautify
+        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES C_COMPILER_LAUNCHER=ccache CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES
         working-directory: apps/test-app/ios
       - name: Run test app
         run: |
