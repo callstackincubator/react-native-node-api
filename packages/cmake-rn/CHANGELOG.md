@@ -1,5 +1,13 @@
 # cmake-rn
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [37e8081]
+  - react-native-node-api@1.1.1
+  - weak-node-api@0.1.1
+
 ## 0.7.0
 
 ### Minor Changes
