@@ -14,3 +14,10 @@ packages/node-addon-examples/examples
 packages/node-tests/node
 packages/node-tests/tests
 packages/node-tests/*.generated.js
+
+# Committed napi-rs codegen fixture (see packages/ferric-example/.gitignore) — left
+# in napi-rs's own output formatting so `pnpm run build:types` reproduces it exactly
+# and the CI drift check (see .github/workflows/check.yml) doesn't false-positive on
+# formatting alone.
+packages/ferric-example/ferric_example.d.ts
+packages/ferric-example/ferric_example.js

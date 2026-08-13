@@ -19,7 +19,8 @@
   ],
   "scripts": {
     "build": "ferric build",
-    "bootstrap": "node --run build"
+    "bootstrap": "node --run build",
+    "build:types": "ferric build --dts-only"
   },
   "dependencies": {
     "react-native-node-api": "workspace:*"
