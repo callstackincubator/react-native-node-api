@@ -43,12 +43,17 @@ jobs:
       - run: pnpm run build
       # Resolved from the test app so the archive is built against the React
       # Native version this repository actually pins.
+      # Each command substitution is assigned before it is echoed: inside
+      # `echo "x=$(cmd)"` the step's exit status is echo's, so a failing cmd
+      # passes the step with an empty value.
       - name: Resolve prebuilt Hermes name
         id: hermes
         working-directory: apps/test-app
         run: |
-          echo "archive=$(pnpm exec react-native-node-api prebuilt-hermes --print name)" >> "$GITHUB_OUTPUT"
-          echo "tag=$(pnpm exec react-native-node-api prebuilt-hermes --print tag)" >> "$GITHUB_OUTPUT"
+          archive=$(pnpm exec react-native-node-api prebuilt-hermes --print name)
+          tag=$(pnpm exec react-native-node-api prebuilt-hermes --print tag)
+          echo "archive=$archive" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - name: Cache prebuilt Hermes
         uses: actions/cache@v6
         with:
@@ -59,7 +64,9 @@ jobs:
       - name: Build prebuilt Hermes
         id: build
         working-directory: apps/test-app
-        run: echo "path=$(pnpm exec react-native-node-api prebuilt-hermes --no-download)" >> "$GITHUB_OUTPUT"
+        run: |
+          path=$(pnpm exec react-native-node-api prebuilt-hermes --no-download)
+          echo "path=$path" >> "$GITHUB_OUTPUT"
       # --latest=false keeps these out of the "latest release" slot, which
       # belongs to the package releases changesets publishes.
       - name: Publish as a release asset

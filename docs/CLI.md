@@ -21,7 +21,9 @@ The archive is looked for in this order, and cached under `~/Library/Caches/reac
 2. The [release asset](https://github.com/callstackincubator/react-native-node-api/releases) published for the pinned commit by the `Hermes prebuilt` workflow, unless `--no-download` is passed.
 3. A local build from the vendored source, unless `--no-build` is passed. This requires macOS and Xcode, and takes a while — but only once per pinned commit.
 
-Its name covers everything that changes its contents: the pinned Hermes commit, the React Native version whose `ReactCommon/jsi` it is compiled against, the build type and the platforms. That makes it usable as a CI cache key.
+Its name covers everything that changes its contents: the pinned Hermes commit, the React Native version whose `ReactCommon/jsi` it is compiled against, the build type, the platforms and the host architecture. That makes it usable as a CI cache key.
+
+The host architecture is part of it because `destroot/bin/hermesc` is a native binary for whichever Mac built the archive. Archives are published from Apple Silicon runners, so an Intel Mac finds none to download and builds its own instead of getting a `hermesc` it cannot execute.
 
 - `[from]` — Path to a file inside the app package. Defaults to the current working directory.
 - `--react-native-package <package-name>` — The React Native package to resolve Hermes for. Defaults to `react-native`.
