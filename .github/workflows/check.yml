@@ -154,7 +154,7 @@ jobs:
           ctest --test-dir build --output-on-failure
         working-directory: packages/weak-node-api
   host-cpp-tests:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'host')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Host 🏡')
     strategy:
       fail-fast: false
       matrix:
