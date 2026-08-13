@@ -4,6 +4,33 @@ Guidance specific to Claude Code sessions that open pull requests against this
 repository (including automated/scheduled sessions). See the root `CLAUDE.md`
 and `AGENTS.md` for everything else.
 
+## Keep inline comments very brief — put the color in the PR description
+
+Default to **no comment at all**. Write one only when it carries knowledge a
+reader cannot get from the code itself plus a `git blame` pointing at the PR
+that introduced it. When you do write one, keep it to a line or two.
+
+Rationale, rejected alternatives, benchmark numbers, "we tried X and it
+didn't work", links to upstream issues, and anything that reads as a history
+lesson belong in the **PR description** (and, where user-facing, the
+changeset) — not in the source. Those places are where a reader who has
+already found the line via `git blame` will end up anyway, and they don't
+have to be maintained as the code around them changes.
+
+Concretely, do not write comments that:
+
+- restate what the next line already says;
+- explain why an alternative implementation was _not_ chosen;
+- narrate the change (`// now compiled out in release builds`) — that is a
+  commit message, and it goes stale the moment the code moves;
+- document a well-known toolchain fact (e.g. what `NDEBUG` means) that a
+  reader can look up.
+
+Comments that _do_ earn their place: a non-obvious constraint the compiler or
+platform imposes, a workaround with the exact condition that makes it
+removable (see the upstream-fix guidance in `AGENTS.md`), or a subtle
+invariant a future edit could silently break.
+
 ## Attach CI labels when you open a PR
 
 `.github/workflows/check.yml`'s `pull_request` trigger only fires on
