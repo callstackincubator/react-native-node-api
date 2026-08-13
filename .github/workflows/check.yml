@@ -59,24 +59,18 @@ jobs:
         uses: hendrikmuhs/ccache-action@v1.2.23
         with:
           key: ${{ github.job }}-${{ runner.os }}
-      # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
-      # TODO: Remove this once we have a way to run linting without building the native code
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          java-version: "17"
-          distribution: "temurin"
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
-      - run: rustup target add x86_64-linux-android
       - run: pnpm install
       - run: pnpm run build
-      # Bootstrap weak-node-api and ferric-example to get types
-      # TODO: Solve this by adding an option to ferric to build only types or by committing the types into the repo as a fixture for an "init" command
-      - run: pnpm --filter weak-node-api run bootstrap
-      - run: pnpm --filter @react-native-node-api/ferric-example run bootstrap
+      # Generate the TypeScript/C++ declarations that other packages' type-checking
+      # depends on, without building any native binaries: weak-node-api's
+      # "prebuild:prepare" only copies headers and runs codegen (needs clang-format,
+      # set up above, but no JDK/Android SDK/NDK). ferric-example's declarations are
+      # committed as a fixture instead (see packages/ferric-example/.gitignore) —
+      # napi-rs's dts generation has no way to run without a real `cargo build`
+      # (confirmed: it leaves a populated target/ directory), so unlike
+      # weak-node-api's codegen it can't be reproduced here without reintroducing a
+      # native build into the fastest-feedback job. See #414.
+      - run: pnpm --filter weak-node-api run prebuild:prepare
       - run: pnpm run lint
         env:
           DEBUG: eslint:eslint
@@ -406,6 +400,9 @@ jobs:
       - name: Build ferric-example for all architectures
         run: pnpm run build --android
         working-directory: packages/ferric-example
+      - name: Verify committed ferric-example TypeScript declarations are up to date
+        run: git diff --exit-code -- ferric_example.d.ts ferric_example.js
+        working-directory: packages/ferric-example
       - name: Run tests (Android)
         timeout-minutes: 75
         uses: reactivecircus/android-emulator-runner@v2
@@ -472,6 +469,9 @@ jobs:
           pnpm --filter weak-node-api run prebuild:build:apple
       # Build Ferric example for all Apple architectures
       - run: pnpm exec ferric --apple
+        working-directory: packages/ferric-example
+      - name: Verify committed ferric-example TypeScript declarations are up to date
+        run: git diff --exit-code -- ferric_example.d.ts ferric_example.js
         working-directory: packages/ferric-example
       - name: Inspect the structure of the prebuilt binary
         run: |
