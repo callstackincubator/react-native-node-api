@@ -6,9 +6,5 @@
   "private": true,
   "dependencies": {
     "bindings": "~1.5.0"
-  },
-  "scripts": {
-    "test": "node addon.js"
-  },
-  "gypfile": true
+  }
 }
