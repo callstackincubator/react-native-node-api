@@ -120,6 +120,12 @@ private:
 
   JsDispatcher dispatchToJs_;
   hermes_napi_host host_;
+  // Reentrancy guard for fatalException(): true for the duration of routing
+  // an error through ErrorUtils.reportFatalError. fatalException always runs
+  // synchronously on the JS thread (see its doc comment), so a plain member
+  // — no atomics or thread_local — is sufficient to detect a handler that
+  // itself triggers napi_fatal_exception before the outer call returns.
+  bool inFatalException_ = false;
 };
 
 } // namespace callstack::react_native_node_api
