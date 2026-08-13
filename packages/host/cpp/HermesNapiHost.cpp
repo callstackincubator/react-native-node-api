@@ -149,6 +149,63 @@ std::string describeError(napi_env env, napi_value err) {
   return "(unable to stringify the error value)";
 }
 
+// Stringifies `err`, logs it and aborts — the pre-#402 behavior, kept as the
+// fallback for whenever routing through ErrorUtils isn't possible.
+[[noreturn]] void abortWithFatalException(napi_env env, napi_value err) {
+  log_error("napi_fatal_exception: %s", describeError(env, err).c_str());
+  abort();
+}
+
+// Attempts to route `err` through React Native's
+// `global.ErrorUtils.reportFatalError`, the moral equivalent of Node's
+// process.emit('uncaughtException'): in dev this surfaces the real error and
+// stack in LogBox, in release it feeds RN's default rethrow-to-native-crash
+// handler, and apps can observe/handle it via ErrorUtils.setGlobalHandler.
+// Returns whether the error was routed successfully. On any failure —
+// ErrorUtils or reportFatalError absent/not the right type, or the call
+// itself throwing — clears any pending exception before returning false, so
+// the caller's fallback (which does its own Node-API calls) starts clean.
+bool tryReportFatalError(napi_env env, napi_value err) {
+  napi_value global = nullptr;
+  if (napi_get_global(env, &global) != napi_ok) {
+    return false;
+  }
+
+  napi_valuetype type = napi_undefined;
+  napi_value error_utils = nullptr;
+  if (napi_get_named_property(env, global, "ErrorUtils", &error_utils) !=
+          napi_ok ||
+      napi_typeof(env, error_utils, &type) != napi_ok ||
+      type != napi_object) {
+    return false;
+  }
+
+  napi_value report_fatal_error = nullptr;
+  if (napi_get_named_property(env, error_utils, "reportFatalError",
+                              &report_fatal_error) != napi_ok ||
+      napi_typeof(env, report_fatal_error, &type) != napi_ok ||
+      type != napi_function) {
+    return false;
+  }
+
+  napi_value argv[] = {err};
+  napi_status call_status = napi_call_function(
+      env, error_utils, report_fatal_error, 1, argv, nullptr);
+  if (call_status != napi_ok) {
+    // Most likely napi_pending_exception (the handler itself threw). Clear
+    // it so the fallback path — which makes further Node-API calls — isn't
+    // itself defeated by a stale pending exception.
+    bool is_pending = false;
+    if (napi_is_exception_pending(env, &is_pending) == napi_ok && is_pending) {
+      napi_value discarded = nullptr;
+      napi_get_and_clear_last_exception(env, &discarded);
+    }
+    return false;
+  }
+
+  return true;
+}
+
 } // namespace
 
 HostContext::HostContext(JsDispatcher dispatchToJs)
@@ -232,20 +289,37 @@ void HostContext::postTask(void *loop_data, void *task_data,
   }
 }
 
-void HostContext::fatalException(void *, napi_env env,
+void HostContext::fatalException(void *data, napi_env env,
                                  napi_value err) noexcept {
-  // Called on the JS thread by napi_fatal_exception(). Node routes this to
-  // process.emit('uncaughtException'); with no process object we log the
-  // error and abort — the same observable outcome as Hermes' null-host
-  // default, but surfaced through the host logger. `err` is only valid for
-  // the duration of this call, so it is stringified before returning.
-  // TODO: Route through React Native's error handling (ErrorUtils / LogBox),
-  // with abort() as the fallback, to get closer to Node's observable and
-  // handleable 'uncaughtException' — note node-addon-api calls
-  // napi_fatal_exception whenever an exception escapes a thread-safe
-  // function callback, so today a single throwing tsfn callback is fatal.
-  log_error("napi_fatal_exception: %s", describeError(env, err).c_str());
-  abort();
+  // Called on the JS thread by napi_fatal_exception() — Hermes returns
+  // napi_ok to the caller once this returns, matching Node, where emitting
+  // 'uncaughtException' returns to the caller and only aborts the process if
+  // no handler is installed (unlike napi_fatal_error, this hook has no
+  // noreturn contract). `err` is only valid for the duration of this call.
+  //
+  // Routed through ErrorUtils.reportFatalError, RN's own
+  // uncaughtException-equivalent: in dev the default handler shows LogBox
+  // with the real error and stack, in release it rethrows into the native
+  // crash path, and apps can observe/handle it via
+  // ErrorUtils.setGlobalHandler. node-addon-api calls napi_fatal_exception
+  // whenever an exception escapes a thread-safe function callback, so this
+  // is what stands between a throwing tsfn callback and a silent, unhandled
+  // abort.
+  auto *self = static_cast<HostContext *>(data);
+  if (self->inFatalException_) {
+    // Reentrant call: the ErrorUtils handler (or something it triggered)
+    // itself hit a fatal exception. Recursing back into reportFatalError
+    // could loop forever, so go straight to the fallback.
+    abortWithFatalException(env, err);
+  }
+  self->inFatalException_ = true;
+  bool routed = tryReportFatalError(env, err);
+  self->inFatalException_ = false;
+  if (!routed) {
+    // ErrorUtils/reportFatalError absent (non-RN embedder, or called before
+    // React Native has installed it) or the handler itself threw.
+    abortWithFatalException(env, err);
+  }
 }
 
 } // namespace callstack::react_native_node_api
