@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
-import { EventEmitter } from "node:events";
 
 import {
   chalk,
@@ -21,9 +20,6 @@ import {
 } from "./platforms.js";
 import { Platform } from "./platforms/types.js";
 import { getCcachePath } from "./ccache.js";
-
-// We're attaching a lot of listeners when spawning in parallel
-EventEmitter.defaultMaxListeners = 100;
 
 const verboseOption = new Option(
   "--verbose",
