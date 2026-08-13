@@ -161,9 +161,15 @@ const appleBundleIdentifierOption = new Option(
   "Unique CFBundleIdentifier used for Apple framework artifacts",
 ).default(undefined, "com.callstackincubator.node-api.{libraryName}");
 
+const codeSigningAllowedOption = new Option(
+  "--code-signing-allowed",
+  "Allow code signing when building free dynamic libraries (passed as CODE_SIGNING_ALLOWED to xcodebuild)",
+).default(false);
+
 type AppleOpts = {
   xcframeworkExtension: boolean;
   appleBundleIdentifier?: string;
+  codeSigningAllowed: boolean;
 };
 
 function getBuildPath(baseBuildPath: string, triplet: Triplet) {
@@ -259,7 +265,8 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   amendCommand(command) {
     return command
       .addOption(xcframeworkExtensionOption)
-      .addOption(appleBundleIdentifierOption);
+      .addOption(appleBundleIdentifierOption)
+      .addOption(codeSigningAllowedOption);
   },
   assertValidTriplets(triplets) {
     for (const suffix of SIMULATOR_TRIPLET_SUFFIXES) {
@@ -366,7 +373,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   },
   async build(
     { spawn, triplet },
-    { build, target, configuration, appleBundleIdentifier },
+    { build, target, configuration, appleBundleIdentifier, codeSigningAllowed },
   ) {
     // We expect the final application to sign these binaries
     if (target.length > 1) {
@@ -440,9 +447,10 @@ export const platform: Platform<Triplet[], AppleOpts> = {
         ...(target.length > 0 ? ["--target", ...target] : []),
         "--",
 
-        // Skip code-signing (needed when building free dynamic libraries)
-        // TODO: Make this configurable
-        "CODE_SIGNING_ALLOWED=NO",
+        // Skip code-signing by default (needed when building free dynamic
+        // libraries), but let a consumer opt into signed binaries via
+        // --code-signing-allowed.
+        `CODE_SIGNING_ALLOWED=${codeSigningAllowed ? "YES" : "NO"}`,
       ]);
       // Create a framework
       const { artifacts } = sharedLibrary;
