@@ -91,15 +91,15 @@ module.exports = require("react-native-node-api").requireNodeAddon(
 > In the time of writing, this code only supports iOS as passes the path to the library with its .framework.
 > We plan on generalizing this soon 🤞
 
-## Transformed code calls into `react-native-node-api`, loading the platform specific dynamic library
+## `react-native-node-api` creates a `napi_env` for the addon
 
-The native implementation of `requireNodeAddon` is responsible for loading the dynamic library and allow the Node-API module to register its initialization function, either by exporting a `napi_register_module_v1` function or by calling the (deprecated) `napi_module_register` function.
+The native implementation of `requireNodeAddon` turns the library name into a platform specific path (`@rpath/<name>.framework/<name>` on Apple platforms, `lib<name>.so` on Android) and creates a `napi_env` for the addon by calling `hermes_napi_create_env` with the low-level Hermes VM runtime behind the `jsi::Runtime`. As in Node.js, each addon gets its own environment.
 
-In any case the native code stores the initialization function in a data-structure.
+## Hermes loads the platform specific dynamic library and initializes the addon
 
-## `react-native-node-api` creates a `napi_env` and initialize the Node-API module
+The host hands the path and the environment to `hermes_napi_load_module`, which opens the dynamic library and finds the addon's initialization function, either by looking up an exported `napi_register_module_v1` symbol or by falling back to the `napi_module` passed to a (deprecated) `napi_module_register` call made while the library was loading. It then calls that function with the environment and a fresh `exports` object.
 
-The initialization function of a Node-API module expects a `napi_env`, which we create by calling `hermes_napi_create_env` with the low-level Hermes VM runtime behind the `jsi::Runtime`. As in Node.js, each addon gets its own environment.
+If the library cannot be opened, or exports no initialization function, `requireNodeAddon` throws.
 
 ## The library's C++ code initialize the `exports` object
 
