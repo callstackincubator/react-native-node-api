@@ -4,8 +4,11 @@
 #include <jsi/jsi.h>
 #include <node_api.h>
 
-#include "AddonLoaders.hpp"
 #include "HermesNapiHost.hpp"
+
+#include <memory>
+#include <string>
+#include <unordered_map>
 
 namespace callstack::react_native_node_api {
 
@@ -24,8 +27,8 @@ public:
 
 protected:
   struct NodeAddon {
-    void *moduleHandle;
-    napi_addon_register_func init;
+    // The name the addon's exports object is stored under on the JavaScript
+    // global, which is how the napi_value crosses over to JSI.
     std::string generatedName;
 
     // The Node-API environment for this addon, created when the addon is
@@ -42,11 +45,8 @@ protected:
   // Also retained process-wide, as the envs outlive this module on teardown.
   std::shared_ptr<HostContext> hostContext_;
 
-  using LoaderPolicy = PosixLoader; // FIXME: HACK: This is temporary workaround
-                                    // for my lazyness (work on iOS and Android)
-
-  bool loadNodeAddon(NodeAddon &addon, const std::string &path) const;
-  bool initializeNodeModule(facebook::jsi::Runtime &rt, NodeAddon &addon);
+  void loadNodeAddon(facebook::jsi::Runtime &rt, NodeAddon &addon,
+                     const std::string &libraryName);
 };
 
 } // namespace callstack::react_native_node_api
