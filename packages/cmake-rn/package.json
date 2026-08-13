@@ -1,6 +1,6 @@
 {
   "name": "cmake-rn",
-  "version": "0.7.1",
+  "version": "0.8.0-rc.0",
   "description": "Build React Native Node API modules with CMake",
   "homepage": "https://github.com/callstackincubator/react-native-node-api",
   "repository": {
