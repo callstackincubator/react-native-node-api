@@ -1,0 +1,78 @@
+name: Hermes prebuilt
+
+# Builds the pinned Hermes for Apple platforms and publishes it as a release
+# asset, so `pod install` downloads it instead of compiling Hermes as part of
+# every app build. The asset is keyed by everything that changes its contents,
+# so a bumped pin publishes alongside the previous one rather than replacing it.
+
+env:
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: "url.https://github.com/.insteadOf"
+  GIT_CONFIG_VALUE_0: "git@github.com:"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - next
+    paths:
+      - "packages/host/src/node/cli/hermes.ts"
+      - "packages/host/src/node/cli/hermes-prebuilt.ts"
+      - ".github/workflows/hermes-prebuilt.yml"
+
+# Two runs publishing the same tag would race on creating the release.
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  publish:
+    name: Publish prebuilt Hermes
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/krypton
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
+      - run: pnpm install
+      - run: pnpm run build
+      # Resolved from the test app so the archive is built against the React
+      # Native version this repository actually pins.
+      - name: Resolve prebuilt Hermes name
+        id: hermes
+        working-directory: apps/test-app
+        run: |
+          echo "archive=$(pnpm exec react-native-node-api prebuilt-hermes --print name)" >> "$GITHUB_OUTPUT"
+          echo "tag=$(pnpm exec react-native-node-api prebuilt-hermes --print tag)" >> "$GITHUB_OUTPUT"
+      - name: Cache prebuilt Hermes
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/react-native-node-api/hermes-prebuilt
+          key: ${{ steps.hermes.outputs.archive }}
+      # --no-download so a re-run rebuilds rather than round-tripping the asset
+      # it is about to publish.
+      - name: Build prebuilt Hermes
+        id: build
+        working-directory: apps/test-app
+        run: echo "path=$(pnpm exec react-native-node-api prebuilt-hermes --no-download)" >> "$GITHUB_OUTPUT"
+      # --latest=false keeps these out of the "latest release" slot, which
+      # belongs to the package releases changesets publishes.
+      - name: Publish as a release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.hermes.outputs.tag }}
+          ARCHIVE_PATH: ${{ steps.build.outputs.path }}
+        run: |
+          if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Prebuilt Hermes ($TAG)" \
+              --notes "Hermes, built for Apple platforms from the commit pinned in \`packages/host/src/node/cli/hermes.ts\`. Downloaded by \`react-native-node-api prebuilt-hermes\` and injected into the app's \`pod install\` through \`HERMES_ENGINE_TARBALL_PATH\`." \
+              --latest=false
+          fi
+          gh release upload "$TAG" "$ARCHIVE_PATH" --repo "$GITHUB_REPOSITORY" --clobber
