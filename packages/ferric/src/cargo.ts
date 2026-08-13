@@ -93,6 +93,36 @@ export function ensureCargo() {
   }
 }
 
+type CargoMetadata = {
+  packages: { targets: { name: string; kind: string[] }[] }[];
+};
+
+/**
+ * Determine the name of the crate's "cdylib" target, without building anything,
+ * by asking cargo for its metadata. This matches the basename a full build would
+ * produce (e.g. "ferric_example" for a crate named "ferric-example"), since cargo
+ * normalizes the crate name (dashes to underscores) for the compiled artifact.
+ */
+export function determineCargoLibraryName(cwd: string): string {
+  const output = cp.execFileSync(
+    "cargo",
+    ["metadata", "--no-deps", "--format-version", "1"],
+    { cwd, encoding: "utf-8" },
+  );
+  const { packages } = JSON.parse(output) as CargoMetadata;
+  const cdylibNames = packages
+    .flatMap((pkg) => pkg.targets)
+    .filter((target) => target.kind.includes("cdylib"))
+    .map((target) => target.name);
+  const candidates = new Set(cdylibNames);
+  assert(
+    candidates.size === 1,
+    `Expected exactly one cdylib target, got: ${[...candidates].join(", ")}`,
+  );
+  const [name] = candidates;
+  return name;
+}
+
 type BuildOptions = {
   configuration: "debug" | "release";
   verbose: boolean;
