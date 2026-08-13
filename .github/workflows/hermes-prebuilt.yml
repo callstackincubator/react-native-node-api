@@ -12,6 +12,11 @@ env:
 
 on:
   workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild and re-upload even when the archive is already published
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -54,7 +59,32 @@ jobs:
           tag=$(pnpm exec react-native-node-api prebuilt-hermes --print tag)
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+      # The paths filter above fires on any edit to these files, not just a
+      # bumped pin — and the archive name covers every input that changes its
+      # contents, so an asset already published under that name is exactly what
+      # this run would spend half an hour rebuilding. The Actions cache is not
+      # enough on its own: it is scoped to the branch that wrote it, and evicts
+      # after 7 days or under the repository's 10 GB cap.
+      - name: Look for an already-published archive
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.hermes.outputs.tag }}
+          ARCHIVE: ${{ steps.hermes.outputs.archive }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          if [ "$FORCE" = "true" ]; then
+            echo "::notice::Forced: rebuilding $ARCHIVE regardless of what is published"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          elif gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+               --jq '.assets[].name' 2>/dev/null | grep -qxF "$ARCHIVE"; then
+            echo "::notice::$ARCHIVE is already published under $TAG — nothing to build"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Cache prebuilt Hermes
+        if: steps.published.outputs.exists != 'true'
         uses: actions/cache@v6
         with:
           path: ~/Library/Caches/react-native-node-api/hermes-prebuilt
@@ -63,6 +93,7 @@ jobs:
       # it is about to publish.
       - name: Build prebuilt Hermes
         id: build
+        if: steps.published.outputs.exists != 'true'
         working-directory: apps/test-app
         run: |
           path=$(pnpm exec react-native-node-api prebuilt-hermes --no-download)
@@ -71,7 +102,7 @@ jobs:
       # compiler's actual complaint only in its configure log. Surface that log
       # here so a failure is diagnosable without another round trip.
       - name: Dump CMake configure log
-        if: failure()
+        if: failure() && steps.published.outputs.exists != 'true'
         run: |
           log=$(find "$PWD" -name CMakeConfigureLog.yaml -path '*build_host_hermesc*' | head -1)
           if [ -z "$log" ]; then
@@ -92,7 +123,7 @@ jobs:
           echo "::endgroup::"
           cp "$log" "$RUNNER_TEMP/CMakeConfigureLog.yaml"
       - name: Upload CMake configure log
-        if: failure()
+        if: failure() && steps.published.outputs.exists != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: hermesc-cmake-configure-log
@@ -101,6 +132,7 @@ jobs:
       # --latest=false keeps these out of the "latest release" slot, which
       # belongs to the package releases changesets publishes.
       - name: Publish as a release asset
+        if: steps.published.outputs.exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.hermes.outputs.tag }}
