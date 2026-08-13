@@ -225,8 +225,9 @@ jobs:
           key: ${{ github.job }}-${{ runner.os }}
           # The action defaults to 500M, which a from-source React Native build
           # fills mid-build: it evicted 88 times in one run, discarding most of
-          # what it had just cached.
-          max-size: 3G
+          # what it had just cached. Raised again to also hold Hermes, which is
+          # by far the largest thing compiled here.
+          max-size: 6G
       - run: rustup target add aarch64-apple-ios-sim x86_64-apple-ios
       - run: pnpm install
       - run: pnpm run bootstrap
@@ -238,12 +239,26 @@ jobs:
       # to it) and so no longer does now that it runs as a compiler launcher.
       # Without this sloppiness Xcode's modules, PCH and index-store flags leave
       # ccache treating almost every compile as uncacheable.
+      #
+      # Hermes is built from source (the Node-API fork), from a CMake build that
+      # React Native drives in a script phase — so C_COMPILER_LAUNCHER, an Xcode
+      # build setting, never reaches it. It is the dominant cost of the build:
+      # 17m15s of an 18m58s build step in run 31691647982. CMake reads
+      # CMAKE_TOOLCHAIN_FILE from the environment, so a toolchain file is enough
+      # to put ccache in front of its compiler without patching React Native.
+      # Only '[RN] [2] Build Hermes' benefits; '[1] Build Hermesc' runs under
+      # `env -i` and cannot see this.
       - name: Tune ccache for Xcode
         run: |
           ccache --set-config sloppiness=clang_index_store,file_stat_matches,include_file_ctime,include_file_mtime,ivfsoverlay,pch_defines,modules,system_headers,time_macros
           ccache --set-config file_clone=true
           ccache --set-config depend_mode=true
           ccache --set-config inode_cache=true
+          cat > "$RUNNER_TEMP/hermes-ccache-toolchain.cmake" <<EOF
+          set(CMAKE_C_COMPILER_LAUNCHER "$(command -v ccache)" CACHE STRING "")
+          set(CMAKE_CXX_COMPILER_LAUNCHER "$(command -v ccache)" CACHE STRING "")
+          EOF
+          echo "CMAKE_TOOLCHAIN_FILE=$RUNNER_TEMP/hermes-ccache-toolchain.cmake" >> $GITHUB_ENV
       # Must precede `pod install`: react-native-test-app embeds the resources
       # declared in app.json when generating the workspace, skipping missing
       # ones, and the app would then expect a Metro dev server at runtime.
