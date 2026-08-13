@@ -144,8 +144,8 @@ importers:
         specifier: ^14.0.0
         version: 14.0.0(commander@14.0.3)
       bufout:
-        specifier: ^0.3.2
-        version: 0.3.4
+        specifier: ^1.0.0
+        version: 1.0.0
       chalk:
         specifier: ^5.4.1
         version: 5.6.2
@@ -2618,8 +2618,8 @@ packages:
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
-  bufout@0.3.4:
-    resolution: {integrity: sha512-m8iGxYUvWLdQ9CQ9Sjnmr8hJHlpXfRQn2CV3eI5b107MWQqAe/K/pqsCGmczkSy3r7E1HW5u5z86z2aBYbwwxQ==}
+  bufout@1.0.0:
+    resolution: {integrity: sha512-ZCFKJOWLZqZKitcDUTIsJucC9EhOiYl/wb7Fg1TfzlFz1FhjrykZAkn5Gb7JyIsW5ViZjDXL8tr2bXReM/u/XQ==}
 
   bytes@3.1.2:
     resolution: {integrity: sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==}
@@ -7367,7 +7367,7 @@ snapshots:
       base64-js: 1.5.1
       ieee754: 1.2.1
 
-  bufout@0.3.4: {}
+  bufout@1.0.0: {}
 
   bytes@3.1.2: {}
 
