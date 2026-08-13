@@ -224,8 +224,31 @@ jobs:
       # feature 'found_incompatible_headers__check_search_paths'", followed by
       # every system module failing. Ccache is wired up on the xcodebuild
       # invocation below instead.
-      - run: pnpm run pod-install
+      #
+      # CocoaPods also dies intermittently with "pathname contains null byte"
+      # while generating the Pods project. That is an unresolved upstream bug
+      # specific to pnpm monorepos (CocoaPods/CocoaPods#12866, #12798) which hit
+      # roughly half the runs on this branch, so retry — but only on that exact
+      # failure, leaving a genuine pod install error to fail the step, and
+      # annotate each retry so the flake stays visible rather than silently
+      # absorbed. Remove once a CocoaPods release later than 1.17.0 (the latest
+      # at the time of writing, and the one that fails) carries a fix.
+      - name: Install pods
+        shell: bash
         working-directory: apps/test-app
+        run: |
+          for attempt in 1 2 3; do
+            if pnpm run pod-install 2>&1 | tee "$RUNNER_TEMP/pod-install.log"; then
+              exit 0
+            fi
+            if ! grep -q 'pathname contains null byte' "$RUNNER_TEMP/pod-install.log"; then
+              echo "::error::pod install failed for an unrelated reason"
+              exit 1
+            fi
+            echo "::warning::pod install hit CocoaPods/CocoaPods#12866 (attempt ${attempt}/3), retrying"
+          done
+          echo "::error::pod install kept failing with CocoaPods/CocoaPods#12866"
+          exit 1
       - name: Build test app
         # `shell: bash` for pipefail, so xcbeautify's exit code can't mask a
         # failing xcodebuild. A bare `run:` uses `bash -e` without pipefail.
