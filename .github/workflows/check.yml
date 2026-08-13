@@ -223,7 +223,15 @@ jobs:
         # `shell: bash` for pipefail, so xcbeautify's exit code can't mask a
         # failing xcodebuild. A bare `run:` uses `bash -e` without pipefail.
         shell: bash
-        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES | xcbeautify
+        # CLANG_ENABLE_EXPLICIT_MODULES=NO because USE_CCACHE makes React Native
+        # point CC/CXX at its ccache-clang.sh wrappers, which Xcode's explicit
+        # modules doesn't recognise as a compiler ("Explicit modules is enabled
+        # but the compiler was not recognized"), and every system module then
+        # fails to build. Remove once React Native configures ccache through
+        # C_COMPILER_LAUNCHER instead of overriding CC/CXX, which would let us
+        # keep explicit modules via
+        # CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES.
+        run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES CLANG_ENABLE_EXPLICIT_MODULES=NO | xcbeautify
         working-directory: apps/test-app/ios
       - name: Run test app
         run: |
