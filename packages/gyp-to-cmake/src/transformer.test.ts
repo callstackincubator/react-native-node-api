@@ -125,4 +125,110 @@ describe("bindingGypToCmakeLists", () => {
       );
     });
   });
+
+  describe("namespaced targets", () => {
+    const gyp = {
+      targets: [{ target_name: "addon", sources: ["addon.cc"] }],
+    };
+
+    it("should not namespace or set OUTPUT_NAME by default", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp,
+      });
+
+      assert(
+        output.includes("add_library(addon SHARED addon.cc"),
+        `Expected an un-namespaced target:\n${output}`,
+      );
+      assert(
+        !output.includes("OUTPUT_NAME"),
+        `Expected no OUTPUT_NAME when not namespacing:\n${output}`,
+      );
+    });
+
+    it("should prefix the target name with the project name", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp,
+        namespacedTargets: true,
+      });
+
+      assert(
+        output.includes("add_library(some-project-addon SHARED addon.cc"),
+        `Expected a namespaced target:\n${output}`,
+      );
+      assert(
+        !output.includes("add_library(addon "),
+        `Expected no un-namespaced target:\n${output}`,
+      );
+    });
+
+    it("should reference the namespaced target in target-specific commands", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "addon",
+              sources: ["addon.cc"],
+              include_dirs: ["include"],
+              defines: ["FOO"],
+            },
+          ],
+        },
+        namespacedTargets: true,
+        weakNodeApi: true,
+        compileFeatures: ["cxx_std_17"],
+      });
+
+      for (const command of [
+        "target_link_libraries(some-project-addon PRIVATE weak-node-api)",
+        "target_include_directories(some-project-addon PRIVATE include)",
+        "target_compile_definitions(some-project-addon PRIVATE FOO)",
+        "target_compile_features(some-project-addon PRIVATE cxx_std_17)",
+      ]) {
+        assert(
+          output.includes(command),
+          `Expected output to include "${command}":\n${output}`,
+        );
+      }
+    });
+
+    it("should keep the artifact name un-namespaced in both Apple branches", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp,
+        namespacedTargets: true,
+      });
+
+      // CMake names the framework bundle after OUTPUT_NAME, so both the
+      // framework and the plain shared library branch need it. Otherwise the
+      // prebuild ends up named after the namespaced target.
+      assert.equal(
+        output.match(/OUTPUT_NAME addon$/gm)?.length,
+        2,
+        `Expected OUTPUT_NAME in both branches:\n${output}`,
+      );
+    });
+
+    it("should set OUTPUT_NAME when Apple framework support is disabled", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp,
+        namespacedTargets: true,
+        appleFramework: false,
+      });
+
+      assert(
+        output.includes("set_target_properties(some-project-addon PROPERTIES"),
+        `Expected properties on the namespaced target:\n${output}`,
+      );
+      assert.equal(
+        output.match(/OUTPUT_NAME addon$/gm)?.length,
+        1,
+        `Expected a single OUTPUT_NAME:\n${output}`,
+      );
+    });
+  });
 });
