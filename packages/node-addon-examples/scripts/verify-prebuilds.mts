@@ -2,6 +2,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
+import plistModule from "@expo/plist";
 import { DIRS } from "./cmake-projects.mjs";
 
 const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
@@ -65,7 +66,27 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
             "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
-            // TODO: Verify the contents of the Info.plist file
+            const libraryName = path.basename(frameworkDir, ".framework");
+            const infoPlist: unknown = plistModule.default.parse(
+              await fs.promises.readFile(
+                path.join(frameworkDir, file.name),
+                "utf8",
+              ),
+            );
+            assert(
+              typeof infoPlist === "object" && infoPlist !== null,
+              "Expected Info.plist to contain a dictionary",
+            );
+            assert("CFBundleExecutable" in infoPlist);
+            assert("CFBundleIdentifier" in infoPlist);
+            assert.equal(infoPlist.CFBundleExecutable, libraryName);
+            assert.equal(
+              infoPlist.CFBundleIdentifier,
+              `com.callstackincubator.node-api.${libraryName}`.replace(
+                /[^A-Za-z0-9-.]/g,
+                "-",
+              ),
+            );
             continue;
           } else {
             assert(
