@@ -9,7 +9,29 @@ npx react-native-node-api <command> [options]
 Run `npx react-native-node-api help` or `npx react-native-node-api help <command>` to see this same information from the CLI itself.
 
 > [!NOTE]
-> This document is hand-written from the [Commander](https://github.com/tj/commander.js) program definition in [`packages/host/src/node/cli/program.ts`](../packages/host/src/node/cli/program.ts) (with the `vendor-hermes` command defined in [`hermes.ts`](../packages/host/src/node/cli/hermes.ts)). It needs to be kept in sync by hand whenever a command or its options change.
+> This document is hand-written from the [Commander](https://github.com/tj/commander.js) program definition in [`packages/host/src/node/cli/program.ts`](../packages/host/src/node/cli/program.ts) (with the `vendor-hermes` command defined in [`hermes.ts`](../packages/host/src/node/cli/hermes.ts) and `prebuilt-hermes` in [`hermes-prebuilt.ts`](../packages/host/src/node/cli/hermes-prebuilt.ts)). It needs to be kept in sync by hand whenever a command or its options change.
+
+## `prebuilt-hermes [from]`
+
+Resolves an archive of the pinned Hermes, prebuilt for Apple platforms, and prints its path. The archive holds the `destroot` layout React Native's `hermes-engine.podspec` expects from a tarball pointed at by `HERMES_ENGINE_TARBALL_PATH`, so an app that sets that variable vendors the prebuilt frameworks instead of compiling Hermes as part of its own build.
+
+The archive is looked for in this order, and cached under `~/Library/Caches/react-native-node-api/hermes-prebuilt` (overridable with `REACT_NATIVE_NODE_API_CACHE_PATH`):
+
+1. The cache, unless `--force` is passed.
+2. The [release asset](https://github.com/callstackincubator/react-native-node-api/releases) published for the pinned commit by the `Hermes prebuilt` workflow, unless `--no-download` is passed.
+3. A local build from the vendored source, unless `--no-build` is passed. This requires macOS and Xcode, and takes a while — but only once per pinned commit.
+
+Its name covers everything that changes its contents: the pinned Hermes commit, the React Native version whose `ReactCommon/jsi` it is compiled against, the build type and the platforms. That makes it usable as a CI cache key.
+
+- `[from]` — Path to a file inside the app package. Defaults to the current working directory.
+- `--react-native-package <package-name>` — The React Native package to resolve Hermes for. Defaults to `react-native`.
+- `--build-type <type>` — One of `debug` or `release`. `debug` enables Hermes' debugger. Defaults to `debug`.
+- `--platform <name>` — Apple platform to build for, repeatable. Defaults to `iphoneos` and `iphonesimulator`.
+- `--silent` — Don't print anything except the final path. Defaults to `false`.
+- `--force` — Re-resolve the archive even if it is already cached. Defaults to `false`.
+- `--no-download` — Don't download a published archive.
+- `--no-build` — Don't build the archive locally when none is published.
+- `--print <property>` — Print `name`, `tag` or `url` of the archive instead of resolving it.
 
 ## `vendor-hermes [from]`
 
