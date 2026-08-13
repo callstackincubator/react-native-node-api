@@ -244,6 +244,27 @@ jobs:
           ccache --set-config file_clone=true
           ccache --set-config depend_mode=true
           ccache --set-config inode_cache=true
+      # Hermes dominates the iOS build (17m15s of an 18m58s "Build test app"
+      # step, measured in #439) and only changes when the pinned commit does, so
+      # it is built once into an archive that `pod install` injects through
+      # HERMES_ENGINE_TARBALL_PATH. The archive name covers every input that
+      # changes its contents — the pinned commit, the React Native version whose
+      # JSI it is compiled against, the build type and the platforms — which
+      # makes it the cache key too.
+      - name: Resolve prebuilt Hermes name
+        id: hermes
+        run: echo "archive=$(pnpm exec react-native-node-api prebuilt-hermes --print name)" >> "$GITHUB_OUTPUT"
+        working-directory: apps/test-app
+      - name: Cache prebuilt Hermes
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/react-native-node-api/hermes-prebuilt
+          key: ${{ steps.hermes.outputs.archive }}
+      # Explicit rather than left to `pod install`, so a cold cache shows up as
+      # its own step in the job log instead of as a mysteriously slow install.
+      - name: Build prebuilt Hermes
+        run: pnpm exec react-native-node-api prebuilt-hermes
+        working-directory: apps/test-app
       # Must precede `pod install`: react-native-test-app embeds the resources
       # declared in app.json when generating the workspace, skipping missing
       # ones, and the app would then expect a Metro dev server at runtime.

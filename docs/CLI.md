@@ -13,7 +13,7 @@ Run `npx react-native-node-api help` or `npx react-native-node-api help <command
 
 ## `prebuilt-hermes [from]`
 
-Resolves an archive of the pinned Hermes, prebuilt for Apple platforms, and prints its path. The archive holds the `destroot` layout React Native's `hermes-engine.podspec` expects from a tarball pointed at by `HERMES_ENGINE_TARBALL_PATH`, so an app that sets that variable vendors the prebuilt frameworks instead of compiling Hermes as part of its own build.
+Resolves an archive of the pinned Hermes, prebuilt for Apple platforms, and prints its path. This is what the Cocoapods integration uses by default: the path is handed to React Native through the `HERMES_ENGINE_TARBALL_PATH` environment variable, and `hermes-engine.podspec` then vendors the frameworks out of the archive instead of compiling Hermes as part of every app build.
 
 The archive is looked for in this order, and cached under `~/Library/Caches/react-native-node-api/hermes-prebuilt` (overridable with `REACT_NATIVE_NODE_API_CACHE_PATH`):
 
@@ -35,9 +35,13 @@ The host architecture is part of it because `destroot/bin/hermesc` is a native b
 - `--no-build` — Don't build the archive locally when none is published.
 - `--print <property>` — Print `name`, `tag` or `url` of the archive instead of resolving it.
 
+To build Hermes from source as part of the app build instead — which is the faster loop while iterating on Hermes itself, since Xcode then rebuilds it incrementally — set `REACT_NATIVE_NODE_API_HERMES_FROM_SOURCE=1` before running `pod install`. Setting `REACT_NATIVE_OVERRIDE_HERMES_DIR` or `HERMES_ENGINE_TARBALL_PATH` yourself also takes precedence.
+
 ## `vendor-hermes [from]`
 
 Clones the pinned commit of Hermes' `static_h` branch (which carries Hermes' first-party Node-API implementation) into the `sdks/node-api-hermes` directory of the app's `react-native` package, so the native build can compile against it. Prints the path to the vendored checkout on success.
+
+This is how Hermes is built on Android, and on Apple when the from-source path described above is selected.
 
 - `[from]` — Path to a file inside the app package. Defaults to the current working directory.
 - `--react-native-package <package-name>` — The React Native package to vendor Hermes into. Defaults to `react-native`.

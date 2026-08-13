@@ -60,7 +60,7 @@ patch or workaround:
 
 ## Critical Build Dependencies
 
-- **Vendored Hermes**: Builds Hermes from a pinned commit on the `static_h` branch, which carries Hermes' first-party Node-API implementation (`API/napi`, target `hermesNapi`). The pin lives in `packages/host/src/node/cli/hermes.ts` and is fetched by the `vendor-hermes` command.
+- **Vendored Hermes**: Builds Hermes from a pinned commit on the `static_h` branch, which carries Hermes' first-party Node-API implementation (`API/napi`, target `hermesNapi`). The pin lives in `packages/host/src/node/cli/hermes.ts` and is fetched by the `vendor-hermes` command. On Apple platforms it is built once into an archive by the `prebuilt-hermes` command and injected into `pod install` through `HERMES_ENGINE_TARBALL_PATH`; Android and the opt-in `REACT_NATIVE_NODE_API_HERMES_FROM_SOURCE=1` path build it from that checkout instead. See [docs/CLI.md](docs/CLI.md).
 - **Prebuilt Binary Spec**: All tools must output to the exact naming scheme:
   - Android: `*.android.node/` with jniLibs structure + `react-native-node-api-module` marker file
   - iOS: `*.apple.node` (XCFramework renamed) + marker file
