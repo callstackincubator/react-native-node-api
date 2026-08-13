@@ -3,9 +3,44 @@
 
 #include <jsi/hermes-interfaces.h>
 
+#include <cassert>
+#include <cstdio>
+#include <string>
+
 using namespace facebook;
 
 namespace callstack::react_native_node_api {
+
+namespace {
+
+/// Renders the exception Hermes left pending on `env` as a message, clearing
+/// it so the env is usable again. Returns an empty string if the exception
+/// cannot be read, in which case the caller reports the status alone.
+std::string takePendingExceptionMessage(napi_env env) {
+  napi_value error = nullptr;
+  if (napi_get_and_clear_last_exception(env, &error) != napi_ok ||
+      error == nullptr) {
+    return {};
+  }
+  napi_value asString = nullptr;
+  if (napi_coerce_to_string(env, error, &asString) != napi_ok) {
+    return {};
+  }
+  size_t length = 0;
+  if (napi_get_value_string_utf8(env, asString, nullptr, 0, &length) !=
+      napi_ok) {
+    return {};
+  }
+  std::string message(length, '\0');
+  if (napi_get_value_string_utf8(env, asString, message.data(), length + 1,
+                                 &length) != napi_ok) {
+    return {};
+  }
+  message.resize(length);
+  return message;
+}
+
+} // namespace
 
 CxxNodeApiHostModule::CxxNodeApiHostModule(
     std::shared_ptr<react::CallInvoker> jsInvoker)
@@ -58,8 +93,8 @@ CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
   if (1 == count && args[0].isString()) {
     return thisModule.requireNodeAddon(rt, args[0].asString(rt));
   }
-  // TODO: Throw a meaningful error
-  return jsi::Value::undefined();
+  throw jsi::JSError(rt, "Expected requireNodeAddon to be called with a single "
+                         "library name string");
 }
 
 jsi::Value
@@ -72,116 +107,94 @@ CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
 
   // Check if this module has been loaded already, if not then load it...
   if (inserted) {
-    if (!loadNodeAddon(addon, libraryNameStr)) {
-      return jsi::Value::undefined();
+    try {
+      loadNodeAddon(rt, addon, libraryNameStr);
+    } catch (...) {
+      // Leave no half-initialized entry behind, so a later require of the same
+      // addon retries the load instead of reading a missing global.
+      nodeAddons_.erase(it);
+      throw;
     }
   }
 
-  // Initialize the addon if it has not already been initialized
-  if (!rt.global().hasProperty(rt, addon.generatedName.data())) {
-    initializeNodeModule(rt, addon);
-  }
-
   // Look the exports up (using JSI) and return it...
-  return rt.global().getProperty(rt, addon.generatedName.data());
+  return rt.global().getProperty(rt, addon.generatedName.c_str());
 }
 
-bool CxxNodeApiHostModule::loadNodeAddon(NodeAddon &addon,
-                                         const std::string &libraryName) const {
+void CxxNodeApiHostModule::loadNodeAddon(jsi::Runtime &rt, NodeAddon &addon,
+                                         const std::string &libraryName) {
 #if defined(__APPLE__)
-  std::string libraryPath =
+  const std::string libraryPath =
       "@rpath/" + libraryName + ".framework/" + libraryName;
 #elif defined(__ANDROID__)
-  std::string libraryPath = "lib" + libraryName + ".so";
+  const std::string libraryPath = "lib" + libraryName + ".so";
 #else
-  abort()
+#error "Loading Node-API addons is unsupported on this platform"
 #endif
 
   log_debug("[%s] Loading addon by '%s'", libraryName.c_str(),
             libraryPath.c_str());
 
-  typename LoaderPolicy::Symbol initFn = NULL;
-  typename LoaderPolicy::Module library =
-      LoaderPolicy::loadLibrary(libraryPath.c_str());
-  if (NULL != library) {
-    log_debug("[%s] Loaded addon", libraryName.c_str());
-    addon.moduleHandle = library;
-
-    // Generate a name allowing us to reference the exports object from JSI
-    // later Instead of using random numbers to avoid name clashes, we just use
-    // the pointer address of the loaded module
-    addon.generatedName.resize(32, '\0');
-    snprintf(addon.generatedName.data(), addon.generatedName.size(),
-             "RN$NodeAddon_%p", addon.moduleHandle);
-
-    initFn = LoaderPolicy::getSymbol(library, "napi_register_module_v1");
-    if (NULL != initFn) {
-      log_debug("[%s] Found napi_register_module_v1 (%p)", libraryName.c_str(),
-                initFn);
-      addon.init = (napi_addon_register_func)initFn;
-    } else {
-      log_debug("[%s] Failed to find napi_register_module_v1. Expecting the "
-                "addon to call napi_module_register to register itself.",
-                libraryName.c_str());
-    }
-    // TODO: Read "node_api_module_get_api_version_v1" to support the addon
-    // declaring its Node-API version
-    // @see
-    // https://github.com/callstackincubator/react-native-node-api/issues/4
-  } else {
-    log_debug("[%s] Failed to load library", libraryName.c_str());
-  }
-  return NULL != initFn;
-}
-
-bool CxxNodeApiHostModule::initializeNodeModule(jsi::Runtime &rt,
-                                                NodeAddon &addon) {
-  // We should check if the module has already been initialized
-  assert(NULL != addon.moduleHandle);
-  assert(NULL != addon.init);
-  napi_status status = napi_ok;
-  // TODO: Read the version from the addon
-  // @see
-  // https://github.com/callstackincubator/react-native-node-api/issues/4
-
   // Create this addon's Node-API environment. Hermes binds an env to its
   // low-level VM runtime, which we reach through the (unstable) IHermes JSI
   // interface, and takes ownership: the env is torn down with the runtime, so
   // there is nothing to free here. Each addon gets its own env, as in Node.
-  if (addon.env == nullptr) {
-    // Fully qualified: `using namespace facebook` makes a bare `hermes`
-    // ambiguous with the top-level `::hermes` (VM) namespace pulled in via
-    // <jsi/hermes-interfaces.h>.
-    auto *hermes = facebook::jsi::castInterface<facebook::hermes::IHermes>(&rt);
-    if (hermes == nullptr) {
-      log_debug("NapiHost: JSI runtime is not castable to IHermes; cannot "
-                "create a Node-API environment");
-      abort();
-    }
-    addon.env =
-        hermes_napi_create_env(hermes->getVMRuntimeUnsafe(), hostContext_->host());
-    assert(addon.env != nullptr);
+  //
+  // Fully qualified: `using namespace facebook` makes a bare `hermes`
+  // ambiguous with the top-level `::hermes` (VM) namespace pulled in via
+  // <jsi/hermes-interfaces.h>.
+  auto *hermes = facebook::jsi::castInterface<facebook::hermes::IHermes>(&rt);
+  if (hermes == nullptr) {
+    log_debug("NapiHost: JSI runtime is not castable to IHermes; cannot "
+              "create a Node-API environment");
+    abort();
   }
+  addon.env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(),
+                                     hostContext_->host());
+  assert(addon.env != nullptr);
   napi_env env = addon.env;
 
-  // Create the "exports" object
-  napi_value exports;
-  status = napi_create_object(env, &exports);
+  // A name to reference the exports object by from JSI. Instead of using
+  // random numbers to avoid name clashes, we use the address of the env, which
+  // is unique per addon per runtime.
+  char generatedName[32];
+  snprintf(generatedName, sizeof(generatedName), "RN$NodeAddon_%p",
+           static_cast<void *>(env));
+  addon.generatedName = generatedName;
+
+  // Every napi_value below is created in this scope, and only reachable from
+  // the JavaScript global (or dropped) once it closes.
+  napi_handle_scope scope = nullptr;
+  napi_status status = napi_open_handle_scope(env, &scope);
   assert(status == napi_ok);
 
-  // Call the addon init function to populate the "exports" object
-  // Allowing it to replace the value entirely by its return value
-  exports = addon.init(env, exports);
+  napi_value exports = nullptr;
+  status = hermes_napi_load_module(env, libraryPath.c_str(), &exports);
+  if (status == napi_ok) {
+    napi_value global = nullptr;
+    status = napi_get_global(env, &global);
+    assert(status == napi_ok);
+    status = napi_set_named_property(env, global, addon.generatedName.c_str(),
+                                     exports);
+    assert(status == napi_ok);
+  }
 
-  napi_value global;
-  napi_get_global(env, &global);
-  assert(status == napi_ok);
+  const bool failed = status != napi_ok;
+  std::string message;
+  if (failed) {
+    message = takePendingExceptionMessage(env);
+    if (message.empty()) {
+      message = "Node-API status " + std::to_string(status);
+    }
+  }
+  const napi_status closeStatus = napi_close_handle_scope(env, scope);
+  assert(closeStatus == napi_ok);
+  (void)closeStatus;
 
-  status =
-      napi_set_named_property(env, global, addon.generatedName.data(), exports);
-  assert(status == napi_ok);
-
-  return true;
+  if (failed) {
+    throw jsi::JSError(rt, "Failed to load '" + libraryName + "' addon from '" +
+                               libraryPath + "': " + message);
+  }
 }
 
 } // namespace callstack::react_native_node_api
