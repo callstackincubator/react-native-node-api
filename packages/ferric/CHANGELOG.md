@@ -1,5 +1,14 @@
 # ferric-cli
 
+## 0.4.1
+
+### Patch Changes
+
+- 37e8081: Add x86_64-apple-ios as a default target on an Apple host
+- Updated dependencies [37e8081]
+  - react-native-node-api@1.1.1
+  - weak-node-api@0.1.1
+
 ## 0.4.0
 
 ### Minor Changes

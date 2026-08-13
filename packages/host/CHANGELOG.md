@@ -1,5 +1,12 @@
 # react-native-node-api
 
+## 1.1.1
+
+### Patch Changes
+
+- 37e8081: Print module path on framework slicing failure
+- weak-node-api@0.1.1
+
 ## 1.1.0
 
 ### Minor Changes
