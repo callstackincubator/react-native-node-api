@@ -60,17 +60,36 @@ export type NamingStrategy = {
 const packageNameCache = new Map<string, string>();
 
 /**
+ * Extensions Node's own `require()` resolves before it would ever consider `.node` -
+ * see https://nodejs.org/api/modules.html#file-modules. A colliding file always wins,
+ * so a module path resolving to one of these isn't ours to rewrite.
+ */
+const JS_RESOLVABLE_EXTENSIONS = [".js", ".cjs", ".mjs", ".json"];
+
+/**
  * @param modulePath  Batch-scans the path to the module to check (must be extensionless or end in .node)
  * @returns True if a platform specific prebuild exists for the module path, warns on unreadable modules.
  * @throws If the parent directory cannot be read, or if a detected module is unreadable.
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
+  const hasExplicitNodeExtension = modulePath.endsWith(".node");
+  if (!hasExplicitNodeExtension) {
+    const dir = path.dirname(modulePath);
+    const baseName = path.basename(modulePath);
+    if (
+      JS_RESOLVABLE_EXTENSIONS.some((extension) =>
+        fs.existsSync(path.join(dir, baseName + extension)),
+      )
+    ) {
+      return false;
+    }
+  }
   {
     // HACK: Take a shortcut (if applicable): existing `.node` files are addons
     try {
       fs.accessSync(
-        modulePath.endsWith(".node") ? modulePath : `${modulePath}.node`,
+        hasExplicitNodeExtension ? modulePath : `${modulePath}.node`,
       );
       return true;
     } catch {
