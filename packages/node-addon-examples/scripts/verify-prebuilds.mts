@@ -3,7 +3,20 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 import plistModule from "@expo/plist";
+import { escapeBundleIdentifier } from "react-native-node-api";
+import { z } from "zod";
+
 import { DIRS } from "./cmake-projects.mjs";
+
+// @expo/plist is CJS with an `export default`; under this genuine ESM
+// (.mts) module's interop, the default import binds to the whole
+// `module.exports`, nesting the real API one `.default` deeper.
+const plist = plistModule.default;
+
+const FrameworkInfoPlistSchema = z.object({
+  CFBundleExecutable: z.string(),
+  CFBundleIdentifier: z.string(),
+});
 
 const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
 
@@ -38,6 +51,27 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
+async function verifyFrameworkInfoPlist(
+  infoPlistPath: string,
+  libraryName: string,
+) {
+  const contents = await fs.promises.readFile(infoPlistPath, "utf8");
+  const parsed = FrameworkInfoPlistSchema.parse(plist.parse(contents));
+  assert.equal(
+    parsed.CFBundleExecutable,
+    libraryName,
+    `Unexpected CFBundleExecutable in ${infoPlistPath}`,
+  );
+  assert.equal(
+    parsed.CFBundleIdentifier,
+    // Mirrors the default writeFrameworkInfoPlist derives in
+    // packages/host/src/node/prebuilds/apple.ts, since none of the
+    // examples pass --apple-bundle-identifier.
+    escapeBundleIdentifier(`com.callstackincubator.node-api.${libraryName}`),
+    `Unexpected CFBundleIdentifier in ${infoPlistPath}`,
+  );
+}
+
 async function verifyApplePrebuild(dirent: fs.Dirent) {
   console.log("Verifying Apple prebuild", dirent.name, "in", dirent.parentPath);
   for (const arch of EXPECTED_XCFRAMEWORK_PLATFORMS) {
@@ -67,27 +101,10 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
           );
           if (file.name === "Info.plist") {
             const libraryName = path.basename(frameworkDir, ".framework");
-            const infoPlist: unknown = plistModule.default.parse(
-              await fs.promises.readFile(
-                path.join(frameworkDir, file.name),
-                "utf8",
-              ),
+            await verifyFrameworkInfoPlist(
+              path.join(frameworkDir, file.name),
+              libraryName,
             );
-            assert(
-              typeof infoPlist === "object" && infoPlist !== null,
-              "Expected Info.plist to contain a dictionary",
-            );
-            assert("CFBundleExecutable" in infoPlist);
-            assert("CFBundleIdentifier" in infoPlist);
-            assert.equal(infoPlist.CFBundleExecutable, libraryName);
-            assert.equal(
-              infoPlist.CFBundleIdentifier,
-              `com.callstackincubator.node-api.${libraryName}`.replace(
-                /[^A-Za-z0-9-.]/g,
-                "-",
-              ),
-            );
-            continue;
           } else {
             assert(
               !file.name.endsWith(".node"),
