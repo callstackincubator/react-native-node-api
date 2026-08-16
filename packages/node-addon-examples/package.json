@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "assert": "^2.1.0",
-    "react-native-node-api": "workspace:*"
+    "react-native-node-api": "workspace:*",
+    "zod": "^4.1.11"
   }
 }

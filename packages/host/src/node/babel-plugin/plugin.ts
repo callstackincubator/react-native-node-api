@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import path from "node:path";
 
 import type { PluginObj, NodePath } from "@babel/core";
@@ -102,7 +101,6 @@ export function plugin(): PluginObj {
             }
           } else if (
             !path.isAbsolute(id) &&
-            !resolvesToNonNodeModule(id, this.filename) &&
             isNodeApiModule(path.join(from, id))
           ) {
             const relativePath = path.join(from, id);
@@ -115,12 +113,4 @@ export function plugin(): PluginObj {
       },
     },
   };
-}
-
-function resolvesToNonNodeModule(id: string, filename: string): boolean {
-  try {
-    return !createRequire(filename).resolve(id).endsWith(".node");
-  } catch {
-    return false;
-  }
 }
