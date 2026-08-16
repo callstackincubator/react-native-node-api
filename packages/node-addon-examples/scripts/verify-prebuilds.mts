@@ -2,7 +2,21 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
+import plistModule from "@expo/plist";
+import { escapeBundleIdentifier } from "react-native-node-api";
+import { z } from "zod";
+
 import { DIRS } from "./cmake-projects.mjs";
+
+// @expo/plist is CJS with an `export default`; under Node's ESM/CJS interop
+// the default import binds to the whole `module.exports`, which nests the
+// real API one `.default` deeper.
+const plist = plistModule.default;
+
+const FrameworkInfoPlistSchema = z.object({
+  CFBundleExecutable: z.string(),
+  CFBundleIdentifier: z.string(),
+});
 
 const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
 
@@ -37,6 +51,27 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
+async function verifyFrameworkInfoPlist(
+  infoPlistPath: string,
+  libraryName: string,
+) {
+  const contents = await fs.promises.readFile(infoPlistPath, "utf8");
+  const parsed = FrameworkInfoPlistSchema.parse(plist.parse(contents));
+  assert.equal(
+    parsed.CFBundleExecutable,
+    libraryName,
+    `Unexpected CFBundleExecutable in ${infoPlistPath}`,
+  );
+  assert.equal(
+    parsed.CFBundleIdentifier,
+    // Mirrors the default writeFrameworkInfoPlist derives in
+    // packages/host/src/node/prebuilds/apple.ts, since none of the
+    // examples pass --apple-bundle-identifier.
+    escapeBundleIdentifier(`com.callstackincubator.node-api.${libraryName}`),
+    `Unexpected CFBundleIdentifier in ${infoPlistPath}`,
+  );
+}
+
 async function verifyApplePrebuild(dirent: fs.Dirent) {
   console.log("Verifying Apple prebuild", dirent.name, "in", dirent.parentPath);
   for (const arch of EXPECTED_XCFRAMEWORK_PLATFORMS) {
@@ -65,8 +100,11 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
             "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
-            // TODO: Verify the contents of the Info.plist file
-            continue;
+            const libraryName = path.basename(frameworkDir, ".framework");
+            await verifyFrameworkInfoPlist(
+              path.join(frameworkDir, file.name),
+              libraryName,
+            );
           } else {
             assert(
               !file.name.endsWith(".node"),

@@ -37,7 +37,9 @@
     "weak-node-api": "workspace:*"
   },
   "dependencies": {
+    "@expo/plist": "0.4.7",
     "assert": "^2.1.0",
-    "react-native-node-api": "workspace:*"
+    "react-native-node-api": "workspace:*",
+    "zod": "^4.1.11"
   }
 }

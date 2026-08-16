@@ -129,8 +129,9 @@ describe("plugin", () => {
     itTransforms("and does not touch required JS files", {
       files: {
         "package.json": `{ "name": "my-package" }`,
-        // TODO: Add a ./my-addon.node to make this test complete
         "my-addon.js": "// Some JS file",
+        "my-addon.apple.node/my-addon.node":
+          "// This is supposed to be a binary file",
         "index.js": `
           const addon = require('./my-addon');
           console.log(addon);
