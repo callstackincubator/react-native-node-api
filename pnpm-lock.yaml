@@ -280,6 +280,9 @@ importers:
       react-native-node-api:
         specifier: workspace:*
         version: link:../host
+      zod:
+        specifier: ^4.1.11
+        version: 4.4.3
     devDependencies:
       '@expo/plist':
         specifier: 0.4.7
