@@ -11,13 +11,17 @@
   "type": "module",
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map",
+    "templates"
   ],
   "bin": {
     "ferric": "./bin/ferric.js"
   },
   "scripts": {
-    "start": "tsx src/run.ts"
+    "start": "tsx src/run.ts",
+    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
   "dependencies": {
     "@napi-rs/cli": "~3.0.3",
