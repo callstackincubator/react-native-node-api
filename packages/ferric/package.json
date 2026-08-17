@@ -11,7 +11,10 @@
   "type": "module",
   "files": [
     "bin",
-    "dist"
+    "dist",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map",
+    "templates"
   ],
   "bin": {
     "ferric": "./bin/ferric.js"
