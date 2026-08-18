@@ -4,14 +4,50 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it, TestContext } from "node:test";
 
+import { parse as parseToml } from "smol-toml";
+
 import {
   applyChanges,
   crateNameFromPackageName,
   determineDependencySpecifiers,
+  formatDiff,
   planInit,
   type InitPlan,
 } from "./init.js";
+import { isRecord } from "./json.js";
 import { findWorkspace } from "./workspaces.js";
+
+const TEMPLATES_PATH = path.resolve(import.meta.dirname, "..", "templates");
+const FERRIC_EXAMPLE_PATH = path.resolve(
+  import.meta.dirname,
+  "..",
+  "..",
+  "ferric-example",
+);
+
+/**
+ * The version each dependency of a Cargo manifest is declared with, whether as
+ * a string or a table with a "version" key.
+ */
+function dependencyVersions(contents: string) {
+  const manifest: unknown = parseToml(contents);
+  assert.ok(isRecord(manifest));
+  const result: Record<string, string> = {};
+  for (const table of ["dependencies", "build-dependencies"]) {
+    const dependencies = manifest[table];
+    if (!isRecord(dependencies)) {
+      continue;
+    }
+    for (const [name, value] of Object.entries(dependencies)) {
+      if (typeof value === "string") {
+        result[name] = value;
+      } else if (isRecord(value) && typeof value["version"] === "string") {
+        result[name] = value["version"];
+      }
+    }
+  }
+  return result;
+}
 
 interface FileMap {
   [filePath: string]: string;
@@ -232,6 +268,15 @@ describe("planInit", () => {
     assert.match(plan.notices.join("\n"), /napi-build/);
   });
 
+  it("notices a Cargo manifest it cannot parse", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "Cargo.toml": "[package\nname =\n",
+    });
+    const plan = await planInit({ packagePath });
+    assert.equal(plan.notices.length, 1);
+    assert.match(plan.notices[0], /could not be parsed/);
+  });
+
   it("adds the package to a pnpm workspace", async (context) => {
     const tempPath = setupTempDirectory(context, {
       "pnpm-workspace.yaml": ["packages:", "  - apps/*", ""].join("\n"),
@@ -274,12 +319,41 @@ describe("planInit", () => {
     // The example is what a package initialized by this command grows into, so
     // it doubles as the fixture asserting an already initialized package is
     // left untouched (see #299).
-    const packagePath = path.resolve(
-      import.meta.dirname,
-      "../../ferric-example",
-    );
+    const packagePath = FERRIC_EXAMPLE_PATH;
     const plan = await planInit({ packagePath });
     assert.deepEqual(changedPaths(plan, packagePath), []);
     assert.deepEqual(plan.notices, []);
+  });
+});
+
+describe("the templates", () => {
+  it("declare the versions the ferric-example is built with", () => {
+    // The example is the crate CI actually builds and runs on devices, so it is
+    // where the pins (see #331) are proven: keeping the template in sync with it
+    // is what stops the versions it scaffolds from going stale unnoticed.
+    const template = dependencyVersions(
+      fs.readFileSync(path.join(TEMPLATES_PATH, "Cargo.toml"), "utf8"),
+    );
+    const example = dependencyVersions(
+      fs.readFileSync(path.join(FERRIC_EXAMPLE_PATH, "Cargo.toml"), "utf8"),
+    );
+    assert.ok(Object.keys(template).length > 0);
+    for (const [name, version] of Object.entries(template)) {
+      assert.equal(
+        example[name],
+        version,
+        `Update the ${name} version in the init template to the ${example[name]} of the ferric-example`,
+      );
+    }
+  });
+});
+
+describe("formatDiff", () => {
+  it("renders the changed lines with context", () => {
+    const lines = formatDiff("a\nb\nc\n", "a\nb\nB\nc\n").map((line) =>
+      // eslint-disable-next-line no-control-regex -- dropping the colors
+      line.replace(/\u001b\[\d+m/g, ""),
+    );
+    assert.deepEqual(lines, ["@@ -1,3 +1,4 @@", " a", " b", "+B", " c"]);
   });
 });

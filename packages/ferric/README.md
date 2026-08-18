@@ -27,7 +27,8 @@ The name of the crate defaults to the package name without its npm scope
 normalizes it to `my_addon` for the artifacts it produces, which is the basename
 `ferric build` writes its outputs and entrypoint with.
 
-Pass `--dry-run` to print the changes without applying them:
+Every file it updates is printed as a diff, and `--dry-run` prints the whole
+plan without writing anything:
 
 ```
 npx ferric init packages/my-addon --dry-run

@@ -26,7 +26,13 @@
   "dependencies": {
     "@napi-rs/cli": "~3.0.3",
     "@react-native-node-api/cli-utils": "workspace:*",
+    "diff": "^9.0.0",
+    "picomatch": "^4.0.5",
     "react-native-node-api": "workspace:*",
+    "smol-toml": "^1.8.0",
     "weak-node-api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/picomatch": "^4.0.3"
   }
 }

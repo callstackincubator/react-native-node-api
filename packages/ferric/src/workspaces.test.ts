@@ -6,7 +6,6 @@ import {
   isPathCovered,
   parseNpmWorkspacePatterns,
   parsePnpmWorkspacePatterns,
-  patternToRegExp,
   type Workspace,
 } from "./workspaces.js";
 
@@ -79,32 +78,28 @@ describe("parseNpmWorkspacePatterns", () => {
   });
 });
 
-describe("patternToRegExp", () => {
+describe("isPathCovered", () => {
   it("matches a single path component per star", () => {
-    assert.match("packages/my-addon", patternToRegExp("packages/*"));
-    assert.doesNotMatch(
-      "packages/nested/my-addon",
-      patternToRegExp("packages/*"),
+    assert.equal(isPathCovered(["packages/*"], "packages/my-addon"), true);
+    assert.equal(
+      isPathCovered(["packages/*"], "packages/nested/my-addon"),
+      false,
     );
   });
 
   it("matches any depth per double star", () => {
-    assert.match("packages/nested/my-addon", patternToRegExp("packages/**"));
+    assert.equal(
+      isPathCovered(["packages/**"], "packages/nested/my-addon"),
+      true,
+    );
   });
 
   it("matches an exact path", () => {
-    assert.match("apps/test-app", patternToRegExp("apps/test-app"));
-    assert.doesNotMatch("apps/test-apple", patternToRegExp("apps/test-app"));
+    assert.equal(isPathCovered(["apps/test-app"], "apps/test-app"), true);
+    assert.equal(isPathCovered(["apps/test-app"], "apps/test-apple"), false);
   });
 
-  it("treats dots literally", () => {
-    assert.doesNotMatch("packagesX", patternToRegExp("packages."));
-  });
-});
-
-describe("isPathCovered", () => {
   it("applies negations after matches", () => {
-    assert.equal(isPathCovered(["packages/*"], "packages/my-addon"), true);
     assert.equal(
       isPathCovered(["packages/*", "!packages/my-addon"], "packages/my-addon"),
       false,
