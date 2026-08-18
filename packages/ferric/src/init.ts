@@ -9,11 +9,14 @@ import {
   prettyPath,
   wrapAction,
 } from "@react-native-node-api/cli-utils";
+import { structuredPatch } from "diff";
+import { parse as parseToml } from "smol-toml";
 
 import {
   detectJsonIndentation,
   getObjectProperty,
   getStringArrayProperty,
+  isRecord,
   parseJsonObject,
   stringifyJson,
 } from "./json.js";
@@ -24,16 +27,13 @@ import {
   relativeWorkspacePath,
   type Workspace,
 } from "./workspaces.js";
-import { parseTomlTables, hasTomlKey } from "./toml.js";
 
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..");
 const TEMPLATES_PATH = path.join(PACKAGE_ROOT, "templates");
 
-export type Change = {
-  kind: "create" | "update";
-  path: string;
-  contents: string;
-};
+export type Change =
+  | { kind: "create"; path: string; contents: string }
+  | { kind: "update"; path: string; contents: string; previous: string };
 
 export type InitPlan = {
   packagePath: string;
@@ -94,16 +94,22 @@ export async function planInit({
     workspace,
   });
   if (updatedPackageJson) {
-    changes.push({
-      kind: existingPackageJson ? "update" : "create",
-      path: packageJsonPath,
-      contents: stringifyJson(
-        updatedPackageJson,
-        existingPackageJson
-          ? detectJsonIndentation(existingPackageJson)
-          : undefined,
-      ),
-    });
+    const contents = stringifyJson(
+      updatedPackageJson,
+      existingPackageJson
+        ? detectJsonIndentation(existingPackageJson)
+        : undefined,
+    );
+    changes.push(
+      existingPackageJson
+        ? {
+            kind: "update",
+            path: packageJsonPath,
+            contents,
+            previous: existingPackageJson,
+          }
+        : { kind: "create", path: packageJsonPath, contents },
+    );
   }
 
   const cargoTomlPath = path.join(resolvedPath, "Cargo.toml");
@@ -150,6 +156,7 @@ export async function planInit({
         kind: "update",
         path: gitignorePath,
         contents: updatedGitignore,
+        previous: existingGitignore,
       });
     }
   } else {
@@ -338,9 +345,21 @@ export function determineDependencySpecifiers(
  * comments and features which are more valuable than a mechanical update.
  */
 function inspectCargoToml(contents: string) {
-  const tables = parseTomlTables(contents);
+  let manifest: unknown;
+  try {
+    manifest = parseToml(contents);
+  } catch (error) {
+    return [
+      `Cargo.toml could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
+    ];
+  }
+  if (!isRecord(manifest)) {
+    return ["Cargo.toml doesn't declare a package"];
+  }
   const result: string[] = [];
-  if (!/crate-type\s*=\s*\[[^\]]*"cdylib"/.test(contents)) {
+  const lib = manifest["lib"];
+  const crateType = isRecord(lib) ? lib["crate-type"] : undefined;
+  if (!Array.isArray(crateType) || !crateType.includes("cdylib")) {
     result.push(
       `Cargo.toml doesn't declare ${chalk.blue('crate-type = ["cdylib"]')} in its ${chalk.blue("[lib]")} section, which Node-API modules are built as`,
     );
@@ -350,7 +369,8 @@ function inspectCargoToml(contents: string) {
     ["dependencies", "napi-derive"],
     ["build-dependencies", "napi-build"],
   ]) {
-    if (!hasTomlKey(tables, table, dependency)) {
+    const dependencies = manifest[table];
+    if (!isRecord(dependencies) || dependencies[dependency] === undefined) {
       result.push(
         `Cargo.toml is missing ${chalk.blue(dependency)} from its ${chalk.blue(`[${table}]`)}`,
       );
@@ -393,13 +413,18 @@ async function planWorkspaceChange(
     patterns && contents
       ? addWorkspacePattern(workspace, contents, relativePath)
       : undefined;
-  if (!updated) {
+  if (!updated || contents === undefined) {
     notices.push(
       `Add ${chalk.blue(relativePath)} to the workspace packages declared by ${prettyPath(configPath)}`,
     );
     return undefined;
   }
-  return { kind: "update", path: configPath, contents: updated };
+  return {
+    kind: "update",
+    path: configPath,
+    contents: updated,
+    previous: contents,
+  };
 }
 
 function readTemplate(filename: string) {
@@ -442,13 +467,47 @@ export const initCommand = new Command("init")
     }),
   );
 
+/**
+ * The hunks of a unified diff, colored like `git diff` prints them.
+ */
+export function formatDiff(previous: string, contents: string, context = 2) {
+  const { hunks } = structuredPatch(
+    "previous",
+    "contents",
+    previous,
+    contents,
+    undefined,
+    undefined,
+    { context },
+  );
+  return hunks.flatMap(({ oldStart, oldLines, newStart, newLines, lines }) => [
+    chalk.cyan(`@@ -${oldStart},${oldLines} +${newStart},${newLines} @@`),
+    ...lines.map((line) => {
+      if (line.startsWith("+")) {
+        return chalk.green(line);
+      } else if (line.startsWith("-")) {
+        return chalk.red(line);
+      } else {
+        return chalk.dim(line);
+      }
+    }),
+  ]);
+}
+
 function printPlan(plan: InitPlan, dryRun: boolean) {
-  for (const { kind, path: filePath } of plan.changes) {
+  for (const change of plan.changes) {
     const label =
-      kind === "create" ? chalk.green("create") : chalk.yellow("update");
+      change.kind === "create" ? chalk.green("create") : chalk.yellow("update");
     console.log(
-      `${dryRun ? chalk.dim("would ") : ""}${label} ${prettyPath(filePath)}`,
+      `${dryRun ? chalk.dim("would ") : ""}${label} ${prettyPath(change.path)}`,
     );
+    // Creating writes a template verbatim, printing it would drown the diffs of
+    // the files being changed around it
+    if (change.kind === "update") {
+      for (const line of formatDiff(change.previous, change.contents)) {
+        console.log(chalk.dim("│ ") + line);
+      }
+    }
   }
   for (const notice of plan.notices) {
     console.log(`${chalk.yellow("ℹ︎")} ${notice}`);

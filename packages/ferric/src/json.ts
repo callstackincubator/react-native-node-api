@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
 
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 /**
  * Indentation used by the first indented line, so rewrites of a hand-maintained
  * JSON file keep the style it was checked in with.
@@ -13,36 +17,25 @@ export function stringifyJson(value: unknown, indentation = "  ") {
   return JSON.stringify(value, null, indentation) + "\n";
 }
 
-export function parseJsonObject(contents: string): Record<string, unknown> {
+export function parseJsonObject(contents: string) {
   const value: unknown = JSON.parse(contents);
-  assert(
-    typeof value === "object" && value !== null && !Array.isArray(value),
-    "Expected a JSON object",
-  );
-  return Object.fromEntries(Object.entries(value));
+  assert(isRecord(value), "Expected a JSON object");
+  return value;
 }
 
-export function getObjectProperty(
-  value: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
+export function getObjectProperty(value: Record<string, unknown>, key: string) {
   const property = value[key];
   if (property === undefined) {
     return undefined;
   }
-  assert(
-    typeof property === "object" &&
-      property !== null &&
-      !Array.isArray(property),
-    `Expected "${key}" to be an object`,
-  );
-  return Object.fromEntries(Object.entries(property));
+  assert(isRecord(property), `Expected "${key}" to be an object`);
+  return property;
 }
 
 export function getStringArrayProperty(
   value: Record<string, unknown>,
   key: string,
-): string[] | undefined {
+) {
   const property = value[key];
   if (property === undefined) {
     return undefined;

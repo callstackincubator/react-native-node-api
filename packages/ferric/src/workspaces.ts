@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import picomatch from "picomatch";
+
 import {
   detectJsonIndentation,
   getStringArrayProperty,
@@ -25,25 +27,29 @@ export type Workspace = {
 /**
  * Find the workspace containing a package, by looking for a pnpm workspace file
  * or a package.json declaring "workspaces" in the ancestor directories.
+ * Directories and files which can't be read or parsed are skipped: the walk
+ * passes through parts of the filesystem the user has no business in.
  */
 export function findWorkspace(packagePath: string): Workspace | undefined {
   let currentPath = path.dirname(path.resolve(packagePath));
   for (;;) {
     const pnpmConfigPath = path.join(currentPath, "pnpm-workspace.yaml");
-    if (fs.existsSync(pnpmConfigPath)) {
+    const pnpmContents = readFileIfAccessible(pnpmConfigPath);
+    if (pnpmContents !== undefined) {
       return {
         kind: "pnpm",
         rootPath: currentPath,
         configPath: pnpmConfigPath,
-        patterns: parsePnpmWorkspacePatterns(
-          fs.readFileSync(pnpmConfigPath, "utf8"),
+        patterns: ignoringErrors(() =>
+          parsePnpmWorkspacePatterns(pnpmContents),
         ),
       };
     }
     const packageJsonPath = path.join(currentPath, "package.json");
-    if (fs.existsSync(packageJsonPath)) {
-      const patterns = parseNpmWorkspacePatterns(
-        fs.readFileSync(packageJsonPath, "utf8"),
+    const packageJsonContents = readFileIfAccessible(packageJsonPath);
+    if (packageJsonContents !== undefined) {
+      const patterns = ignoringErrors(() =>
+        parseNpmWorkspacePatterns(packageJsonContents),
       );
       if (patterns) {
         return {
@@ -115,38 +121,15 @@ function parseYamlScalar(value: string) {
 }
 
 /**
- * Turn a workspace package pattern into an anchored regular expression.
- * Only the subset of globbing used by workspace patterns is supported: "*"
- * matching within a path component and "**" matching across components.
- */
-export function patternToRegExp(pattern: string) {
-  const trimmed = pattern.replace(/^\.\//, "").replace(/\/$/, "");
-  const source = trimmed.replace(/\*\*|\*|\?|[.+^${}()|[\]\\]/g, (match) => {
-    if (match === "**") {
-      return ".*";
-    } else if (match === "*") {
-      return "[^/]*";
-    } else if (match === "?") {
-      return "[^/]";
-    } else {
-      return `\\${match}`;
-    }
-  });
-  return new RegExp(`^${source}$`);
-}
-
-/**
  * Determine if a path (relative to the workspace root, using forward slashes)
- * is matched by the workspace patterns.
+ * is matched by the workspace patterns. A pattern prefixed with "!" excludes
+ * what it matches, which is why the last pattern matching wins.
  */
 export function isPathCovered(patterns: string[], relativePath: string) {
   let result = false;
   for (const pattern of patterns) {
     const negated = pattern.startsWith("!");
-    const matches = patternToRegExp(negated ? pattern.slice(1) : pattern).test(
-      relativePath,
-    );
-    if (matches) {
+    if (picomatch.isMatch(relativePath, negated ? pattern.slice(1) : pattern)) {
       result = !negated;
     }
   }
@@ -229,4 +212,20 @@ function addNpmWorkspacePattern(contents: string, pattern: string) {
     },
     indentation,
   );
+}
+
+function readFileIfAccessible(filePath: string) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return undefined;
+  }
+}
+
+function ignoringErrors<T>(fn: () => T) {
+  try {
+    return fn();
+  } catch {
+    return undefined;
+  }
 }
