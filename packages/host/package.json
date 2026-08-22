@@ -10,6 +10,9 @@
   },
   "main": "dist/react-native/index.js",
   "type": "commonjs",
+  "engines": {
+    "node": ">=20.19.0 <21 || >=22.12.0"
+  },
   "bin": {
     "react-native-node-api": "./bin/react-native-node-api.mjs"
   },
