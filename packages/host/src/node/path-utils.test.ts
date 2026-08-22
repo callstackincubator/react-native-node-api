@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import path from "node:path";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import fswin from "fswin";
 
 import {
@@ -9,6 +10,7 @@ import {
   findNodeApiModulePaths,
   findNodeAddonForBindings,
   findPackageDependencyPaths,
+  resolvePackageRoot,
   getLibraryName,
   isNodeApiModule,
   stripExtension,
@@ -352,6 +354,34 @@ describe("findPackageDependencyPaths", () => {
       "lib-a": path.join(tempDir, "node_modules/lib-a"),
       "lib-b": path.join(tempDir, "test-package/node_modules/lib-b"),
     });
+  });
+});
+
+describe("resolvePackageRoot", () => {
+  it("logs the original package resolution error", (context) => {
+    const tempDir = setupTempDirectory(context, {
+      "node_modules/broken-package/package.json": JSON.stringify({
+        name: "broken-package",
+        main: "missing.js",
+      }),
+    });
+    const requireFromRoot = createRequire(path.join(tempDir, "noop.js"));
+    const debug = context.mock.method(console, "debug", () => {});
+
+    assert.equal(
+      resolvePackageRoot(requireFromRoot, "broken-package"),
+      undefined,
+    );
+    assert.equal(debug.mock.callCount(), 1);
+
+    const call = debug.mock.calls[0];
+    assert(call);
+    assert.equal(call.arguments.length, 1);
+    assert.equal(typeof call.arguments[0], "string");
+    assert.match(
+      String(call.arguments[0]),
+      /Failed to resolve package root for "broken-package": Cannot find module .*broken-package[\\/]missing\.js/,
+    );
   });
 });
 
