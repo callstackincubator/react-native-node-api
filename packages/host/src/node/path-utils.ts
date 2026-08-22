@@ -260,8 +260,11 @@ export function resolvePackageRoot(
   try {
     const resolvedPath = requireFromPackageRoot.resolve(packageName);
     return packageDirectorySync({ cwd: resolvedPath });
-  } catch {
-    // TODO: Add a debug log here
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.debug(
+      `Failed to resolve package root for "${packageName}": ${message}`,
+    );
     return undefined;
   }
 }
