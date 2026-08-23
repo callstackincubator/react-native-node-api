@@ -56,6 +56,7 @@ Auto-links the Node-API modules found among the app's dependencies for one or mo
 - `--android` — Link Android modules.
 - `--apple` — Link Apple modules.
 - `--prune` — Delete previously vendored modules that are no longer auto-linked. Defaults to `true`.
+- `--fail-on-error` — Fail with the original package-resolution error instead of skipping dependencies that cannot be resolved. Defaults to `false`.
 - `--package-name <strategy>` — Controls how a dependency's package name is transformed into a library name. One of `strip`, `keep` or `omit` (see [Library naming](#library-naming) below). Defaults to `strip`, or the `NODE_API_PACKAGE_NAME` environment variable if set.
 - `--path-suffix <strategy>` — Controls how the path of the addon inside a package is transformed into a library name. One of `strip`, `keep` or `omit` (see [Library naming](#library-naming) below). Defaults to `strip`, or the `NODE_API_PATH_SUFFIX` environment variable if set.
 
