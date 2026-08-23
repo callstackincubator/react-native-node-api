@@ -24,11 +24,13 @@
     "gyp-to-cmake": "gyp-to-cmake --weak-node-api .",
     "build": "tsx scripts/build-examples.mts",
     "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run build",
+    "test:verify": "tsx --test scripts/verify-prebuilds.test.mts",
     "verify": "tsx scripts/verify-prebuilds.mts",
     "test": "node --run copy-and-build && node --run verify",
     "bootstrap": "node --run copy-and-build"
   },
   "devDependencies": {
+    "@expo/plist": "0.4.7",
     "cmake-rn": "workspace:*",
     "node-addon-examples": "github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509",
     "gyp-to-cmake": "workspace:*",

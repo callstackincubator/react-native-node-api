@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import path from "node:path";
 
 import type { PluginObj, NodePath } from "@babel/core";
@@ -66,6 +67,14 @@ export function replaceWithRequireNodeAddon(
   );
 }
 
+function resolvesToNonAddon(id: string, filename: string): boolean {
+  try {
+    return !createRequire(path.resolve(filename)).resolve(id).endsWith(".node");
+  } catch {
+    return false;
+  }
+}
+
 export function plugin(): PluginObj {
   return {
     visitor: {
@@ -101,7 +110,8 @@ export function plugin(): PluginObj {
             }
           } else if (
             !path.isAbsolute(id) &&
-            isNodeApiModule(path.join(from, id))
+            isNodeApiModule(path.join(from, id)) &&
+            !resolvesToNonAddon(id, this.filename)
           ) {
             const relativePath = path.join(from, id);
             replaceWithRequireNodeAddon(p, relativePath, {

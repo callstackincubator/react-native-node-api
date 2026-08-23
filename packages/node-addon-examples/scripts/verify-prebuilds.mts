@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+import { parse } from "@expo/plist/build/parse.js";
 
 import { EXAMPLES_DIR } from "./cmake-projects.mjs";
 
@@ -15,6 +18,32 @@ const EXPECTED_XCFRAMEWORK_PLATFORMS = [
   "xros-arm64",
   "xros-arm64-simulator",
 ];
+
+export async function verifyFrameworkInfoPlist(
+  infoPlistPath: string,
+  libraryName: string,
+) {
+  const parsed: unknown = parse(
+    await fs.promises.readFile(infoPlistPath, "utf8"),
+  );
+  assert(
+    typeof parsed === "object" && parsed !== null,
+    `Expected an object in ${infoPlistPath}`,
+  );
+  assert.equal(
+    Reflect.get(parsed, "CFBundleExecutable"),
+    libraryName,
+    `Unexpected CFBundleExecutable in ${infoPlistPath}`,
+  );
+  assert.equal(
+    Reflect.get(parsed, "CFBundleIdentifier"),
+    `com.callstackincubator.node-api.${libraryName}`.replace(
+      /[^A-Za-z0-9-.]/g,
+      "-",
+    ),
+    `Unexpected CFBundleIdentifier in ${infoPlistPath}`,
+  );
+}
 
 async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   console.log(
@@ -65,7 +94,11 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
             "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
-            // TODO: Verify the contents of the Info.plist file
+            const libraryName = path.basename(frameworkDir, ".framework");
+            await verifyFrameworkInfoPlist(
+              path.join(frameworkDir, file.name),
+              libraryName,
+            );
             continue;
           } else {
             assert(
@@ -82,17 +115,26 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
   }
 }
 
-for await (const dirent of fs.promises.glob("**/*.*.node", {
-  cwd: EXAMPLES_DIR,
-  withFileTypes: true,
-})) {
-  if (dirent.name.endsWith(".android.node")) {
-    await verifyAndroidPrebuild(dirent);
-  } else if (dirent.name.endsWith(".apple.node")) {
-    await verifyApplePrebuild(dirent);
-  } else {
-    throw new Error(
-      `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`,
-    );
+async function main() {
+  for await (const dirent of fs.promises.glob("**/*.*.node", {
+    cwd: EXAMPLES_DIR,
+    withFileTypes: true,
+  })) {
+    if (dirent.name.endsWith(".android.node")) {
+      await verifyAndroidPrebuild(dirent);
+    } else if (dirent.name.endsWith(".apple.node")) {
+      await verifyApplePrebuild(dirent);
+    } else {
+      throw new Error(
+        `Unexpected prebuild file: ${dirent.name} in ${dirent.parentPath}`,
+      );
+    }
   }
+}
+
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+) {
+  await main();
 }

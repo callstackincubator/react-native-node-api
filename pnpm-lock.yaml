@@ -281,6 +281,9 @@ importers:
         specifier: workspace:*
         version: link:../host
     devDependencies:
+      '@expo/plist':
+        specifier: 0.4.7
+        version: 0.4.7
       cmake-rn:
         specifier: workspace:*
         version: link:../cmake-rn
