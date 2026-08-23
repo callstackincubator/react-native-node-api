@@ -126,6 +126,50 @@ describe("bindingGypToCmakeLists", () => {
     });
   });
 
+  describe("cflags", () => {
+    it("should add cflags as target-specific compile options", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["foo.cc"],
+              cflags: ["-fPIC", "-Wall", "-DNAME=value with space"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes(
+          "target_compile_options(foo PRIVATE -fPIC -Wall -DNAME=value\\ with\\ space)",
+        ),
+        `Expected output to include target_compile_options:\n${output}`,
+      );
+    });
+
+    it("should expand cflags command output into compile options", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["foo.cc"],
+              cflags: ["<!@echo -fPIC -Wall"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes("target_compile_options(foo PRIVATE -fPIC -Wall)"),
+        `Expected expanded cflags in target_compile_options:\n${output}`,
+      );
+    });
+  });
+
   describe("namespaced targets", () => {
     const gyp = {
       targets: [{ target_name: "addon", sources: ["addon.cc"] }],
@@ -174,6 +218,7 @@ describe("bindingGypToCmakeLists", () => {
               sources: ["addon.cc"],
               include_dirs: ["include"],
               defines: ["FOO"],
+              cflags: ["-fPIC"],
             },
           ],
         },
@@ -186,6 +231,7 @@ describe("bindingGypToCmakeLists", () => {
         "target_link_libraries(some-project-addon PRIVATE weak-node-api)",
         "target_include_directories(some-project-addon PRIVATE include)",
         "target_compile_definitions(some-project-addon PRIVATE FOO)",
+        "target_compile_options(some-project-addon PRIVATE -fPIC)",
         "target_compile_features(some-project-addon PRIVATE cxx_std_17)",
       ]) {
         assert(
