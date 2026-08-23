@@ -253,13 +253,20 @@ export function getLibraryName(modulePath: string, naming: NamingStrategy) {
   return parts.join("--");
 }
 
+function resolvePackageRootOrThrow(
+  requireFromPackageRoot: NodeJS.Require,
+  packageName: string,
+): string | undefined {
+  const resolvedPath = requireFromPackageRoot.resolve(packageName);
+  return packageDirectorySync({ cwd: resolvedPath });
+}
+
 export function resolvePackageRoot(
   requireFromPackageRoot: NodeJS.Require,
   packageName: string,
 ): string | undefined {
   try {
-    const resolvedPath = requireFromPackageRoot.resolve(packageName);
-    return packageDirectorySync({ cwd: resolvedPath });
+    return resolvePackageRootOrThrow(requireFromPackageRoot, packageName);
   } catch {
     // TODO: Add a debug log here
     return undefined;
@@ -356,6 +363,7 @@ export function findPackageConfigurationByPath(
  */
 export function findPackageDependencyPaths(
   fromPath: string,
+  { failOnError = false }: { failOnError?: boolean } = {},
 ): Record<string, string> {
   const packageRoot = packageDirectorySync({ cwd: fromPath });
   assert(packageRoot, `Could not find package root from ${fromPath}`);
@@ -389,8 +397,15 @@ export function findPackageDependencyPaths(
     }
     visited.add(name);
 
-    const root = resolvePackageRoot(requireFromRoot, name);
+    const root = failOnError
+      ? resolvePackageRootOrThrow(requireFromRoot, name)
+      : resolvePackageRoot(requireFromRoot, name);
     if (!root) {
+      if (failOnError) {
+        throw new Error(
+          `Cannot find package root from ${fromPath} for ${name}`,
+        );
+      }
       console.warn(`Cannot find package root from ${fromPath} for ${name}`);
       continue;
     }
@@ -511,13 +526,17 @@ export async function findNodeApiModulePathsByDependency({
   fromPath,
   includeSelf,
   excludePackages = DEFAULT_EXCLUDE_PACKAGES,
+  failOnError = false,
   ...options
 }: FindNodeApiModuleOptions & {
   includeSelf: boolean;
   excludePackages?: string[];
+  failOnError?: boolean;
 }) {
   // Find the location of each dependency
-  const packagePathsByName = findPackageDependencyPaths(fromPath);
+  const packagePathsByName = findPackageDependencyPaths(fromPath, {
+    failOnError,
+  });
   if (includeSelf) {
     const packageRoot = packageDirectorySync({ cwd: fromPath });
     assert(packageRoot, `Could not find package root from ${fromPath}`);

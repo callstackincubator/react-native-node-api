@@ -62,11 +62,18 @@ program
   )
   .option("--android", "Link Android modules")
   .option("--apple", "Link Apple modules")
+  .option(
+    "--fail-on-error",
+    "Fail when a package dependency cannot be resolved",
+  )
   .addOption(packageNameOption)
   .addOption(pathSuffixOption)
   .action(
     wrapAction(
-      async (pathArg, { prune, pathSuffix, android, apple, packageName }) => {
+      async (
+        pathArg,
+        { prune, pathSuffix, android, apple, packageName, failOnError },
+      ) => {
         console.log("Auto-linking Node-API modules from", chalk.dim(pathArg));
         const platforms: PlatformName[] = [];
         if (android) {
@@ -94,6 +101,7 @@ program
                 fromPath: path.resolve(pathArg),
                 naming: { packageName, pathSuffix },
                 linker: await createLinker(platform),
+                failOnError,
               }),
             {
               text: `Linking ${platformDisplayName} Node-API modules`,
