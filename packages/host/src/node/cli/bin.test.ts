@@ -69,5 +69,75 @@ describe("bin", () => {
         `Failed to find expected output (stdout: ${stdout} stderr: ${stderr})`,
       );
     });
+
+    it("skips dependencies that cannot be resolved by default", (context) => {
+      const targetBuildDir = setupTempDirectory(context, {});
+      const appDir = setupTempDirectory(context, {
+        "package.json": JSON.stringify({
+          name: "test-app",
+          dependencies: { "broken-package": "1.0.0" },
+        }),
+        "node_modules/broken-package/package.json": JSON.stringify({
+          name: "broken-package",
+          exports: "./missing.js",
+        }),
+      });
+
+      const { status, stdout, stderr } = cp.spawnSync(
+        process.execPath,
+        [BIN_PATH, "link", appDir, "--android"],
+        {
+          cwd: PACKAGE_ROOT,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            TARGET_BUILD_DIR: targetBuildDir,
+          },
+        },
+      );
+
+      assert.equal(
+        status,
+        0,
+        `Expected success (got ${status}): ${stdout} ${stderr}`,
+      );
+      assert.match(stderr, /Cannot find package root .* for broken-package/);
+    });
+
+    it("reports dependency resolution errors with --fail-on-error", (context) => {
+      const targetBuildDir = setupTempDirectory(context, {});
+      const appDir = setupTempDirectory(context, {
+        "package.json": JSON.stringify({
+          name: "test-app",
+          dependencies: { "broken-package": "1.0.0" },
+        }),
+        "node_modules/broken-package/package.json": JSON.stringify({
+          name: "broken-package",
+          exports: "./missing.js",
+        }),
+      });
+
+      const { status, stdout, stderr } = cp.spawnSync(
+        process.execPath,
+        [BIN_PATH, "link", appDir, "--android", "--fail-on-error"],
+        {
+          cwd: PACKAGE_ROOT,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            TARGET_BUILD_DIR: targetBuildDir,
+          },
+        },
+      );
+
+      assert.equal(
+        status,
+        1,
+        `Expected failure (got ${status}): ${stdout} ${stderr}`,
+      );
+      assert.match(stderr, /broken-package/);
+      assert.match(stderr, /missing\.js/);
+      assert.doesNotMatch(stderr, /unknown option/);
+    });
   });
 });
