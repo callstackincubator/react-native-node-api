@@ -64,6 +64,18 @@ describe("isNodeApiModule", () => {
     assert(isNodeApiModule(path.join(tempDirectoryPath, "addon.node")));
   });
 
+  it("does not treat .cjs or .mjs files as shadowing .node", (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {
+      "cjs-addon.cjs": "// Some CommonJS file",
+      "cjs-addon.node": "// This is supposed to be a binary file",
+      "mjs-addon.mjs": "// Some ES module file",
+      "mjs-addon.node": "// This is supposed to be a binary file",
+    });
+
+    assert(isNodeApiModule(path.join(tempDirectoryPath, "cjs-addon")));
+    assert(isNodeApiModule(path.join(tempDirectoryPath, "mjs-addon")));
+  });
+
   it(
     "returns false when directory cannot be read due to permissions",
     // Skipping on Windows because there is no way to set ACLs on directories in Node.js on Windows without brittle powershell commands
