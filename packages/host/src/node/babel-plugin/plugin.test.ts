@@ -129,7 +129,7 @@ describe("plugin", () => {
     itTransforms("and does not touch required JS files", {
       files: {
         "package.json": `{ "name": "my-package" }`,
-        // TODO: Add a ./my-addon.node to make this test complete
+        "my-addon.node": "// This is supposed to be a binary file",
         "my-addon.js": "// Some JS file",
         "index.js": `
           const addon = require('./my-addon');
