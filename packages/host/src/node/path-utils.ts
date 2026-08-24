@@ -60,7 +60,7 @@ export type NamingStrategy = {
 const packageNameCache = new Map<string, string>();
 
 // Extensions Node's own require() resolves before ever trying `.node`.
-const COLLIDING_SOURCE_EXTENSIONS = [".js", ".cjs", ".mjs", ".json"];
+const COLLIDING_SOURCE_EXTENSIONS = [".js", ".json"];
 
 /**
  * @param modulePath  Batch-scans the path to the module to check (must be extensionless or end in .node)
