@@ -17,11 +17,11 @@ const ALLOW_LIST = [
   "1-getting-started/4_object_factory/node-addon-api/",
   "1-getting-started/5_function_factory/napi/",
   // "1-getting-started/5_function_factory/node-addon-api/",
-  // "1-getting-started/6_object_wrap/napi/", // TODO: Fix C++ support to allow lambda functions
+  "1-getting-started/6_object_wrap/napi/",
   // "1-getting-started/6_object_wrap/node-addon-api/",
-  // "1-getting-started/7_factory_wrap/napi/", // TODO: Fix C++ support to allow lambda functions
+  "1-getting-started/7_factory_wrap/napi/",
   // "1-getting-started/7_factory_wrap/node-addon-api/",
-  // "2-js-to-native-conversion/8_passing_wrapped/napi/", // TODO: Fix C++ support to allow lambda functions
+  "2-js-to-native-conversion/8_passing_wrapped/napi/",
   // "2-js-to-native-conversion/8_passing_wrapped/node-addon-api/",
   // "2-js-to-native-conversion/array_buffer_to_native/node-addon-api/",
   // "2-js-to-native-conversion/object-template-demo/napi/", // TODO: Fix C++ support to allow noexcept
