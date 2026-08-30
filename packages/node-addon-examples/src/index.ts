@@ -75,6 +75,20 @@ export const suites: Record<
       assertLogs(() => {
         require("../examples/1-getting-started/5_function_factory/napi/addon.js");
       }, ["hello world"]),
+    "6_object_wrap/napi": () =>
+      assertLogs(() => {
+        require("../examples/1-getting-started/6_object_wrap/napi/addon.js");
+      }, ["11", "12", "13", "13", "130", "-13", "false"]),
+    "7_factory_wrap/napi": () =>
+      assertLogs(() => {
+        require("../examples/1-getting-started/7_factory_wrap/napi/addon.js");
+      }, ["11", "12", "13", "21", "22", "23"]),
+  },
+  "2-js-to-native-conversion": {
+    "8_passing_wrapped/napi": () =>
+      assertLogs(() => {
+        require("../examples/2-js-to-native-conversion/8_passing_wrapped/napi/addon.js");
+      }, ["30"]),
   },
   "5-async-work": {
     async_work_thread_safe_function: () => {
