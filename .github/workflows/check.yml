@@ -19,11 +19,18 @@ on:
     branches:
       - main
       - next
+  # The label gates below are evaluated against the labels carried by the
+  # triggering event's payload, and re-running a run replays the payload it was
+  # started with — so without `labeled`, a label attached after the pull request
+  # was opened only takes effect on the next push. A `labeled` run starts just
+  # the job its label gates; every other job sits it out.
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Labeled runs get a group per label, so attaching one cancels neither the run
+  # for the head commit nor a run for a label attached moments earlier.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.action == 'labeled' && github.event.label.name || 'commit' }}
   cancel-in-progress: true
 
 # Every job sets Node.js up before pnpm, which is the opposite of what pnpm's
@@ -41,6 +48,7 @@ concurrency:
 
 jobs:
   lint:
+    if: github.event.action != 'labeled'
     name: Lint
     runs-on: ubuntu-latest
     steps:
@@ -78,6 +86,7 @@ jobs:
       - run: pnpm run depcheck
       - run: pnpm run publint
   unit-tests:
+    if: github.event.action != 'labeled'
     strategy:
       fail-fast: false
       matrix:
@@ -117,7 +126,7 @@ jobs:
       - run: pnpm run bootstrap
       - run: pnpm test
   weak-node-api-tests:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'weak-node-api')
+    if: github.event.action == 'labeled' && github.event.label.name == 'weak-node-api' || github.event.action != 'labeled' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'weak-node-api'))
     strategy:
       fail-fast: false
       matrix:
@@ -154,7 +163,7 @@ jobs:
           ctest --test-dir build --output-on-failure
         working-directory: packages/weak-node-api
   host-cpp-tests:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Host 🏡')
+    if: github.event.action == 'labeled' && github.event.label.name == 'Host 🏡' || github.event.action != 'labeled' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Host 🏡'))
     strategy:
       fail-fast: false
       matrix:
@@ -191,7 +200,7 @@ jobs:
           ctest --test-dir tests/build --output-on-failure
         working-directory: packages/host
   test-ios:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎')
+    if: github.event.action == 'labeled' && github.event.label.name == 'Apple 🍎' || github.event.action != 'labeled' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Apple 🍎'))
     name: Test app (iOS)
     runs-on: macos-latest
     steps:
@@ -313,7 +322,7 @@ jobs:
     # Disabling this on main for now, as initializing the template takes a long time and
     # we don't have macOS-specific code yet. Currently also blocked on react-native-macos:
     # https://github.com/callstackincubator/react-native-node-api/issues/392
-    if: contains(github.event.pull_request.labels.*.name, 'MacOS 💻')
+    if: github.event.action == 'labeled' && github.event.label.name == 'MacOS 💻' || github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'MacOS 💻')
     name: Test app (macOS)
     runs-on: macos-latest
     steps:
@@ -362,7 +371,7 @@ jobs:
     # offline, so running this on main pushes leaves the job queued forever and
     # blocks the whole Check run from completing. Re-enable on main once the
     # self-hosted runner is back. Tracked in #379.
-    if: contains(github.event.pull_request.labels.*.name, 'Android 🤖')
+    if: github.event.action == 'labeled' && github.event.label.name == 'Android 🤖' || github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'Android 🤖')
     name: Test app (Android)
     runs-on: ubuntu-self-hosted
     steps:
@@ -456,7 +465,7 @@ jobs:
           name: emulator-logcat
           path: apps/test-app/emulator-logcat.txt
   test-ferric-apple-triplets:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Ferric 🦀')
+    if: github.event.action == 'labeled' && github.event.label.name == 'Ferric 🦀' || github.event.action != 'labeled' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Ferric 🦀'))
     name: Test ferric Apple triplets
     runs-on: macos-latest
     steps:

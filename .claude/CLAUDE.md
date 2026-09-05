@@ -33,20 +33,21 @@ invariant a future edit could silently break.
 
 ## Attach CI labels when you open a PR
 
-`.github/workflows/check.yml`'s `pull_request` trigger only fires on
-`opened`, `synchronize` and `reopened` — **not** `labeled`. Several of its
-jobs are gated behind a label check evaluated against that triggering
-event's payload, e.g.:
+Several of `.github/workflows/check.yml`'s jobs are gated behind a label
+check, e.g.:
 
 ```yaml
-if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Host 🏡')
+if: github.event.action == 'labeled' && github.event.label.name == 'Host 🏡' || github.event.action != 'labeled' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/next' || contains(github.event.pull_request.labels.*.name, 'Host 🏡'))
 ```
 
-A label added after the PR is already open does nothing on its own — there
-is no new `opened`/`synchronize`/`reopened` event for the workflow to
-re-evaluate against, so the gated job silently never runs, and that gap is
-easy to miss since the Check run still shows green (the job wasn't
-skipped-and-failed, it just never triggered).
+`contains(github.event.pull_request.labels.*.name, …)` reads the labels off
+the payload of the event that started the run, and re-running a run replays
+the payload it started with — so on its own a label attached after the pull
+request was opened would only take effect on the next push. That is what the
+first half of the condition is for: the workflow also triggers on `labeled`,
+and each gated job claims the `labeled` event carrying its own label.
+Attaching a label starts its job, so **never push an empty commit to "kick"
+CI.**
 
 The label name in the `if:` condition has to match a real, currently-existing
 GitHub label exactly (name and emoji). `host-cpp-tests` checked for a label
@@ -57,16 +58,16 @@ exists (e.g. via the GitHub MCP `get_label` tool) before trusting a condition
 or table like the one below.
 
 The `create_pull_request` GitHub MCP tool has no `labels` parameter, so
-labels can only be attached in a follow-up call after the PR exists — which
-is exactly the case above. **Whenever you open a PR here:**
+labels can only be attached in a follow-up call after the PR exists.
+**Whenever you open a PR here:**
 
 1. Decide which of the labels below apply, based on what the diff touches.
 2. Attach them immediately after creating the PR (e.g. `issue_write` with
-   `method: "update"`, or the equivalent `gh pr edit --add-label`).
-3. Push one more commit to the branch — even a trivial or `--allow-empty`
-   one — so a `synchronize` event fires and the gated jobs actually run with
-   the labels now present. Labeling without this step means the relevant CI
-   never runs before merge.
+   `method: "update"`, or the equivalent `gh pr edit --add-label`). GitHub
+   emits one `labeled` event per label, so a single call attaching several
+   labels still starts each of their jobs.
+3. Check that each expected job actually started, and re-attach the label if
+   one didn't.
 
 ## Label → job map
 
