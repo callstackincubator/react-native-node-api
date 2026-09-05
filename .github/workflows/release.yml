@@ -111,7 +111,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17

@@ -55,7 +55,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       # Set up JDK and Android SDK only because we need weak-node-api, to build ferric-example and to run the linting
@@ -105,7 +105,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
@@ -145,7 +145,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - run: pnpm install
@@ -188,7 +188,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
           # The action defaults to 500M, which a from-source React Native build
@@ -276,7 +276,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
@@ -325,7 +325,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
@@ -416,7 +416,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
