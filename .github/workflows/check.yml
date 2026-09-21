@@ -111,7 +111,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: tools platform-tools ndk;${{ env.NDK_VERSION }}
+          packages: platform-tools ndk;${{ env.NDK_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim x86_64-apple-ios
       - run: pnpm install
       - run: pnpm run bootstrap
@@ -389,7 +389,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
         with:
-          packages: tools platform-tools ndk;${{ env.NDK_VERSION }} cmake;${{ env.CMAKE_VERSION }}
+          packages: platform-tools ndk;${{ env.NDK_VERSION }} cmake;${{ env.CMAKE_VERSION }}
       - run: rustup target add x86_64-linux-android aarch64-linux-android armv7-linux-androideabi i686-linux-android aarch64-apple-ios-sim
       - run: pnpm install
       - run: pnpm run bootstrap
