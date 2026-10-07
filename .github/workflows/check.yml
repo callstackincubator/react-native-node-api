@@ -173,7 +173,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6.1.0
         with:
           cache: true
       - name: Setup cpp tools
@@ -181,7 +181,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.23
+        uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - run: pnpm install
