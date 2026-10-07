@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import path from "node:path";
-import { EventEmitter } from "node:stream";
 
 import {
   Command,
@@ -27,9 +26,6 @@ import { packageNameOption, pathSuffixOption } from "./options";
 import { linkModules, pruneLinkedModules, ModuleLinker } from "./link-modules";
 import { ensureXcodeBuildPhase, createAppleLinker } from "./apple";
 import { linkAndroidDir } from "./android";
-
-// We're attaching a lot of listeners when spawning in parallel
-EventEmitter.defaultMaxListeners = 100;
 
 export const program = new Command("react-native-node-api").addCommand(
   vendorHermes,

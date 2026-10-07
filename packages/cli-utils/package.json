@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
-    "bufout": "^0.3.2",
+    "bufout": "^1.0.0",
     "chalk": "^5.4.1",
     "commander": "^14.0.1",
     "ora": "^8.2.0",
