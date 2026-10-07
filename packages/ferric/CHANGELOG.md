@@ -1,5 +1,36 @@
 # ferric-cli
 
+## 0.4.2-rc.0
+
+### Patch Changes
+
+- 294de3f: Upgrade `bufout` to v1.0.0, which keeps the number of listeners on the process
+  and the output streams constant regardless of how many children are spawned
+  concurrently: a single shared `exit`/`SIGINT` listener is attached only while
+  children are running, and every child pipes into one shared pass-through per
+  destination stream.
+
+  That removes the reason for the CLIs to raise `EventEmitter.defaultMaxListeners`
+  to 100, so those assignments are gone and Node's default limit again applies —
+  restoring the leak warning it exists to give.
+
+- a2e0f75: Add `--dts-only` flag to `ferric build`, generating just the TypeScript declaration file and JS entrypoint without cross-compiling any Android/Apple binaries. It still runs a real host `cargo build` (napi-rs has no lighter typegen-only mode), so it's meant for regenerating a checked-in declarations fixture rather than for environments without a Rust toolchain.
+- Updated dependencies [294de3f]
+- Updated dependencies [30e60b5]
+- Updated dependencies [eea8c09]
+- Updated dependencies [bd03b8f]
+- Updated dependencies [e5df6f3]
+- Updated dependencies [7ad0a34]
+- Updated dependencies [207d67b]
+- Updated dependencies [58aa14a]
+- Updated dependencies [1062dee]
+- Updated dependencies [641a071]
+- Updated dependencies [9cff364]
+- Updated dependencies [a19b9e9]
+  - @react-native-node-api/cli-utils@0.1.5-rc.0
+  - react-native-node-api@2.0.0-rc.0
+  - weak-node-api@0.2.0-rc.0
+
 ## 0.4.1
 
 ### Patch Changes
