@@ -424,6 +424,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
               configuration,
               "-destination",
               DESTINATION_BY_TRIPLET[triplet],
+              `CODE_SIGNING_ALLOWED=${codeSigningAllowed ? "YES" : "NO"}`,
             ],
             buildPath,
           );
