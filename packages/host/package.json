@@ -73,8 +73,9 @@
   "dependencies": {
     "@bacons/xcode": "^1.0.0-alpha.29",
     "@expo/plist": "0.4.7",
-    "@xmldom/xmldom": "^0.8.11",
     "@react-native-node-api/cli-utils": "workspace:*",
+    "@xmldom/xmldom": "^0.8.11",
+    "bplist-parser": "^0.5.0",
     "pkg-dir": "^8.0.0",
     "read-pkg": "^9.0.1",
     "zod": "^4.1.11"

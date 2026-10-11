@@ -13,48 +13,89 @@ import {
 } from "./apple";
 import { setupTempDirectory } from "../test-utils";
 
-describe("apple", { skip: process.platform !== "darwin" }, () => {
-  describe("readInfoPlist", () => {
-    it("should read Info.plist contents, plus extra keys not in schema", async (context) => {
-      const infoPlistContents = `
-        <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-        <plist version="1.0">
-          <dict>
-            <key>CFBundleExecutable</key>
-            <string>ExecutableFileName</string>
-            <key>CFBundlePackageType</key>
-            <string>FMWK</string>
-            <key>CFBundleInfoDictionaryVersion</key>
-            <string>6.0</string>
-          </dict>
-        </plist>
-      `;
-      const infoPlistSubPath = "Info.plist";
-      const tempDirectoryPath = setupTempDirectory(context, {
-        [infoPlistSubPath]: infoPlistContents,
-      });
-      const infoPlistPath = path.join(tempDirectoryPath, infoPlistSubPath);
+// Generated running "base64 -i <path-to-binary-plist>" on a plist file from a framework in the node-examples package
+const BINARY_INFO_PLIST = Buffer.from(
+  "YnBsaXN0MDDfEBUBAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4cICEiIyQiJSYnJChfEBNCdWlsZE1hY2hpbmVPU0J1aWxkXxAZQ0ZCdW5kbGVEZXZlbG9wbWVudFJlZ2lvbl8QEkNGQnVuZGxlRXhlY3V0YWJsZV8QEkNGQnVuZGxlSWRlbnRpZmllcl8QHUNGQnVuZGxlSW5mb0RpY3Rpb25hcnlWZXJzaW9uXxATQ0ZCdW5kbGVQYWNrYWdlVHlwZV8QGkNGQnVuZGxlU2hvcnRWZXJzaW9uU3RyaW5nXxARQ0ZCdW5kbGVTaWduYXR1cmVfEBpDRkJ1bmRsZVN1cHBvcnRlZFBsYXRmb3Jtc18QD0NGQnVuZGxlVmVyc2lvbl8QFUNTUmVzb3VyY2VzRmlsZU1hcHBlZFpEVENvbXBpbGVyXxAPRFRQbGF0Zm9ybUJ1aWxkXkRUUGxhdGZvcm1OYW1lXxARRFRQbGF0Zm9ybVZlcnNpb25aRFRTREtCdWlsZFlEVFNES05hbWVXRFRYY29kZVxEVFhjb2RlQnVpbGRfEBBNaW5pbXVtT1NWZXJzaW9uXlVJRGV2aWNlRmFtaWx5VjI0RzIzMVdFbmdsaXNoVWFkZG9uXxAPZXhhbXBsZV82LmFkZG9uUzYuMFRGTVdLUzEuMFQ/Pz8/oR9fEA9pUGhvbmVTaW11bGF0b3IJXxAiY29tLmFwcGxlLmNvbXBpbGVycy5sbHZtLmNsYW5nLjFfMFYyMkMxNDZfEA9pcGhvbmVzaW11bGF0b3JUMTguMl8QE2lwaG9uZXNpbXVsYXRvcjE4LjJUMTYyMFgxNkM1MDMyYaEpEAEACAA1AEsAZwB8AJEAsQDHAOQA+AEVAScBPwFKAVwBawF/AYoBlAGcAakBvAHLAdIB2gHgAfIB9gH7Af8CBAIGAhgCGQI+AkUCVwJcAnICdwKAAoIAAAAAAAACAQAAAAAAAAAqAAAAAAAAAAAAAAAAAAAChA==",
+  "base64",
+);
 
-      const contents = await readAndParsePlist(infoPlistPath);
-      assert.deepEqual(contents, {
-        CFBundleExecutable: "ExecutableFileName",
-        CFBundlePackageType: "FMWK",
-        CFBundleInfoDictionaryVersion: "6.0",
-      });
+describe("readAndParsePlist", () => {
+  it("should read Info.plist contents, plus extra keys not in schema", async (context) => {
+    const infoPlistContents = `
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+        <dict>
+          <key>CFBundleExecutable</key>
+          <string>ExecutableFileName</string>
+          <key>CFBundlePackageType</key>
+          <string>FMWK</string>
+          <key>CFBundleInfoDictionaryVersion</key>
+          <string>6.0</string>
+        </dict>
+      </plist>
+    `;
+    const infoPlistSubPath = "Info.plist";
+    const tempDirectoryPath = setupTempDirectory(context, {
+      [infoPlistSubPath]: infoPlistContents,
     });
+    const infoPlistPath = path.join(tempDirectoryPath, infoPlistSubPath);
 
-    it("should throw if Info.plist doesn't exist", async (context) => {
-      const tempDirectoryPath = setupTempDirectory(context, {});
-      const infoPlistPath = path.join(tempDirectoryPath, "Info.plist");
-
-      await assert.rejects(
-        () => readAndParsePlist(infoPlistPath),
-        /Expected an Info.plist/,
-      );
+    const contents = await readAndParsePlist(infoPlistPath);
+    assert.deepEqual(contents, {
+      CFBundleExecutable: "ExecutableFileName",
+      CFBundlePackageType: "FMWK",
+      CFBundleInfoDictionaryVersion: "6.0",
     });
   });
 
+  it("should throw if Info.plist doesn't exist", async (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {});
+    const infoPlistPath = path.join(tempDirectoryPath, "Info.plist");
+
+    await assert.rejects(
+      () => readAndParsePlist(infoPlistPath),
+      /Expected an Info.plist/,
+    );
+  });
+
+  it("should read a binary Info.plist without modifying it", async (context) => {
+    const tempDirectoryPath = setupTempDirectory(context, {});
+    const infoPlistPath = path.join(tempDirectoryPath, "Info.plist");
+    await fs.promises.writeFile(infoPlistPath, BINARY_INFO_PLIST);
+
+    const contents = await readAndParsePlist(infoPlistPath);
+    assert.deepEqual(contents, {
+      BuildMachineOSBuild: "24G231",
+      CFBundleDevelopmentRegion: "English",
+      CFBundleExecutable: "addon",
+      CFBundleIdentifier: "example_6.addon",
+      CFBundleInfoDictionaryVersion: "6.0",
+      CFBundlePackageType: "FMWK",
+      CFBundleShortVersionString: "1.0",
+      CFBundleSignature: "????",
+      CFBundleSupportedPlatforms: ["iPhoneSimulator"],
+      CFBundleVersion: "1.0",
+      CSResourcesFileMapped: true,
+      DTCompiler: "com.apple.compilers.llvm.clang.1_0",
+      DTPlatformBuild: "22C146",
+      DTPlatformName: "iphonesimulator",
+      DTPlatformVersion: "18.2",
+      DTSDKBuild: "22C146",
+      DTSDKName: "iphonesimulator18.2",
+      DTXcode: "1620",
+      DTXcodeBuild: "16C5032a",
+      MinimumOSVersion: "18.2",
+      UIDeviceFamily: [1],
+    });
+    assert.deepEqual(
+      await fs.promises.readFile(infoPlistPath),
+      BINARY_INFO_PLIST,
+    );
+  });
+});
+
+describe("apple", { skip: process.platform !== "darwin" }, () => {
   describe("readXcframeworkInfo", () => {
     it("should read xcframework Info.plist contents, plus extra keys not in schema", async (context) => {
       const tempDirectoryPath = setupTempDirectory(context, {
@@ -232,15 +273,9 @@ describe("apple", { skip: process.platform !== "darwin" }, () => {
     it("converts a binary plist to xml", async (context) => {
       const tempDirectoryPath = setupTempDirectory(context, {});
       await fs.promises.mkdir(path.join(tempDirectoryPath, "foo.framework"));
-      // Write a binary plist file
-      const binaryPlistContents = Buffer.from(
-        // Generated running "base64 -i <path-to-binary-plist>" on a plist file from a framework in the node-examples package
-        "YnBsaXN0MDDfEBUBAgMEBQYHCAkKCwwNDg8QERITFBUWFxgZGhscHR4cICEiIyQiJSYnJChfEBNCdWlsZE1hY2hpbmVPU0J1aWxkXxAZQ0ZCdW5kbGVEZXZlbG9wbWVudFJlZ2lvbl8QEkNGQnVuZGxlRXhlY3V0YWJsZV8QEkNGQnVuZGxlSWRlbnRpZmllcl8QHUNGQnVuZGxlSW5mb0RpY3Rpb25hcnlWZXJzaW9uXxATQ0ZCdW5kbGVQYWNrYWdlVHlwZV8QGkNGQnVuZGxlU2hvcnRWZXJzaW9uU3RyaW5nXxARQ0ZCdW5kbGVTaWduYXR1cmVfEBpDRkJ1bmRsZVN1cHBvcnRlZFBsYXRmb3Jtc18QD0NGQnVuZGxlVmVyc2lvbl8QFUNTUmVzb3VyY2VzRmlsZU1hcHBlZFpEVENvbXBpbGVyXxAPRFRQbGF0Zm9ybUJ1aWxkXkRUUGxhdGZvcm1OYW1lXxARRFRQbGF0Zm9ybVZlcnNpb25aRFRTREtCdWlsZFlEVFNES05hbWVXRFRYY29kZVxEVFhjb2RlQnVpbGRfEBBNaW5pbXVtT1NWZXJzaW9uXlVJRGV2aWNlRmFtaWx5VjI0RzIzMVdFbmdsaXNoVWFkZG9uXxAPZXhhbXBsZV82LmFkZG9uUzYuMFRGTVdLUzEuMFQ/Pz8/oR9fEA9pUGhvbmVTaW11bGF0b3IJXxAiY29tLmFwcGxlLmNvbXBpbGVycy5sbHZtLmNsYW5nLjFfMFYyMkMxNDZfEA9pcGhvbmVzaW11bGF0b3JUMTguMl8QE2lwaG9uZXNpbXVsYXRvcjE4LjJUMTYyMFgxNkM1MDMyYaEpEAEACAA1AEsAZwB8AJEAsQDHAOQA+AEVAScBPwFKAVwBawF/AYoBlAGcAakBvAHLAdIB2gHgAfIB9gH7Af8CBAIGAhgCGQI+AkUCVwJcAnICdwKAAoIAAAAAAAACAQAAAAAAAAAqAAAAAAAAAAAAAAAAAAAChA==",
-        "base64",
-      );
       await fs.promises.writeFile(
         path.join(tempDirectoryPath, "foo.framework", "Info.plist"),
-        binaryPlistContents,
+        BINARY_INFO_PLIST,
       );
 
       // Create a dummy binary file

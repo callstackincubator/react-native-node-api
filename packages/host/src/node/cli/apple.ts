@@ -3,6 +3,7 @@ import path from "node:path";
 import fs from "node:fs";
 
 import plist from "@expo/plist";
+import * as bplist from "bplist-parser";
 import * as xcode from "@bacons/xcode";
 import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
@@ -112,36 +113,17 @@ export async function ensureXcodeBuildPhase(fromPath: string) {
 }
 
 /**
- * Reads and parses a plist file, converting it to XML format if needed.
+ * Reads and parses a plist file in either XML or binary format.
  */
 export async function readAndParsePlist(plistPath: string): Promise<unknown> {
   assert(fs.existsSync(plistPath), `Expected an Info.plist: ${plistPath}`);
-  // Try reading the file to see if it is already in XML format
   try {
-    const contents = await fs.promises.readFile(plistPath, "utf-8");
-    if (contents.startsWith("<?xml")) {
-      return plist.parse(contents) as unknown;
+    const contents = await fs.promises.readFile(plistPath);
+    if (contents.subarray(0, 6).toString("ascii") === "bplist") {
+      const [result] = bplist.parseBuffer<unknown>(contents);
+      return result;
     }
-
-    try {
-      // Convert to XML format if needed
-      assert(
-        process.platform === "darwin",
-        "Updating Info.plist files are not supported on this platform",
-      );
-      await spawn("plutil", ["-convert", "xml1", plistPath], {
-        outputMode: "buffered",
-      });
-    } catch (cause) {
-      throw new Error(`Failed to convert plist to XML: ${plistPath}`, {
-        cause,
-      });
-    }
-
-    return plist.parse(
-      // Read it again now that it is in XML format
-      await fs.promises.readFile(plistPath, "utf-8"),
-    ) as unknown;
+    return plist.parse(contents.toString("utf-8")) as unknown;
   } catch (cause) {
     throw new Error(`Failed to read and parse plist at path "${plistPath}"`, {
       cause,
