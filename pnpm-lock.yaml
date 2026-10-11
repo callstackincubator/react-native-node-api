@@ -287,6 +287,9 @@ importers:
       '@expo/plist':
         specifier: 0.4.7
         version: 0.4.7
+      bplist-parser:
+        specifier: ^0.5.0
+        version: 0.5.0
       cmake-rn:
         specifier: workspace:*
         version: link:../cmake-rn
@@ -295,7 +298,7 @@ importers:
         version: link:../gyp-to-cmake
       node-addon-examples:
         specifier: github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509
-        version: git+https://git@github.com:nodejs/node-addon-examples.git#4b7dd86a85644610e6de80154df9acac9329b509
+        version: https://codeload.github.com/nodejs/node-addon-examples/tar.gz/4b7dd86a85644610e6de80154df9acac9329b509
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
@@ -2717,6 +2720,10 @@ packages:
     resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
     engines: {node: '>=18'}
 
+  bplist-parser@0.5.0:
+    resolution: {integrity: sha512-owgQ0RGbndIGNrQkpHe99HVSslIK59t31nVyAPDRqhq9mNDc2kRl5HwYO292GuKjHqiJRdJNiaI63a02hjLFIQ==}
+    engines: {node: '>=20.19.0'}
+
   brace-expansion@1.1.16:
     resolution: {integrity: sha512-IDw48K2/2kRkg9LdJxurvq3lV3aBgq0REY89duEqFRthjlPdXHKMj7EnQOXVckxzgisinf3nHfrcE2FufFLXMw==}
 
@@ -4076,8 +4083,8 @@ packages:
     resolution: {integrity: sha512-ekZMeaaIzSQTSpr7X2X3iJM7lTzgnx8ahAG9pJfT/7+14mlEM8ZYQ9cgCDvSSRbReFK0oHli3WrZdCiRsgAT9Q==}
     engines: {node: ^18 || ^20 || >= 21}
 
-  node-addon-examples@git+https://git@github.com:nodejs/node-addon-examples.git#4b7dd86a85644610e6de80154df9acac9329b509:
-    resolution: {commit: 4b7dd86a85644610e6de80154df9acac9329b509, repo: git@github.com:nodejs/node-addon-examples.git, type: git}
+  node-addon-examples@https://codeload.github.com/nodejs/node-addon-examples/tar.gz/4b7dd86a85644610e6de80154df9acac9329b509:
+    resolution: {tarball: https://codeload.github.com/nodejs/node-addon-examples/tar.gz/4b7dd86a85644610e6de80154df9acac9329b509}
     version: 1.0.0
 
   node-api-headers@1.9.0:
@@ -7728,6 +7735,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  bplist-parser@0.5.0: {}
+
   brace-expansion@1.1.16:
     dependencies:
       balanced-match: 1.0.2
@@ -9276,7 +9285,7 @@ snapshots:
 
   node-addon-api@8.9.0: {}
 
-  node-addon-examples@git+https://git@github.com:nodejs/node-addon-examples.git#4b7dd86a85644610e6de80154df9acac9329b509:
+  node-addon-examples@https://codeload.github.com/nodejs/node-addon-examples/tar.gz/4b7dd86a85644610e6de80154df9acac9329b509:
     dependencies:
       chalk: 5.6.2
       cmake-js: 7.4.0

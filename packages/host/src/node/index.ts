@@ -20,7 +20,6 @@ export {
   createXCframework,
   createUniversalAppleLibrary,
   determineXCFrameworkFilename,
-  escapeBundleIdentifier,
 } from "./prebuilds/apple.js";
 
 export {

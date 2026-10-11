@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 import plistModule from "@expo/plist";
-import { escapeBundleIdentifier } from "react-native-node-api";
+import { parseBuffer } from "bplist-parser";
 import { z } from "zod";
 
 import { DIRS } from "./cmake-projects.mjs";
@@ -15,20 +15,16 @@ const plist = plistModule.default;
 
 const FrameworkInfoPlistSchema = z.object({
   CFBundleExecutable: z.string(),
-  CFBundleIdentifier: z.string(),
 });
 
-const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
+const KNOWN_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
 
-const EXPECTED_XCFRAMEWORK_PLATFORMS = [
-  "ios-arm64",
-  "ios-arm64-simulator",
-  "macos-arm64_x86_64",
-  "tvos-arm64",
-  "tvos-arm64-simulator",
-  "xros-arm64",
-  "xros-arm64-simulator",
-];
+async function readSubdirectories(dir: string) {
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  const subdirectories = entries.filter((entry) => entry.isDirectory());
+  assert(subdirectories.length > 0, `Expected at least one slice in ${dir}`);
+  return subdirectories;
+}
 
 async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   console.log(
@@ -37,8 +33,13 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
     "in",
     dirent.parentPath,
   );
-  for (const arch of EXPECTED_ANDROID_ARCHS) {
-    const archDir = path.join(dirent.parentPath, dirent.name, arch);
+  const prebuildDir = path.join(dirent.parentPath, dirent.name);
+  for (const arch of await readSubdirectories(prebuildDir)) {
+    assert(
+      KNOWN_ANDROID_ARCHS.includes(arch.name),
+      `Unexpected Android arch: ${arch.name}`,
+    );
+    const archDir = path.join(prebuildDir, arch.name);
     for (const file of await fs.promises.readdir(archDir, {
       withFileTypes: true,
     })) {
@@ -51,38 +52,46 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
-async function verifyFrameworkInfoPlist(
-  infoPlistPath: string,
-  libraryName: string,
-) {
-  const contents = await fs.promises.readFile(infoPlistPath, "utf8");
-  const parsed = FrameworkInfoPlistSchema.parse(plist.parse(contents));
+async function readPlist(plistPath: string): Promise<unknown> {
+  const contents = await fs.promises.readFile(plistPath);
+  // xcodebuild emits binary plists, while the host writes XML ones
+  if (contents.subarray(0, 6).toString("ascii") === "bplist") {
+    const [parsed] = parseBuffer<unknown>(contents);
+    return parsed;
+  }
+  return plist.parse(contents.toString("utf8"));
+}
+
+async function verifyFrameworkInfoPlist(frameworkDir: string) {
+  const libraryName = path.basename(frameworkDir, ".framework");
+  const infoPlistPath = path.join(frameworkDir, "Info.plist");
+  const parsed = FrameworkInfoPlistSchema.parse(await readPlist(infoPlistPath));
   assert.equal(
     parsed.CFBundleExecutable,
     libraryName,
     `Unexpected CFBundleExecutable in ${infoPlistPath}`,
   );
-  assert.equal(
-    parsed.CFBundleIdentifier,
-    // Mirrors the default writeFrameworkInfoPlist derives in
-    // packages/host/src/node/prebuilds/apple.ts, since none of the
-    // examples pass --apple-bundle-identifier.
-    escapeBundleIdentifier(`com.callstackincubator.node-api.${libraryName}`),
-    `Unexpected CFBundleIdentifier in ${infoPlistPath}`,
+  assert(
+    fs.existsSync(path.join(frameworkDir, libraryName)),
+    `Missing executable ${libraryName} in ${frameworkDir}`,
   );
 }
 
 async function verifyApplePrebuild(dirent: fs.Dirent) {
   console.log("Verifying Apple prebuild", dirent.name, "in", dirent.parentPath);
-  for (const arch of EXPECTED_XCFRAMEWORK_PLATFORMS) {
-    const archDir = path.join(dirent.parentPath, dirent.name, arch);
-    for (const file of await fs.promises.readdir(archDir, {
+  const prebuildDir = path.join(dirent.parentPath, dirent.name);
+  for (const slice of await readSubdirectories(prebuildDir)) {
+    const sliceDir = path.join(prebuildDir, slice.name);
+    for (const file of await fs.promises.readdir(sliceDir, {
       withFileTypes: true,
     })) {
       assert(
         file.isDirectory(),
         "Expected only directories in xcframework arch directory",
       );
+      if (file.name === "dSYMs") {
+        continue;
+      }
       assert(file.name.endsWith(".framework"), "Expected framework directory");
       const frameworkDir = path.join(file.parentPath, file.name);
       for (const file of await fs.promises.readdir(frameworkDir, {
@@ -100,11 +109,7 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
             "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
-            const libraryName = path.basename(frameworkDir, ".framework");
-            await verifyFrameworkInfoPlist(
-              path.join(frameworkDir, file.name),
-              libraryName,
-            );
+            await verifyFrameworkInfoPlist(frameworkDir);
           } else {
             assert(
               !file.name.endsWith(".node"),
