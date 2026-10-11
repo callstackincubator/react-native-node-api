@@ -35,7 +35,8 @@
     "node-addon-examples": "github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509",
     "gyp-to-cmake": "workspace:*",
     "read-pkg": "^9.0.1",
-    "weak-node-api": "workspace:*"
+    "weak-node-api": "workspace:*",
+    "zod": "^4.1.11"
   },
   "dependencies": {
     "assert": "^2.1.0",

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 
 import plist from "@expo/plist";
+import * as z from "zod";
 
 import { DIRS } from "./cmake-projects.mjs";
 
@@ -39,22 +40,21 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
+const InfoPlistSchema = z.object({
+  CFBundleExecutable: z.string(),
+  CFBundleName: z.string(),
+  CFBundleIdentifier: z.string().regex(/^[A-Za-z0-9-.]+$/),
+});
+
 async function verifyInfoPlist(frameworkDir: string) {
   const libraryName = path.basename(frameworkDir, ".framework");
-  const info: unknown = plist.default.parse(
-    await fs.promises.readFile(path.join(frameworkDir, "Info.plist"), "utf8"),
+  const info = InfoPlistSchema.parse(
+    plist.default.parse(
+      await fs.promises.readFile(path.join(frameworkDir, "Info.plist"), "utf8"),
+    ),
   );
-  assert(typeof info === "object" && info !== null, "Expected a plist dict");
-  const CFBundleExecutable: unknown = Reflect.get(info, "CFBundleExecutable");
-  const CFBundleName: unknown = Reflect.get(info, "CFBundleName");
-  const CFBundleIdentifier: unknown = Reflect.get(info, "CFBundleIdentifier");
-  assert.equal(CFBundleExecutable, libraryName);
-  assert.equal(CFBundleName, libraryName);
-  assert(
-    typeof CFBundleIdentifier === "string" &&
-      /^[A-Za-z0-9-.]+$/.test(CFBundleIdentifier),
-    `Invalid CFBundleIdentifier in ${frameworkDir}: ${String(CFBundleIdentifier)}`,
-  );
+  assert.equal(info.CFBundleExecutable, libraryName);
+  assert.equal(info.CFBundleName, libraryName);
   assert(
     fs.existsSync(path.join(frameworkDir, libraryName)),
     `Missing executable ${libraryName} in ${frameworkDir}`,
