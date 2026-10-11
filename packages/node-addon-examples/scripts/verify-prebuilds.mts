@@ -2,6 +2,8 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
+import plist from "@expo/plist";
+
 import { DIRS } from "./cmake-projects.mjs";
 
 const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
@@ -37,6 +39,28 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
+async function verifyInfoPlist(frameworkDir: string) {
+  const libraryName = path.basename(frameworkDir, ".framework");
+  const info: unknown = plist.default.parse(
+    await fs.promises.readFile(path.join(frameworkDir, "Info.plist"), "utf8"),
+  );
+  assert(typeof info === "object" && info !== null, "Expected a plist dict");
+  const CFBundleExecutable: unknown = Reflect.get(info, "CFBundleExecutable");
+  const CFBundleName: unknown = Reflect.get(info, "CFBundleName");
+  const CFBundleIdentifier: unknown = Reflect.get(info, "CFBundleIdentifier");
+  assert.equal(CFBundleExecutable, libraryName);
+  assert.equal(CFBundleName, libraryName);
+  assert(
+    typeof CFBundleIdentifier === "string" &&
+      /^[A-Za-z0-9-.]+$/.test(CFBundleIdentifier),
+    `Invalid CFBundleIdentifier in ${frameworkDir}: ${String(CFBundleIdentifier)}`,
+  );
+  assert(
+    fs.existsSync(path.join(frameworkDir, libraryName)),
+    `Missing executable ${libraryName} in ${frameworkDir}`,
+  );
+}
+
 async function verifyApplePrebuild(dirent: fs.Dirent) {
   console.log("Verifying Apple prebuild", dirent.name, "in", dirent.parentPath);
   for (const arch of EXPECTED_XCFRAMEWORK_PLATFORMS) {
@@ -65,8 +89,7 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
             "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
-            // TODO: Verify the contents of the Info.plist file
-            continue;
+            await verifyInfoPlist(frameworkDir);
           } else {
             assert(
               !file.name.endsWith(".node"),

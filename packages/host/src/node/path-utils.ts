@@ -66,6 +66,13 @@ const packageNameCache = new Map<string, string>();
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
+  // Node resolves `.js` and `.json` before `.node`
+  if (
+    !modulePath.endsWith(".node") &&
+    [".js", ".json"].some((extension) => fs.existsSync(modulePath + extension))
+  ) {
+    return false;
+  }
   {
     // HACK: Take a shortcut (if applicable): existing `.node` files are addons
     try {
