@@ -38,4 +38,47 @@ describe("gyp.assertRoot", () => {
     assertBinding(input);
     assert(Array.isArray(input.targets));
   });
+
+  it("should accept target cflags", () => {
+    assert.doesNotThrow(() => {
+      assertBinding(
+        {
+          targets: [
+            {
+              target_name: "addon",
+              sources: ["addon.cc"],
+              cflags: ["-fPIC", "-Wall"],
+            },
+          ],
+        },
+        true,
+      );
+    });
+  });
+
+  it("should reject malformed target cflags", () => {
+    assert.throws(() => {
+      assertBinding({
+        targets: [
+          {
+            target_name: "addon",
+            sources: ["addon.cc"],
+            cflags: "-fPIC",
+          },
+        ],
+      });
+    }, /Expected 'cflags' to be an array/);
+
+    assert.throws(() => {
+      assertBinding({
+        targets: [
+          {
+            target_name: "addon",
+            sources: ["addon.cc"],
+            cflags: ["-fPIC", 42],
+          },
+        ],
+      });
+    }, /Expected all cflags to be strings/);
+  });
 });

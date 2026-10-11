@@ -95,10 +95,9 @@ export function bindingGypToCmakeLists({
   }
 
   for (const target of gyp.targets) {
-    const { target_name: targetName, defines = [] } = target;
+    const { target_name: targetName, defines = [], cflags = [] } = target;
 
     // TODO: Handle "conditions"
-    // TODO: Handle "cflags"
     // TODO: Handle "ldflags"
 
     const escapedSources = target.sources
@@ -115,6 +114,8 @@ export function bindingGypToCmakeLists({
       .flatMap(mapExpansion)
       .map(transformPath)
       .map(escapeSpaces);
+
+    const escapedCflags = cflags.flatMap(mapExpansion).map(escapeSpaces);
 
     const libraries = [];
     if (weakNodeApi) {
@@ -213,6 +214,12 @@ export function bindingGypToCmakeLists({
     if (escapedDefines.length > 0) {
       lines.push(
         `target_compile_definitions(${actualTargetName} PRIVATE ${escapedDefines.join(" ")})`,
+      );
+    }
+
+    if (escapedCflags.length > 0) {
+      lines.push(
+        `target_compile_options(${actualTargetName} PRIVATE ${escapedCflags.join(" ")})`,
       );
     }
 
