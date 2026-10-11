@@ -1,5 +1,16 @@
 # gyp-to-cmake
 
+## 0.6.0
+
+### Minor Changes
+
+- c17619d: Add --namespaced-targets to allow a root project to add many sub-projects.
+
+  CMake requires target names to be unique across a project tree, so sub-projects
+  that each declare an `addon` target cannot be added to a single root project. This
+  prefixes the target name with the project name, while setting `OUTPUT_NAME` so the
+  artifact keeps the name a `require` resolves against.
+
 ## 0.5.5
 
 ### Patch Changes

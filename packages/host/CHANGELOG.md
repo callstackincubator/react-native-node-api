@@ -1,5 +1,22 @@
 # react-native-node-api
 
+## 1.1.3
+
+### Patch Changes
+
+- 7962f09: Stop emitting `log_debug`'s per-addon diagnostic chatter (library
+  found/loaded, symbol resolution, ...) in release builds. It is now compiled
+  out in `NDEBUG` builds (CMake's `Release`/`MinSizeRel`/`RelWithDebInfo`
+  configurations, and Xcode's default `Release` configuration), mirroring React
+  Native's own dev/release logging split. `log_warning` and `log_error` are
+  unaffected and keep firing in every build type.
+- 1d0e670: Make `vendor-hermes --silent` actually silent. The spinners were passed
+  `isEnabled: false`, which stops the animation but still writes the spinner text
+  and its final symbol to stderr. They now use `isSilent`, which suppresses the
+  output entirely, leaving the vendored Hermes path on stdout as the command's
+  only output.
+- weak-node-api@0.1.1
+
 ## 1.1.2
 
 ### Patch Changes

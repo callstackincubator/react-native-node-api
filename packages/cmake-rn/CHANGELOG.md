@@ -1,5 +1,49 @@
 # cmake-rn
 
+## 0.8.0
+
+### Minor Changes
+
+- c17619d: Add support for building projects declaring multiple shared object libraries into Node-API addons.
+
+  Each addon is emitted next to the sources it was built from, so that a project
+  declaring many addons produces the same layout as building each of them on its
+  own. Both the location and the name of an artifact are derived from the target
+  that produced it:
+  - `--out` supports a new `{targetSourceDir}` placeholder, expanding to the source
+    directory of the target being emitted, and now defaults to
+    `{targetSourceDir}/build/{configuration}`. This resolves to the same path as
+    before, unless `--build` is pointed outside of the source directory.
+  - The artifact is named after the target's `OUTPUT_NAME` rather than the CMake
+    target name. These are the same unless `OUTPUT_NAME` is set explicitly, which is
+    how a project can give its targets the unique names CMake requires without
+    affecting the name of the addon.
+
+  Also adds `--concurrency`, limiting how many build tasks run at once. It defaults
+  to the available parallelism, or to 1 when `--verbose` is enabled, since
+  interleaved output from concurrent builds is hard to read.
+
+- 3235633: Let a consumer override the Android `ANDROID_STL` CMake cache variable via
+  the existing `-D`/`--define` option (e.g. `--define ANDROID_STL=c++_static`).
+  It still defaults to `c++_shared`, matching what React Native itself uses,
+  but an addon that must match a prebuilt third-party dependency's STL, or one
+  that's genuinely self-contained, can now ask for a different value.
+
+  This also fixes an ordering bug where a `--define` targeting any of the
+  Android platform's own default CMake variables (including `ANDROID_STL`) was
+  silently discarded: our hardcoded defaults were appended to the CMake
+  command line _after_ the user-provided `-D` arguments, and CMake resolves a
+  cache variable set multiple times via `-D` to its last occurrence.
+
+- 4dbd9b3: Add a `--code-signing-allowed` flag to `cmake-rn`. `CODE_SIGNING_ALLOWED=NO` remains the default (needed for the free-standing dynamic libraries we produce), but a consumer who needs signed binaries in the XCFramework can now pass `--code-signing-allowed` to opt in.
+
+### Patch Changes
+
+- Updated dependencies [7962f09]
+- Updated dependencies [1d0e670]
+  - react-native-node-api@1.1.3
+  - weak-node-api@0.1.1
+
 ## 0.7.2
 
 ### Patch Changes
