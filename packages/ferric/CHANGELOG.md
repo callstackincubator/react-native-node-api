@@ -1,5 +1,15 @@
 # ferric-cli
 
+## 0.4.3
+
+### Patch Changes
+
+- 8a81b9b: Add `--dts-only` flag to `ferric build`, generating just the TypeScript declaration file and JS entrypoint without cross-compiling any Android/Apple binaries. It still runs a real host `cargo build` (napi-rs has no lighter typegen-only mode), so it's meant for regenerating a checked-in declarations fixture rather than for environments without a Rust toolchain.
+- Updated dependencies [7962f09]
+- Updated dependencies [1d0e670]
+  - react-native-node-api@1.1.3
+  - weak-node-api@0.1.1
+
 ## 0.4.2
 
 ### Patch Changes
