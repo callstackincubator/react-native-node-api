@@ -2,6 +2,11 @@
   "name": "@react-native-node-api/cli-utils",
   "version": "0.1.5",
   "description": "Useful utilities for the CLIs in the React Native Node API mono-repo",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
+    "directory": "packages/cli-utils"
+  },
   "type": "module",
   "files": [
     "dist"
