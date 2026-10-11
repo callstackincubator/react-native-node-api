@@ -199,6 +199,8 @@ jobs:
         env:
           CMAKE_RN_TRIPLETS: arm64;x86_64-apple-ios-sim
           FERRIC_TARGETS: aarch64-apple-ios-sim,x86_64-apple-ios
+      - name: Verify prebuilds
+        run: pnpm --filter @react-native-node-api/node-addon-examples run verify
       # Mirrors React Native's scripts/xcode/ccache.conf, which only applied
       # while ccache ran through their wrapper script (it sets CCACHE_CONFIGPATH
       # to it) and so no longer does now that it runs as a compiler launcher.
