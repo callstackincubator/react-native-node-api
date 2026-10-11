@@ -26,11 +26,12 @@ export type LinkModulesOptions = {
   naming: NamingStrategy;
   fromPath: string;
   linker: ModuleLinker;
+  failOnError?: boolean;
 };
 
 export type LinkModuleOptions = Omit<
   LinkModulesOptions,
-  "fromPath" | "linker" | "platform"
+  "fromPath" | "linker" | "platform" | "failOnError"
 > & {
   modulePath: string;
 };
@@ -63,12 +64,14 @@ export async function linkModules({
   naming,
   platform,
   linker,
+  failOnError,
 }: LinkModulesOptions): Promise<ModuleOutput[]> {
   // Find all their xcframeworks
   const dependenciesByName = await findNodeApiModulePathsByDependency({
     fromPath,
     platform,
     includeSelf: true,
+    failOnError,
   });
 
   // Find absolute paths to xcframeworks
