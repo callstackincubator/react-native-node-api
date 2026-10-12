@@ -1,5 +1,21 @@
 # cmake-rn
 
+## 0.8.1
+
+### Patch Changes
+
+- 4376787: Apply `--code-signing-allowed` to CMake framework targets too. It was only
+  passed when building plain dynamic libraries, so framework targets built
+  through `xcodebuild archive`/`install` were always signed, leaving a
+  `_CodeSignature` directory in each framework.
+- Updated dependencies [14e5119]
+- Updated dependencies [8d125fa]
+- Updated dependencies [ba6a527]
+- Updated dependencies [c8d5b80]
+- Updated dependencies [44617d2]
+  - react-native-node-api@1.2.0
+  - weak-node-api@0.1.1
+
 ## 0.8.0
 
 ### Minor Changes
