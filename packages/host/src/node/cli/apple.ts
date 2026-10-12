@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 
-import plist from "@expo/plist";
 import * as xcode from "@bacons/xcode";
 import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
@@ -10,7 +9,7 @@ import * as zod from "zod";
 import { chalk, prettyPath, spawn } from "@react-native-node-api/cli-utils";
 
 import { getLibraryName } from "../path-utils.js";
-import { readAndParsePlist } from "../plist.js";
+import { readAndParsePlist, writePlist } from "../plist.js";
 import {
   LinkModuleOptions,
   LinkModuleResult,
@@ -138,9 +137,10 @@ export async function writeXcframeworkInfo(
   xcframeworkPath: string,
   info: zod.infer<typeof XcframeworkInfoSchema>,
 ) {
-  const infoPlistPath = path.join(xcframeworkPath, "Info.plist");
-  const infoPlistXml = plist.build(info);
-  await fs.promises.writeFile(infoPlistPath, infoPlistXml, "utf-8");
+  await writePlist({
+    path: path.join(xcframeworkPath, "Info.plist"),
+    plist: info,
+  });
 }
 
 const FrameworkInfoSchema = zod.looseObject({
@@ -158,8 +158,7 @@ export async function writeFrameworkInfo(
   infoPlistPath: string,
   info: zod.infer<typeof FrameworkInfoSchema>,
 ) {
-  const infoPlistXml = plist.build(info);
-  await fs.promises.writeFile(infoPlistPath, infoPlistXml, "utf-8");
+  await writePlist({ path: infoPlistPath, plist: info });
 }
 
 type LinkFrameworkOptions = {

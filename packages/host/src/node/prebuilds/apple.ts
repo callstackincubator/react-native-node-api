@@ -3,10 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-import plist from "@expo/plist";
 import { spawn } from "@react-native-node-api/cli-utils";
 
 import { determineLibraryBasename } from "../path-utils.js";
+import { writePlist } from "../plist.js";
 
 type XCframeworkOptions = {
   frameworkPaths: string[];
@@ -22,17 +22,6 @@ export function escapeBundleIdentifier(input: string) {
   return input.replace(/[^A-Za-z0-9-.]/g, "-");
 }
 
-/** Serialize a plist object and write it to the given path. */
-async function writeInfoPlist({
-  path: infoPlistPath,
-  plist: plistDict,
-}: {
-  path: string;
-  plist: Record<string, unknown>;
-}) {
-  await fs.promises.writeFile(infoPlistPath, plist.build(plistDict), "utf8");
-}
-
 /** Build and write the framework Info.plist to the given path. */
 async function writeFrameworkInfoPlist({
   path: infoPlistPath,
@@ -43,7 +32,7 @@ async function writeFrameworkInfoPlist({
   libraryName: string;
   bundleIdentifier?: string;
 }) {
-  await writeInfoPlist({
+  await writePlist({
     path: infoPlistPath,
     plist: {
       CFBundleDevelopmentRegion: "en",

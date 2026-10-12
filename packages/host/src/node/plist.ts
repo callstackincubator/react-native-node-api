@@ -8,7 +8,7 @@ import * as bplist from "bplist-parser";
  * Reads and parses a plist file in either XML or binary format.
  */
 export async function readAndParsePlist(plistPath: string): Promise<unknown> {
-  assert(fs.existsSync(plistPath), `Expected an Info.plist: ${plistPath}`);
+  assert(fs.existsSync(plistPath), `Expected a plist: ${plistPath}`);
   try {
     const contents = await fs.promises.readFile(plistPath);
     if (contents.subarray(0, 6).toString("ascii") === "bplist") {
@@ -21,4 +21,15 @@ export async function readAndParsePlist(plistPath: string): Promise<unknown> {
       cause,
     });
   }
+}
+
+/** Serialize a plist object as XML and write it to the given path. */
+export async function writePlist({
+  path: plistPath,
+  plist: plistDict,
+}: {
+  path: string;
+  plist: Record<string, unknown>;
+}) {
+  await fs.promises.writeFile(plistPath, plist.build(plistDict), "utf8");
 }

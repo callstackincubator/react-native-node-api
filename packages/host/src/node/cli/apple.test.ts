@@ -55,7 +55,7 @@ describe("readAndParsePlist", () => {
 
     await assert.rejects(
       () => readAndParsePlist(infoPlistPath),
-      /Expected an Info.plist/,
+      /Expected a plist/,
     );
   });
 
