@@ -81,4 +81,47 @@ describe("gyp.assertRoot", () => {
       });
     }, /Expected all cflags to be strings/);
   });
+
+  it("should accept target ldflags", () => {
+    assert.doesNotThrow(() => {
+      assertBinding(
+        {
+          targets: [
+            {
+              target_name: "addon",
+              sources: ["addon.cc"],
+              ldflags: ["-Wl,-dead_strip"],
+            },
+          ],
+        },
+        true,
+      );
+    });
+  });
+
+  it("should reject malformed target ldflags", () => {
+    assert.throws(() => {
+      assertBinding({
+        targets: [
+          {
+            target_name: "addon",
+            sources: ["addon.cc"],
+            ldflags: "-Wl,-dead_strip",
+          },
+        ],
+      });
+    }, /Expected 'ldflags' to be an array/);
+
+    assert.throws(() => {
+      assertBinding({
+        targets: [
+          {
+            target_name: "addon",
+            sources: ["addon.cc"],
+            ldflags: ["-Wl,-dead_strip", 42],
+          },
+        ],
+      });
+    }, /Expected all ldflags to be strings/);
+  });
 });
