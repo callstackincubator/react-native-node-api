@@ -1,5 +1,21 @@
 # cmake-rn
 
+## 0.8.3-rc.0
+
+### Patch Changes
+
+- Updated dependencies [5254777]
+- Updated dependencies [6fd62e3]
+- Updated dependencies [9fc812b]
+- Updated dependencies [7cb6ce5]
+- Updated dependencies [dd46b9f]
+- Updated dependencies [1bebc7f]
+- Updated dependencies [8a346b9]
+- Updated dependencies [c5d1a50]
+- Updated dependencies [2246709]
+  - react-native-node-api@2.0.0-rc.0
+  - weak-node-api@0.2.0-rc.0
+
 ## 0.8.2
 
 ### Patch Changes
