@@ -30,14 +30,17 @@
     "bootstrap": "node --run copy-and-build"
   },
   "devDependencies": {
+    "@expo/plist": "0.4.7",
+    "bplist-parser": "^0.5.0",
     "cmake-rn": "workspace:*",
-    "node-addon-examples": "github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509",
     "gyp-to-cmake": "workspace:*",
+    "node-addon-examples": "github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509",
     "read-pkg": "^9.0.1",
     "weak-node-api": "workspace:*"
   },
   "dependencies": {
     "assert": "^2.1.0",
-    "react-native-node-api": "workspace:*"
+    "react-native-node-api": "workspace:*",
+    "zod": "^4.1.11"
   }
 }

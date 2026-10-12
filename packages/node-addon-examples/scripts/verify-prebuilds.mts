@@ -2,19 +2,29 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
+import plistModule from "@expo/plist";
+import { parseBuffer } from "bplist-parser";
+import { z } from "zod";
+
 import { DIRS } from "./cmake-projects.mjs";
 
-const EXPECTED_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
+// @expo/plist is CJS with an `export default`; under this genuine ESM
+// (.mts) module's interop, the default import binds to the whole
+// `module.exports`, nesting the real API one `.default` deeper.
+const plist = plistModule.default;
 
-const EXPECTED_XCFRAMEWORK_PLATFORMS = [
-  "ios-arm64",
-  "ios-arm64-simulator",
-  "macos-arm64_x86_64",
-  "tvos-arm64",
-  "tvos-arm64-simulator",
-  "xros-arm64",
-  "xros-arm64-simulator",
-];
+const FrameworkInfoPlistSchema = z.object({
+  CFBundleExecutable: z.string(),
+});
+
+const KNOWN_ANDROID_ARCHS = ["armeabi-v7a", "arm64-v8a", "x86_64", "x86"];
+
+async function readSubdirectories(dir: string) {
+  const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  const subdirectories = entries.filter((entry) => entry.isDirectory());
+  assert(subdirectories.length > 0, `Expected at least one slice in ${dir}`);
+  return subdirectories;
+}
 
 async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   console.log(
@@ -23,8 +33,13 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
     "in",
     dirent.parentPath,
   );
-  for (const arch of EXPECTED_ANDROID_ARCHS) {
-    const archDir = path.join(dirent.parentPath, dirent.name, arch);
+  const prebuildDir = path.join(dirent.parentPath, dirent.name);
+  for (const arch of await readSubdirectories(prebuildDir)) {
+    assert(
+      KNOWN_ANDROID_ARCHS.includes(arch.name),
+      `Unexpected Android arch: ${arch.name}`,
+    );
+    const archDir = path.join(prebuildDir, arch.name);
     for (const file of await fs.promises.readdir(archDir, {
       withFileTypes: true,
     })) {
@@ -37,17 +52,46 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
+async function readPlist(plistPath: string): Promise<unknown> {
+  const contents = await fs.promises.readFile(plistPath);
+  // xcodebuild emits binary plists, while the host writes XML ones
+  if (contents.subarray(0, 6).toString("ascii") === "bplist") {
+    const [parsed] = parseBuffer<unknown>(contents);
+    return parsed;
+  }
+  return plist.parse(contents.toString("utf8"));
+}
+
+async function verifyFrameworkInfoPlist(frameworkDir: string) {
+  const libraryName = path.basename(frameworkDir, ".framework");
+  const infoPlistPath = path.join(frameworkDir, "Info.plist");
+  const parsed = FrameworkInfoPlistSchema.parse(await readPlist(infoPlistPath));
+  assert.equal(
+    parsed.CFBundleExecutable,
+    libraryName,
+    `Unexpected CFBundleExecutable in ${infoPlistPath}`,
+  );
+  assert(
+    fs.existsSync(path.join(frameworkDir, libraryName)),
+    `Missing executable ${libraryName} in ${frameworkDir}`,
+  );
+}
+
 async function verifyApplePrebuild(dirent: fs.Dirent) {
   console.log("Verifying Apple prebuild", dirent.name, "in", dirent.parentPath);
-  for (const arch of EXPECTED_XCFRAMEWORK_PLATFORMS) {
-    const archDir = path.join(dirent.parentPath, dirent.name, arch);
-    for (const file of await fs.promises.readdir(archDir, {
+  const prebuildDir = path.join(dirent.parentPath, dirent.name);
+  for (const slice of await readSubdirectories(prebuildDir)) {
+    const sliceDir = path.join(prebuildDir, slice.name);
+    for (const file of await fs.promises.readdir(sliceDir, {
       withFileTypes: true,
     })) {
       assert(
         file.isDirectory(),
         "Expected only directories in xcframework arch directory",
       );
+      if (file.name === "dSYMs") {
+        continue;
+      }
       assert(file.name.endsWith(".framework"), "Expected framework directory");
       const frameworkDir = path.join(file.parentPath, file.name);
       for (const file of await fs.promises.readdir(frameworkDir, {
@@ -65,8 +109,7 @@ async function verifyApplePrebuild(dirent: fs.Dirent) {
             "Expected only directory and files in framework",
           );
           if (file.name === "Info.plist") {
-            // TODO: Verify the contents of the Info.plist file
-            continue;
+            await verifyFrameworkInfoPlist(frameworkDir);
           } else {
             assert(
               !file.name.endsWith(".node"),

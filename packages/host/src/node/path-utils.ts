@@ -59,6 +59,9 @@ export type NamingStrategy = {
 // Cache mapping package directory to package name across calls
 const packageNameCache = new Map<string, string>();
 
+// Extensions Node's own require() resolves before ever trying `.node`.
+const COLLIDING_SOURCE_EXTENSIONS = [".js", ".json"];
+
 /**
  * @param modulePath  Batch-scans the path to the module to check (must be extensionless or end in .node)
  * @returns True if a platform specific prebuild exists for the module path, warns on unreadable modules.
@@ -66,6 +69,15 @@ const packageNameCache = new Map<string, string>();
  * TODO: Consider checking for a specific platform extension.
  */
 export function isNodeApiModule(modulePath: string): boolean {
+  if (
+    !modulePath.endsWith(".node") &&
+    COLLIDING_SOURCE_EXTENSIONS.some((extension) =>
+      fs.existsSync(modulePath + extension),
+    )
+  ) {
+    // An explicit require('./foo.node') has no such ambiguity to defer to.
+    return false;
+  }
   {
     // HACK: Take a shortcut (if applicable): existing `.node` files are addons
     try {
