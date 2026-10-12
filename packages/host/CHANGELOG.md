@@ -1,5 +1,26 @@
 # react-native-node-api
 
+## 1.2.0
+
+### Minor Changes
+
+- 44617d2: Add a `--fail-on-error` option to `react-native-node-api link`. By default,
+  unresolvable dependencies continue to be skipped with a warning; the new flag
+  instead surfaces the original package-resolution error and exits unsuccessfully,
+  which makes broken package `exports` configurations diagnosable in CI.
+
+### Patch Changes
+
+- 14e5119: Parse binary `Info.plist` files in-process with `bplist-parser` instead of
+  converting them with `plutil`, so reading a framework's plist no longer
+  rewrites the file or requires macOS.
+- 8d125fa: Preserve Node.js module resolution precedence when a JavaScript file and native addon share a basename: `require('./foo')` no longer gets rewritten to load a Node-API addon when a same-named `foo.js`/`.cjs`/`.mjs`/`.json` file exists alongside it, since that source file is what `require()` actually resolves to. An explicit `require('./foo.node')` is unaffected.
+- ba6a527: Log the original package resolution error during dependency scanning so invalid package entry points include the missing path.
+- c8d5b80: Declare the Node.js versions that support loading ESM from CommonJS so package
+  managers warn before the CLI loads its ESM dependencies on an incompatible
+  runtime.
+- weak-node-api@0.1.1
+
 ## 1.1.3
 
 ### Patch Changes
