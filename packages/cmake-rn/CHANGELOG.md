@@ -1,5 +1,13 @@
 # cmake-rn
 
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [62f421b]
+  - react-native-node-api@1.2.1
+  - weak-node-api@0.1.1
+
 ## 0.8.1
 
 ### Patch Changes
