@@ -1,5 +1,12 @@
 # react-native-node-api
 
+## 1.2.1
+
+### Patch Changes
+
+- 62f421b: Export `readAndParsePlist`, which reads an XML or binary plist, from the package's Node.js entrypoint.
+- weak-node-api@0.1.1
+
 ## 1.2.0
 
 ### Minor Changes
