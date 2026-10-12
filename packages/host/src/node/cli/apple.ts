@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import fs from "node:fs";
 
-import plist from "@expo/plist";
-import * as bplist from "bplist-parser";
 import * as xcode from "@bacons/xcode";
 import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
@@ -11,6 +9,7 @@ import * as zod from "zod";
 import { chalk, prettyPath, spawn } from "@react-native-node-api/cli-utils";
 
 import { getLibraryName } from "../path-utils.js";
+import { readAndParsePlist, writePlist } from "../plist.js";
 import {
   LinkModuleOptions,
   LinkModuleResult,
@@ -112,25 +111,6 @@ export async function ensureXcodeBuildPhase(fromPath: string) {
   }
 }
 
-/**
- * Reads and parses a plist file in either XML or binary format.
- */
-export async function readAndParsePlist(plistPath: string): Promise<unknown> {
-  assert(fs.existsSync(plistPath), `Expected an Info.plist: ${plistPath}`);
-  try {
-    const contents = await fs.promises.readFile(plistPath);
-    if (contents.subarray(0, 6).toString("ascii") === "bplist") {
-      const [result] = bplist.parseBuffer<unknown>(contents);
-      return result;
-    }
-    return plist.parse(contents.toString("utf-8")) as unknown;
-  } catch (cause) {
-    throw new Error(`Failed to read and parse plist at path "${plistPath}"`, {
-      cause,
-    });
-  }
-}
-
 // Using a looseObject to allow additional fields that we don't know about
 const XcframeworkInfoSchema = zod.looseObject({
   AvailableLibraries: zod.array(
@@ -157,9 +137,10 @@ export async function writeXcframeworkInfo(
   xcframeworkPath: string,
   info: zod.infer<typeof XcframeworkInfoSchema>,
 ) {
-  const infoPlistPath = path.join(xcframeworkPath, "Info.plist");
-  const infoPlistXml = plist.build(info);
-  await fs.promises.writeFile(infoPlistPath, infoPlistXml, "utf-8");
+  await writePlist({
+    path: path.join(xcframeworkPath, "Info.plist"),
+    plist: info,
+  });
 }
 
 const FrameworkInfoSchema = zod.looseObject({
@@ -177,8 +158,7 @@ export async function writeFrameworkInfo(
   infoPlistPath: string,
   info: zod.infer<typeof FrameworkInfoSchema>,
 ) {
-  const infoPlistXml = plist.build(info);
-  await fs.promises.writeFile(infoPlistPath, infoPlistXml, "utf-8");
+  await writePlist({ path: infoPlistPath, plist: info });
 }
 
 type LinkFrameworkOptions = {
