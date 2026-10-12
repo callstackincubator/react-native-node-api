@@ -2,16 +2,10 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import path from "node:path";
 
-import plistModule from "@expo/plist";
-import { parseBuffer } from "bplist-parser";
+import { readAndParsePlist } from "react-native-node-api";
 import { z } from "zod";
 
 import { DIRS } from "./cmake-projects.mjs";
-
-// @expo/plist is CJS with an `export default`; under this genuine ESM
-// (.mts) module's interop, the default import binds to the whole
-// `module.exports`, nesting the real API one `.default` deeper.
-const plist = plistModule.default;
 
 const FrameworkInfoPlistSchema = z.object({
   CFBundleExecutable: z.string(),
@@ -52,20 +46,12 @@ async function verifyAndroidPrebuild(dirent: fs.Dirent) {
   }
 }
 
-async function readPlist(plistPath: string): Promise<unknown> {
-  const contents = await fs.promises.readFile(plistPath);
-  // xcodebuild emits binary plists, while the host writes XML ones
-  if (contents.subarray(0, 6).toString("ascii") === "bplist") {
-    const [parsed] = parseBuffer<unknown>(contents);
-    return parsed;
-  }
-  return plist.parse(contents.toString("utf8"));
-}
-
 async function verifyFrameworkInfoPlist(frameworkDir: string) {
   const libraryName = path.basename(frameworkDir, ".framework");
   const infoPlistPath = path.join(frameworkDir, "Info.plist");
-  const parsed = FrameworkInfoPlistSchema.parse(await readPlist(infoPlistPath));
+  const parsed = FrameworkInfoPlistSchema.parse(
+    await readAndParsePlist(infoPlistPath),
+  );
   assert.equal(
     parsed.CFBundleExecutable,
     libraryName,

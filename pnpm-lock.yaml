@@ -287,12 +287,6 @@ importers:
         specifier: ^4.1.11
         version: 4.4.3
     devDependencies:
-      '@expo/plist':
-        specifier: 0.4.7
-        version: 0.4.7
-      bplist-parser:
-        specifier: ^0.5.0
-        version: 0.5.0
       cmake-rn:
         specifier: workspace:*
         version: link:../cmake-rn

@@ -26,3 +26,5 @@ export {
   determineLibraryBasename,
   dereferenceDirectory,
 } from "./path-utils.js";
+
+export { readAndParsePlist } from "./plist.js";

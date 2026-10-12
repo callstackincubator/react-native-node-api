@@ -6,11 +6,11 @@ import cp from "node:child_process";
 
 import {
   linkFlatFramework,
-  readAndParsePlist,
   readFrameworkInfo,
   readXcframeworkInfo,
   restoreVersionedFrameworkSymlinks,
 } from "./apple";
+import { readAndParsePlist } from "../plist";
 import { setupTempDirectory } from "../test-utils";
 
 // Generated running "base64 -i <path-to-binary-plist>" on a plist file from a framework in the node-examples package

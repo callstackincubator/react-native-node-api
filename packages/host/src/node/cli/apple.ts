@@ -3,7 +3,6 @@ import path from "node:path";
 import fs from "node:fs";
 
 import plist from "@expo/plist";
-import * as bplist from "bplist-parser";
 import * as xcode from "@bacons/xcode";
 import * as xcodeJson from "@bacons/xcode/json";
 import * as zod from "zod";
@@ -11,6 +10,7 @@ import * as zod from "zod";
 import { chalk, prettyPath, spawn } from "@react-native-node-api/cli-utils";
 
 import { getLibraryName } from "../path-utils.js";
+import { readAndParsePlist } from "../plist.js";
 import {
   LinkModuleOptions,
   LinkModuleResult,
@@ -109,25 +109,6 @@ export async function ensureXcodeBuildPhase(fromPath: string) {
       prettyPath(pbxprojPath),
       chalk.dim("(no changes were made)"),
     );
-  }
-}
-
-/**
- * Reads and parses a plist file in either XML or binary format.
- */
-export async function readAndParsePlist(plistPath: string): Promise<unknown> {
-  assert(fs.existsSync(plistPath), `Expected an Info.plist: ${plistPath}`);
-  try {
-    const contents = await fs.promises.readFile(plistPath);
-    if (contents.subarray(0, 6).toString("ascii") === "bplist") {
-      const [result] = bplist.parseBuffer<unknown>(contents);
-      return result;
-    }
-    return plist.parse(contents.toString("utf-8")) as unknown;
-  } catch (cause) {
-    throw new Error(`Failed to read and parse plist at path "${plistPath}"`, {
-      cause,
-    });
   }
 }
 
