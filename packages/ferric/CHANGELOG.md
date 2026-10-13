@@ -1,5 +1,11 @@
 # ferric-cli
 
+## 0.4.6
+
+### Patch Changes
+
+- fe40a9e: Update `@napi-rs/cli` to 3.10.8.
+
 ## 0.4.5
 
 ### Patch Changes
