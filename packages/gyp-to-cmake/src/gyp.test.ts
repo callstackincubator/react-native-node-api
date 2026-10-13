@@ -56,6 +56,23 @@ describe("gyp.assertRoot", () => {
     });
   });
 
+  it("should accept target ldflags", () => {
+    assert.doesNotThrow(() => {
+      assertBinding(
+        {
+          targets: [
+            {
+              target_name: "addon",
+              sources: ["addon.cc"],
+              ldflags: ["-Wl,--as-needed", "-pthread"],
+            },
+          ],
+        },
+        true,
+      );
+    });
+  });
+
   it("should reject malformed target cflags", () => {
     assert.throws(() => {
       assertBinding({
@@ -80,5 +97,31 @@ describe("gyp.assertRoot", () => {
         ],
       });
     }, /Expected all cflags to be strings/);
+  });
+
+  it("should reject malformed target ldflags", () => {
+    assert.throws(() => {
+      assertBinding({
+        targets: [
+          {
+            target_name: "addon",
+            sources: ["addon.cc"],
+            ldflags: "-pthread",
+          },
+        ],
+      });
+    }, /Expected 'ldflags' to be an array/);
+
+    assert.throws(() => {
+      assertBinding({
+        targets: [
+          {
+            target_name: "addon",
+            sources: ["addon.cc"],
+            ldflags: ["-pthread", 42],
+          },
+        ],
+      });
+    }, /Expected all ldflags to be strings/);
   });
 });
