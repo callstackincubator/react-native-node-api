@@ -9,6 +9,7 @@ export type GypTarget = {
   include_dirs?: string[];
   defines?: string[];
   cflags?: string[];
+  ldflags?: string[];
 };
 
 export type GypBinding = {
@@ -58,12 +59,21 @@ export function assertTarget(
       "Expected all cflags to be strings",
     );
   }
+  if ("ldflags" in target) {
+    const { ldflags } = target;
+    assert(Array.isArray(ldflags), "Expected 'ldflags' to be an array");
+    assert(
+      ldflags.every((flag) => typeof flag === "string"),
+      "Expected all ldflags to be strings",
+    );
+  }
   if (disallowUnknownProperties) {
     assertNoExtraProperties(target, [
       "target_name",
       "sources",
       "include_dirs",
       "cflags",
+      "ldflags",
     ]);
   }
 }
