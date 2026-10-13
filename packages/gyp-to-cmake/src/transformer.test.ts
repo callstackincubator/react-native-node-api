@@ -170,6 +170,52 @@ describe("bindingGypToCmakeLists", () => {
     });
   });
 
+  describe("ldflags", () => {
+    it("should add ldflags as target-specific link options", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["foo.cc"],
+              ldflags: ["-Wl,-dead_strip", "-framework CoreFoundation"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes(
+          "target_link_options(foo PRIVATE -Wl,-dead_strip -framework\\ CoreFoundation)",
+        ),
+        `Expected output to include target_link_options:\n${output}`,
+      );
+    });
+
+    it("should expand ldflags command output into link options", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["foo.cc"],
+              ldflags: ["<!@echo -Wl,-dead_strip -pthread"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes(
+          "target_link_options(foo PRIVATE -Wl,-dead_strip -pthread",
+        ),
+        `Expected expanded ldflags in target_link_options:\n${output}`,
+      );
+    });
+  });
+
   describe("namespaced targets", () => {
     const gyp = {
       targets: [{ target_name: "addon", sources: ["addon.cc"] }],
