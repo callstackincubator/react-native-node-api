@@ -3,12 +3,10 @@
 #include <ReactCommon/CxxTurboModuleUtils.h>
 
 #include <CxxNodeApiHostModule.hpp>
-#include <HermesFatalHandler.hpp>
 #include <WeakNodeApiInjector.hpp>
 
 // Called when the library is loaded
 jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-  callstack::react_native_node_api::installHermesFatalHandler();
   callstack::react_native_node_api::injectIntoWeakNodeApi();
   // Register the C++ TurboModule
   facebook::react::registerCxxModuleToGlobalModuleMap(

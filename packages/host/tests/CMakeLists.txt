@@ -21,7 +21,6 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(node-api-host-tests
   test_hermes_napi_host.cpp
-  test_hermes_fatal_handler.cpp
   ../cpp/HermesNapiHost.cpp
   ../cpp/Logger.cpp
 )

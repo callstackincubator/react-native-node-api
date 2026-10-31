@@ -12,12 +12,8 @@ add_library(node-api-host SHARED
   ../cpp/Logger.cpp
   ../cpp/CxxNodeApiHostModule.cpp
   ../cpp/WeakNodeApiInjector.cpp
-  ../cpp/RuntimeNodeApi.cpp
-  ../cpp/RuntimeNodeApi.hpp
   ../cpp/HermesNapiHost.cpp
   ../cpp/HermesNapiHost.hpp
-  ../cpp/HermesFatalHandler.cpp
-  ../cpp/HermesFatalHandler.hpp
 )
 
 target_include_directories(node-api-host PRIVATE
