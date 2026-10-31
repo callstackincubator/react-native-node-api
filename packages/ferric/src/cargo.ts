@@ -10,6 +10,7 @@ import {
   spawn,
 } from "@react-native-node-api/cli-utils";
 import { applePrebuildPath, androidPrebuildPath } from "weak-node-api";
+import * as z from "zod";
 
 import {
   AndroidTargetName,
@@ -93,13 +94,17 @@ export function ensureCargo() {
   }
 }
 
-type CargoMetadata = {
-  target_directory: string;
-  packages: {
-    manifest_path: string;
-    targets: { name: string; kind: string[] }[];
-  }[];
-};
+const CargoMetadataSchema = z.object({
+  target_directory: z.string(),
+  packages: z.array(
+    z.object({
+      manifest_path: z.string(),
+      targets: z.array(
+        z.object({ name: z.string(), kind: z.array(z.string()) }),
+      ),
+    }),
+  ),
+});
 
 function getCargoMetadata(cwd: string) {
   const output = cp.execFileSync(
@@ -107,7 +112,7 @@ function getCargoMetadata(cwd: string) {
     ["metadata", "--no-deps", "--format-version", "1"],
     { cwd, encoding: "utf-8" },
   );
-  return JSON.parse(output) as CargoMetadata;
+  return CargoMetadataSchema.parse(JSON.parse(output));
 }
 
 /**
