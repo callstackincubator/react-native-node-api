@@ -1,0 +1,22 @@
+[package]
+name = "{{name}}"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies.napi]
+version = "{{napiCrateVersion}}"
+# see https://nodejs.org/api/n-api.html#node-api-version-matrix
+default-features = false
+features = ["napi{{nodeApiVersion}}"]
+
+[dependencies.napi-derive]
+version = "{{napiDeriveCrateVersion}}"
+features = ["type-def"]
+
+[build-dependencies]
+napi-build = "{{napiBuildCrateVersion}}"
+{{releaseProfile}}

@@ -19,7 +19,8 @@
     "changeset": "changeset",
     "release": "node --run prerelease && changeset publish",
     "prerelease": "node --run build && pnpm --recursive run prerelease && node --run publint",
-    "init-macos-test-app": "node scripts/init-macos-test-app.ts"
+    "init-macos-test-app": "node scripts/init-macos-test-app.ts",
+    "init-ferric-example": "node scripts/init-ferric-example.ts"
   },
   "author": {
     "name": "Callstack",

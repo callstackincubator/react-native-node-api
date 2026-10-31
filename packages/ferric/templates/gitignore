@@ -1,0 +1,5 @@
+/target
+
+/*.xcframework/
+/*.apple.node/
+/*.android.node/
