@@ -1,5 +1,7 @@
+import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 import {
   chalk,
@@ -97,6 +99,48 @@ export type InitOptions = {
   force?: boolean;
 };
 
+type PackageJson = Record<string, unknown>;
+
+type InitContext = {
+  packagePath: string;
+  packageName: string;
+  crateName: string;
+  libraryName: string;
+  /** The package.json of an existing package, as read from disk. */
+  existingPackageJson: string | undefined;
+  packageJson: PackageJson | undefined;
+  workspace: Workspace | undefined;
+  crateVersions: CrateVersions;
+  nodeApiVersion: number | undefined;
+  releaseProfile: ReleaseProfile | undefined;
+  force: boolean;
+};
+
+type StepResult = { changes?: Change[]; skips?: Skip[]; notices?: string[] };
+
+/** Plans a part of the initialization, without writing anything. */
+type InitStep = (context: InitContext) => StepResult | Promise<StepResult>;
+
+function mergeStepResults(results: StepResult[]) {
+  return {
+    changes: results.flatMap(({ changes = [] }) => changes),
+    skips: results.flatMap(({ skips = [] }) => skips),
+    notices: results.flatMap(({ notices = [] }) => notices),
+  };
+}
+
+/**
+ * Applying a later change to a file would silently discard an earlier one.
+ */
+export function assertDistinctChanges(changes: Pick<Change, "path">[]) {
+  const paths = changes.map(({ path: filePath }) => filePath);
+  assert.deepEqual(
+    paths.filter((filePath, index) => paths.indexOf(filePath) !== index),
+    [],
+    "Expected every init step to change distinct files",
+  );
+}
+
 /**
  * Determine the changes needed to make a package build a Rust Node-API module,
  * without applying any of them.
@@ -110,9 +154,6 @@ export async function planInit({
   force = false,
 }: InitOptions): Promise<InitPlan> {
   const resolvedPath = path.resolve(packagePath);
-  const changes: Change[] = [];
-  const skips: Skip[] = [];
-  const notices: string[] = [];
   const crateVersions = { ...DEFAULT_CRATE_VERSIONS, ...crateVersionsOption };
   for (const [crate, version] of Object.entries(crateVersions)) {
     assertFixable(
@@ -132,8 +173,9 @@ export async function planInit({
     },
   );
 
-  const packageJsonPath = path.join(resolvedPath, "package.json");
-  const existingPackageJson = await readFileIfExists(packageJsonPath);
+  const existingPackageJson = await readFileIfExists(
+    path.join(resolvedPath, "package.json"),
+  );
   const packageJson = existingPackageJson
     ? parseJsonObject(existingPackageJson)
     : undefined;
@@ -155,149 +197,23 @@ export async function planInit({
   // is the basename `ferric build` writes its outputs and entrypoint with.
   const libraryName = crateName.replaceAll("-", "_");
 
-  const workspace = findWorkspace(resolvedPath);
-  const { updated: updatedPackageJson, conflicts } = updatePackageJson({
-    packageJson,
+  const context: InitContext = {
+    packagePath: resolvedPath,
     packageName,
+    crateName,
     libraryName,
-    workspace,
-  });
-  const indentation = existingPackageJson
-    ? detectJsonIndentation(existingPackageJson)
-    : undefined;
-  const hasConflicts = Object.keys(conflicts).length > 0;
-  const keptPackageJson = updatedPackageJson ?? packageJson;
-  const overwritten =
-    hasConflicts && keptPackageJson
-      ? stringifyJson({ ...keptPackageJson, ...conflicts }, indentation)
-      : undefined;
-  if (overwritten && keptPackageJson && !force) {
-    skips.push({
-      path: packageJsonPath,
-      previous: stringifyJson(keptPackageJson, indentation),
-      contents: overwritten,
-      hint: conflicts["main"]
-        ? `To keep ${chalk.blue(String(keptPackageJson["main"]))} as the entrypoint, re-export the addon from it: ${chalk.blue(reExportStatement(keptPackageJson, conflicts["main"]))}`
-        : undefined,
-    });
-  }
-  const packageJsonContents =
-    force && overwritten
-      ? overwritten
-      : updatedPackageJson && stringifyJson(updatedPackageJson, indentation);
-  if (packageJsonContents) {
-    changes.push(
-      existingPackageJson
-        ? {
-            kind: "update",
-            path: packageJsonPath,
-            contents: packageJsonContents,
-            previous: existingPackageJson,
-            forced: force && hasConflicts,
-          }
-        : {
-            kind: "create",
-            path: packageJsonPath,
-            contents: packageJsonContents,
-          },
-    );
-  }
-
-  const cargoTomlPath = path.join(resolvedPath, "Cargo.toml");
-  const existingCargoToml = await readFileIfExists(cargoTomlPath);
-  if (existingCargoToml !== undefined) {
-    const manifest = updateCargoManifest(existingCargoToml, crateVersions);
-    notices.push(...manifest.notices);
-    if (manifest.contents !== existingCargoToml) {
-      changes.push({
-        kind: "update",
-        path: cargoTomlPath,
-        contents: manifest.contents,
-        previous: existingCargoToml,
-      });
-    }
-    for (const [option, value] of Object.entries({
-      "--node-api-version": nodeApiVersion,
-      "--release-profile": releaseProfile,
-    })) {
-      if (value !== undefined) {
-        notices.push(
-          `Ignored ${chalk.blue(option)}, which only applies when creating a Cargo.toml`,
-        );
-      }
-    }
-  } else {
-    const template = await readTemplate("Cargo.toml");
-    changes.push({
-      kind: "create",
-      path: cargoTomlPath,
-      contents: renderCargoManifest(template, {
-        crateName,
-        nodeApiVersion: nodeApiVersion ?? DEFAULT_NODE_API_VERSION,
-        crateVersions,
-        releaseProfile: releaseProfile ?? "speed",
-      }),
-    });
-  }
-
-  for (const [template, relativePath] of [
-    ["build.rs", "build.rs"],
-    ["lib.rs", path.join("src", "lib.rs")],
-  ]) {
-    const outputPath = path.join(resolvedPath, relativePath);
-    const contents = await readTemplate(template);
-    const previous = await readFileIfExists(outputPath);
-    if (previous === undefined) {
-      changes.push({ kind: "create", path: outputPath, contents });
-    } else if (previous !== contents) {
-      if (force) {
-        changes.push({
-          kind: "update",
-          path: outputPath,
-          contents,
-          previous,
-          forced: true,
-        });
-      } else {
-        skips.push({ path: outputPath, contents, previous });
-      }
-    }
-  }
-
-  const gitignorePath = path.join(resolvedPath, ".gitignore");
-  // The template is named without a leading dot, as npm won't publish a
-  // .gitignore file inside a package
-  const gitignoreTemplate = await readTemplate("gitignore");
-  const existingGitignore = await readFileIfExists(gitignorePath);
-  if (existingGitignore !== undefined) {
-    const updatedGitignore = appendMissingLines(
-      existingGitignore,
-      gitignoreTemplate,
-    );
-    if (updatedGitignore) {
-      changes.push({
-        kind: "update",
-        path: gitignorePath,
-        contents: updatedGitignore,
-        previous: existingGitignore,
-      });
-    }
-  } else {
-    changes.push({
-      kind: "create",
-      path: gitignorePath,
-      contents: gitignoreTemplate,
-    });
-  }
-
-  const workspaceChange = await planWorkspaceChange(
-    workspace,
-    resolvedPath,
-    notices,
+    existingPackageJson,
+    packageJson,
+    workspace: findWorkspace(resolvedPath),
+    crateVersions,
+    nodeApiVersion,
+    releaseProfile,
+    force,
+  };
+  const { changes, skips, notices } = mergeStepResults(
+    await Promise.all(INIT_STEPS.map((step) => step(context))),
   );
-  if (workspaceChange) {
-    changes.push(workspaceChange);
-  }
+  assertDistinctChanges(changes);
 
   return {
     packagePath: resolvedPath,
@@ -309,6 +225,191 @@ export async function planInit({
     notices,
   };
 }
+
+const planPackageJson: InitStep = (context) => {
+  const { packageJson, existingPackageJson, libraryName, force } = context;
+  const packageJsonPath = path.join(context.packagePath, "package.json");
+  const updated = getPackageJsonUpdates(context).reduce<PackageJson>(
+    (result, update) => update(result),
+    packageJson ?? {},
+  );
+  const stringify = (value: PackageJson) =>
+    stringifyJson(
+      value,
+      existingPackageJson
+        ? detectJsonIndentation(existingPackageJson)
+        : undefined,
+    );
+
+  if (existingPackageJson === undefined) {
+    return {
+      changes: [
+        { kind: "create", path: packageJsonPath, contents: stringify(updated) },
+      ],
+    };
+  }
+
+  const conflicts = Object.fromEntries(
+    Object.entries(getEntrypoints(libraryName)).filter(
+      ([key, value]) => updated[key] !== value,
+    ),
+  );
+  const overwritten = { ...updated, ...conflicts };
+  const hasConflicts = Object.keys(conflicts).length > 0;
+  const result = force ? overwritten : updated;
+  return {
+    changes: isDeepStrictEqual(result, packageJson)
+      ? []
+      : [
+          {
+            kind: "update",
+            path: packageJsonPath,
+            contents: stringify(result),
+            previous: existingPackageJson,
+            forced: force && hasConflicts,
+          },
+        ],
+    skips:
+      hasConflicts && !force
+        ? [
+            {
+              path: packageJsonPath,
+              previous: stringify(updated),
+              contents: stringify(overwritten),
+              hint: conflicts["main"]
+                ? `To keep ${chalk.blue(String(updated["main"]))} as the entrypoint, re-export the addon from it: ${chalk.blue(reExportStatement(updated, conflicts["main"]))}`
+                : undefined,
+            },
+          ]
+        : [],
+  };
+};
+
+const planCargoManifest: InitStep = async ({
+  packagePath,
+  crateName,
+  crateVersions,
+  nodeApiVersion,
+  releaseProfile,
+}) => {
+  const cargoTomlPath = path.join(packagePath, "Cargo.toml");
+  const previous = await readFileIfExists(cargoTomlPath);
+  if (previous === undefined) {
+    return {
+      changes: [
+        {
+          kind: "create",
+          path: cargoTomlPath,
+          contents: renderCargoManifest(await readTemplate("Cargo.toml"), {
+            crateName,
+            nodeApiVersion: nodeApiVersion ?? DEFAULT_NODE_API_VERSION,
+            crateVersions,
+            releaseProfile: releaseProfile ?? "speed",
+          }),
+        },
+      ],
+    };
+  }
+  const { contents, notices } = updateCargoManifest(previous, crateVersions);
+  const ignoredOptions = Object.entries({
+    "--node-api-version": nodeApiVersion,
+    "--release-profile": releaseProfile,
+  }).filter(([, value]) => value !== undefined);
+  return {
+    changes:
+      contents === previous
+        ? []
+        : [{ kind: "update", path: cargoTomlPath, contents, previous }],
+    notices: [
+      ...notices,
+      ...ignoredOptions.map(
+        ([option]) =>
+          `Ignored ${chalk.blue(option)}, which only applies when creating a Cargo.toml`,
+      ),
+    ],
+  };
+};
+
+async function planSourceFile(
+  { packagePath, force }: InitContext,
+  template: string,
+  relativePath: string,
+): Promise<StepResult> {
+  const outputPath = path.join(packagePath, relativePath);
+  const contents = await readTemplate(template);
+  const previous = await readFileIfExists(outputPath);
+  if (previous === undefined) {
+    return { changes: [{ kind: "create", path: outputPath, contents }] };
+  } else if (previous === contents) {
+    return {};
+  } else if (force) {
+    return {
+      changes: [
+        { kind: "update", path: outputPath, contents, previous, forced: true },
+      ],
+    };
+  }
+  return { skips: [{ path: outputPath, contents, previous }] };
+}
+
+const planSourceFiles: InitStep = async (context) =>
+  mergeStepResults(
+    await Promise.all([
+      planSourceFile(context, "build.rs", "build.rs"),
+      planSourceFile(context, "lib.rs", path.join("src", "lib.rs")),
+    ]),
+  );
+
+const planGitignore: InitStep = async ({ packagePath }) => {
+  const gitignorePath = path.join(packagePath, ".gitignore");
+  // The template is named without a leading dot, as npm won't publish a
+  // .gitignore file inside a package
+  const template = await readTemplate("gitignore");
+  const previous = await readFileIfExists(gitignorePath);
+  if (previous === undefined) {
+    return {
+      changes: [{ kind: "create", path: gitignorePath, contents: template }],
+    };
+  }
+  const contents = appendMissingLines(previous, template);
+  return contents
+    ? { changes: [{ kind: "update", path: gitignorePath, contents, previous }] }
+    : {};
+};
+
+const planWorkspace: InitStep = async ({ workspace, packagePath }) => {
+  if (!workspace) {
+    return {};
+  }
+  const relativePath = relativeWorkspacePath(workspace, packagePath);
+  const { patterns, configPath } = workspace;
+  if (patterns && isPathCovered(patterns, relativePath)) {
+    return {};
+  }
+  const previous = await readFileIfExists(configPath);
+  const contents =
+    patterns && previous
+      ? addWorkspacePattern(workspace, previous, relativePath)
+      : undefined;
+  if (!contents || previous === undefined) {
+    return {
+      notices: [
+        `Add ${chalk.blue(relativePath)} to the workspace packages declared by ${prettyPath(configPath)}`,
+      ],
+    };
+  }
+  return {
+    changes: [{ kind: "update", path: configPath, contents, previous }],
+  };
+};
+
+const INIT_STEPS: InitStep[] = [
+  planPackageJson,
+  planCargoManifest,
+  planSourceFiles,
+  planGitignore,
+  planWorkspace,
+];
 
 function renderCargoManifest(
   template: string,
@@ -362,129 +463,123 @@ export function crateNameFromPackageName(packageName: string) {
   return packageName.replace(/^@[^/]+\//, "");
 }
 
-type PackageJsonOptions = {
-  packageJson: Record<string, unknown> | undefined;
-  packageName: string;
-  libraryName: string;
-  workspace: Workspace | undefined;
-};
+function getEntrypoints(libraryName: string) {
+  return { main: `${libraryName}.js`, types: `${libraryName}.d.ts` };
+}
+
+type PackageJsonUpdate = (packageJson: PackageJson) => PackageJson;
 
 /**
- * Add whatever a package needs to build a Rust Node-API module to its
- * package.json and bump outdated dependencies, leaving any other value it already
- * declares alone. `updated` is undefined if there is nothing to change, and
- * `conflicts` holds the entrypoints it declares differently.
+ * Add the entries a package.json lacks, keeping any value it already declares.
  */
-function updatePackageJson({
-  packageJson,
-  packageName,
-  libraryName,
-  workspace,
-}: PackageJsonOptions) {
-  const { hostSpecifier, ferricSpecifier } =
-    determineDependencySpecifiers(workspace);
-  const result: Record<string, unknown> = { ...packageJson };
-  let changed = false;
-
-  for (const [key, value] of Object.entries({
-    name: packageName,
-    version: "0.1.0",
-    type: "commonjs",
-  })) {
-    if (result[key] === undefined) {
-      result[key] = value;
-      changed = true;
-    }
-  }
-
-  const entrypoints = {
-    main: `${libraryName}.js`,
-    types: `${libraryName}.d.ts`,
-  };
-  const conflicts = Object.fromEntries(
-    Object.entries(entrypoints).filter(
-      ([key, value]) => result[key] !== undefined && result[key] !== value,
+function withMissing(entries: Record<string, unknown>): PackageJsonUpdate {
+  return (packageJson) => ({
+    ...packageJson,
+    ...Object.fromEntries(
+      Object.entries(entries).filter(([key]) => packageJson[key] === undefined),
     ),
-  );
-  for (const [key, value] of Object.entries(entrypoints)) {
-    if (result[key] === undefined) {
-      result[key] = value;
-      changed = true;
+  });
+}
+
+function withMissingScripts(
+  scripts: Record<string, string>,
+): PackageJsonUpdate {
+  return (packageJson) => ({
+    ...packageJson,
+    scripts: withMissing(scripts)(
+      getObjectProperty(packageJson, "scripts") ?? {},
+    ),
+  });
+}
+
+/**
+ * Only extends an existing "files" array, unless asked to create one: adding one
+ * to a package without it would suddenly narrow down what that package publishes.
+ */
+function withFiles(files: string[], create: boolean): PackageJsonUpdate {
+  return (packageJson) => {
+    const existing = getStringArrayProperty(packageJson, "files");
+    if (existing === undefined && !create) {
+      return packageJson;
     }
-  }
-
-  // Only extend an existing "files" array: adding one to a package without it
-  // would suddenly narrow down what that package publishes.
-  const artifactFiles = [
-    `${libraryName}.js`,
-    `${libraryName}.d.ts`,
-    `${libraryName}.apple.node`,
-    `${libraryName}.android.node`,
-  ];
-  const files = getStringArrayProperty(result, "files");
-  if (packageJson === undefined) {
-    result["files"] = artifactFiles;
-    changed = true;
-  } else if (files) {
-    const missing = artifactFiles.filter((file) => !files.includes(file));
-    if (missing.length > 0) {
-      result["files"] = [...files, ...missing];
-      changed = true;
-    }
-  }
-
-  const scripts = getObjectProperty(result, "scripts") ?? {};
-  const missingScripts = Object.entries({
-    build: "ferric build",
-    "build:types": "ferric build --dts-only",
-  }).filter(([name]) => scripts[name] === undefined);
-  if (missingScripts.length > 0) {
-    result["scripts"] = { ...scripts, ...Object.fromEntries(missingScripts) };
-    changed = true;
-  }
-
-  changed =
-    updateDependency(result, {
-      name: "react-native-node-api",
-      specifier: hostSpecifier,
-      keys: ["dependencies", "devDependencies", "peerDependencies"],
-    }) || changed;
-  changed =
-    updateDependency(result, {
-      name: "ferric-cli",
-      specifier: ferricSpecifier,
-      keys: ["devDependencies", "dependencies", "peerDependencies"],
-    }) || changed;
-
-  return { updated: changed ? result : undefined, conflicts };
+    const declared = existing ?? [];
+    return {
+      ...packageJson,
+      files: [...declared, ...files.filter((file) => !declared.includes(file))],
+    };
+  };
 }
 
 /**
  * Add a dependency to the first of the keys, unless one of them declares it
  * already, in which case it's bumped if outdated.
  */
-function updateDependency(
-  packageJson: Record<string, unknown>,
-  {
-    name,
-    specifier,
-    keys,
-  }: { name: string; specifier: string; keys: string[] },
-) {
-  const declaredIn = keys.find(
-    (key) => getObjectProperty(packageJson, key)?.[name] !== undefined,
-  );
-  const key = declaredIn ?? keys[0];
-  const dependencies = getObjectProperty(packageJson, key) ?? {};
-  const declared = dependencies[name];
-  if (
-    declaredIn === undefined ||
-    (typeof declared === "string" && isOutdated(declared, specifier))
-  ) {
-    packageJson[key] = { ...dependencies, [name]: specifier };
-    return true;
-  }
-  return false;
+function withDependency({
+  name,
+  specifier,
+  keys,
+}: {
+  name: string;
+  specifier: string;
+  keys: string[];
+}): PackageJsonUpdate {
+  return (packageJson) => {
+    const declaredIn = keys.find(
+      (key) => getObjectProperty(packageJson, key)?.[name] !== undefined,
+    );
+    const key = declaredIn ?? keys[0];
+    const dependencies = getObjectProperty(packageJson, key) ?? {};
+    const declared = dependencies[name];
+    return declaredIn === undefined ||
+      (typeof declared === "string" && isOutdated(declared, specifier))
+      ? { ...packageJson, [key]: { ...dependencies, [name]: specifier } }
+      : packageJson;
+  };
+}
+
+/**
+ * What a package needs to build a Rust Node-API module, leaving any value it
+ * already declares alone besides outdated dependencies.
+ */
+function getPackageJsonUpdates({
+  packageJson,
+  packageName,
+  libraryName,
+  workspace,
+}: InitContext): PackageJsonUpdate[] {
+  const { hostSpecifier, ferricSpecifier } =
+    determineDependencySpecifiers(workspace);
+  return [
+    withMissing({
+      name: packageName,
+      version: "0.1.0",
+      type: "commonjs",
+      ...getEntrypoints(libraryName),
+    }),
+    withFiles(
+      [
+        `${libraryName}.js`,
+        `${libraryName}.d.ts`,
+        `${libraryName}.apple.node`,
+        `${libraryName}.android.node`,
+      ],
+      packageJson === undefined,
+    ),
+    withMissingScripts({
+      build: "ferric build",
+      "build:types": "ferric build --dts-only",
+    }),
+    withDependency({
+      name: "react-native-node-api",
+      specifier: hostSpecifier,
+      keys: ["dependencies", "devDependencies", "peerDependencies"],
+    }),
+    withDependency({
+      name: "ferric-cli",
+      specifier: ferricSpecifier,
+      keys: ["devDependencies", "dependencies", "peerDependencies"],
+    }),
+  ];
 }
 
 /**
@@ -536,38 +631,6 @@ function appendMissingLines(contents: string, template: string) {
   }
   const separator = contents.endsWith("\n") ? "" : "\n";
   return contents + separator + missing.join("\n") + "\n";
-}
-
-async function planWorkspaceChange(
-  workspace: Workspace | undefined,
-  packagePath: string,
-  notices: string[],
-): Promise<Change | undefined> {
-  if (!workspace) {
-    return undefined;
-  }
-  const relativePath = relativeWorkspacePath(workspace, packagePath);
-  const { patterns, configPath } = workspace;
-  if (patterns && isPathCovered(patterns, relativePath)) {
-    return undefined;
-  }
-  const contents = await readFileIfExists(configPath);
-  const updated =
-    patterns && contents
-      ? addWorkspacePattern(workspace, contents, relativePath)
-      : undefined;
-  if (!updated || contents === undefined) {
-    notices.push(
-      `Add ${chalk.blue(relativePath)} to the workspace packages declared by ${prettyPath(configPath)}`,
-    );
-    return undefined;
-  }
-  return {
-    kind: "update",
-    path: configPath,
-    contents: updated,
-    previous: contents,
-  };
 }
 
 function readTemplate(filename: string) {

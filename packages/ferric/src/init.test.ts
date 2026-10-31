@@ -8,6 +8,7 @@ import { parse as parseToml } from "smol-toml";
 
 import {
   applyChanges,
+  assertDistinctChanges,
   crateNameFromPackageName,
   DEFAULT_CRATE_VERSIONS,
   DEFAULT_NODE_API_VERSION,
@@ -64,6 +65,15 @@ function changedPaths(plan: InitPlan, packagePath: string) {
     .map((filePath) => filePath.split(path.sep).join("/"))
     .sort();
 }
+
+describe("assertDistinctChanges", () => {
+  it("rejects two changes to the same file", () => {
+    assertDistinctChanges([{ path: "a" }, { path: "b" }]);
+    assert.throws(() =>
+      assertDistinctChanges([{ path: "a" }, { path: "b" }, { path: "a" }]),
+    );
+  });
+});
 
 describe("crateNameFromPackageName", () => {
   it("strips the scope", () => {
