@@ -10,13 +10,18 @@ import {
   wrapAction,
 } from "@react-native-node-api/cli-utils";
 import { structuredPatch } from "diff";
-import { parse as parseToml } from "smol-toml";
 
+import {
+  isCrateVersion,
+  isOutdated,
+  updateCargoManifest,
+  type CrateVersions,
+} from "./cargo-manifest.js";
+import { MAX_NODE_API_VERSION } from "./features.js";
 import {
   detectJsonIndentation,
   getObjectProperty,
   getStringArrayProperty,
-  isRecord,
   parseJsonObject,
   stringifyJson,
 } from "./json.js";
@@ -31,9 +36,41 @@ import {
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..");
 const TEMPLATES_PATH = path.join(PACKAGE_ROOT, "templates");
 
+export const DEFAULT_NODE_API_VERSION = 3;
+
+export const DEFAULT_CRATE_VERSIONS: CrateVersions = {
+  napi: "3.14.2",
+  "napi-derive": "3.6.12",
+  "napi-build": "2.6.0",
+};
+
+const SPEED_PROFILE = ["lto = true", "codegen-units = 1"];
+
+const RELEASE_PROFILES = {
+  speed: SPEED_PROFILE,
+  size: [...SPEED_PROFILE, 'opt-level = "z"', "strip = true"],
+  none: [],
+} satisfies Record<string, string[]>;
+
+export type ReleaseProfile = keyof typeof RELEASE_PROFILES;
+
 export type Change =
   | { kind: "create"; path: string; contents: string }
-  | { kind: "update"; path: string; contents: string; previous: string };
+  | {
+      kind: "update";
+      path: string;
+      contents: string;
+      previous: string;
+      forced?: boolean;
+    };
+
+/** A difference left alone, unless the caller forces the overwrite. */
+export type Skip = {
+  path: string;
+  contents: string;
+  previous: string;
+  hint?: string;
+};
 
 export type InitPlan = {
   packagePath: string;
@@ -41,6 +78,7 @@ export type InitPlan = {
   crateName: string;
   libraryName: string;
   changes: Change[];
+  skips: Skip[];
   notices: string[];
 };
 
@@ -49,6 +87,14 @@ export type InitOptions = {
   packagePath: string;
   /** Name of the Cargo crate, derived from the package name when omitted. */
   crateName?: string;
+  /** Node-API version enabled when creating a Cargo manifest. */
+  nodeApiVersion?: number;
+  /** Versions of the napi crates, overriding the defaults. */
+  crateVersions?: Partial<CrateVersions>;
+  /** Release profile written when creating a Cargo manifest. */
+  releaseProfile?: ReleaseProfile;
+  /** Overwrite entrypoints and source files instead of skipping them. */
+  force?: boolean;
 };
 
 /**
@@ -58,10 +104,33 @@ export type InitOptions = {
 export async function planInit({
   packagePath,
   crateName: crateNameOption,
+  nodeApiVersion,
+  crateVersions: crateVersionsOption,
+  releaseProfile,
+  force = false,
 }: InitOptions): Promise<InitPlan> {
   const resolvedPath = path.resolve(packagePath);
   const changes: Change[] = [];
+  const skips: Skip[] = [];
   const notices: string[] = [];
+  const crateVersions = { ...DEFAULT_CRATE_VERSIONS, ...crateVersionsOption };
+  for (const [crate, version] of Object.entries(crateVersions)) {
+    assertFixable(
+      isCrateVersion(version),
+      `Cannot use ${chalk.blue(version)} as the version of ${chalk.blue(crate)}`,
+      { instructions: "Pass a Cargo version requirement, such as 3.14.2" },
+    );
+  }
+  assertFixable(
+    nodeApiVersion === undefined ||
+      (Number.isInteger(nodeApiVersion) &&
+        nodeApiVersion >= 1 &&
+        nodeApiVersion <= MAX_NODE_API_VERSION),
+    `Cannot use ${chalk.blue(String(nodeApiVersion))} as the Node-API version`,
+    {
+      instructions: `Pass a version between 1 and ${MAX_NODE_API_VERSION}, the highest one implemented by the host`,
+    },
+  );
 
   const packageJsonPath = path.join(resolvedPath, "package.json");
   const existingPackageJson = await readFileIfExists(packageJsonPath);
@@ -87,43 +156,87 @@ export async function planInit({
   const libraryName = crateName.replaceAll("-", "_");
 
   const workspace = findWorkspace(resolvedPath);
-  const updatedPackageJson = updatePackageJson({
+  const { updated: updatedPackageJson, conflicts } = updatePackageJson({
     packageJson,
     packageName,
     libraryName,
     workspace,
   });
-  if (updatedPackageJson) {
-    const contents = stringifyJson(
-      updatedPackageJson,
-      existingPackageJson
-        ? detectJsonIndentation(existingPackageJson)
+  const indentation = existingPackageJson
+    ? detectJsonIndentation(existingPackageJson)
+    : undefined;
+  const hasConflicts = Object.keys(conflicts).length > 0;
+  const keptPackageJson = updatedPackageJson ?? packageJson;
+  const overwritten =
+    hasConflicts && keptPackageJson
+      ? stringifyJson({ ...keptPackageJson, ...conflicts }, indentation)
+      : undefined;
+  if (overwritten && keptPackageJson && !force) {
+    skips.push({
+      path: packageJsonPath,
+      previous: stringifyJson(keptPackageJson, indentation),
+      contents: overwritten,
+      hint: conflicts["main"]
+        ? `To keep ${chalk.blue(String(keptPackageJson["main"]))} as the entrypoint, re-export the addon from it: ${chalk.blue(reExportStatement(keptPackageJson, conflicts["main"]))}`
         : undefined,
-    );
+    });
+  }
+  const packageJsonContents =
+    force && overwritten
+      ? overwritten
+      : updatedPackageJson && stringifyJson(updatedPackageJson, indentation);
+  if (packageJsonContents) {
     changes.push(
       existingPackageJson
         ? {
             kind: "update",
             path: packageJsonPath,
-            contents,
+            contents: packageJsonContents,
             previous: existingPackageJson,
+            forced: force && hasConflicts,
           }
-        : { kind: "create", path: packageJsonPath, contents },
+        : {
+            kind: "create",
+            path: packageJsonPath,
+            contents: packageJsonContents,
+          },
     );
   }
 
   const cargoTomlPath = path.join(resolvedPath, "Cargo.toml");
   const existingCargoToml = await readFileIfExists(cargoTomlPath);
-  if (existingCargoToml) {
-    notices.push(...inspectCargoToml(existingCargoToml));
+  if (existingCargoToml !== undefined) {
+    const manifest = updateCargoManifest(existingCargoToml, crateVersions);
+    notices.push(...manifest.notices);
+    if (manifest.contents !== existingCargoToml) {
+      changes.push({
+        kind: "update",
+        path: cargoTomlPath,
+        contents: manifest.contents,
+        previous: existingCargoToml,
+      });
+    }
+    for (const [option, value] of Object.entries({
+      "--node-api-version": nodeApiVersion,
+      "--release-profile": releaseProfile,
+    })) {
+      if (value !== undefined) {
+        notices.push(
+          `Ignored ${chalk.blue(option)}, which only applies when creating a Cargo.toml`,
+        );
+      }
+    }
   } else {
+    const template = await readTemplate("Cargo.toml");
     changes.push({
       kind: "create",
       path: cargoTomlPath,
-      contents: (await readTemplate("Cargo.toml")).replaceAll(
-        "{{name}}",
+      contents: renderCargoManifest(template, {
         crateName,
-      ),
+        nodeApiVersion: nodeApiVersion ?? DEFAULT_NODE_API_VERSION,
+        crateVersions,
+        releaseProfile: releaseProfile ?? "speed",
+      }),
     });
   }
 
@@ -132,12 +245,22 @@ export async function planInit({
     ["lib.rs", path.join("src", "lib.rs")],
   ]) {
     const outputPath = path.join(resolvedPath, relativePath);
-    if (!(await readFileIfExists(outputPath))) {
-      changes.push({
-        kind: "create",
-        path: outputPath,
-        contents: await readTemplate(template),
-      });
+    const contents = await readTemplate(template);
+    const previous = await readFileIfExists(outputPath);
+    if (previous === undefined) {
+      changes.push({ kind: "create", path: outputPath, contents });
+    } else if (previous !== contents) {
+      if (force) {
+        changes.push({
+          kind: "update",
+          path: outputPath,
+          contents,
+          previous,
+          forced: true,
+        });
+      } else {
+        skips.push({ path: outputPath, contents, previous });
+      }
     }
   }
 
@@ -146,7 +269,7 @@ export async function planInit({
   // .gitignore file inside a package
   const gitignoreTemplate = await readTemplate("gitignore");
   const existingGitignore = await readFileIfExists(gitignorePath);
-  if (existingGitignore) {
+  if (existingGitignore !== undefined) {
     const updatedGitignore = appendMissingLines(
       existingGitignore,
       gitignoreTemplate,
@@ -182,8 +305,47 @@ export async function planInit({
     crateName,
     libraryName,
     changes,
+    skips,
     notices,
   };
+}
+
+function renderCargoManifest(
+  template: string,
+  {
+    crateName,
+    nodeApiVersion,
+    crateVersions,
+    releaseProfile,
+  }: {
+    crateName: string;
+    nodeApiVersion: number;
+    crateVersions: CrateVersions;
+    releaseProfile: ReleaseProfile;
+  },
+) {
+  const profile = RELEASE_PROFILES[releaseProfile];
+  return template
+    .replaceAll("{{name}}", crateName)
+    .replaceAll("{{nodeApiVersion}}", String(nodeApiVersion))
+    .replaceAll("{{napiCrateVersion}}", crateVersions.napi)
+    .replaceAll("{{napiDeriveCrateVersion}}", crateVersions["napi-derive"])
+    .replaceAll("{{napiBuildCrateVersion}}", crateVersions["napi-build"])
+    .replaceAll(
+      "{{releaseProfile}}\n",
+      profile.length > 0
+        ? ["", "[profile.release]", ...profile, ""].join("\n")
+        : "",
+    );
+}
+
+function reExportStatement(
+  packageJson: Record<string, unknown>,
+  entrypoint: string,
+) {
+  return packageJson["type"] === "module"
+    ? `export { default } from "./${entrypoint}";`
+    : `module.exports = require("./${entrypoint}");`;
 }
 
 export async function applyChanges(changes: Change[]) {
@@ -209,8 +371,9 @@ type PackageJsonOptions = {
 
 /**
  * Add whatever a package needs to build a Rust Node-API module to its
- * package.json, leaving any value it already declares alone. Returns undefined
- * if it already declares everything.
+ * package.json and bump outdated dependencies, leaving any other value it already
+ * declares alone. `updated` is undefined if there is nothing to change, and
+ * `conflicts` holds the entrypoints it declares differently.
  */
 function updatePackageJson({
   packageJson,
@@ -227,9 +390,23 @@ function updatePackageJson({
     name: packageName,
     version: "0.1.0",
     type: "commonjs",
+  })) {
+    if (result[key] === undefined) {
+      result[key] = value;
+      changed = true;
+    }
+  }
+
+  const entrypoints = {
     main: `${libraryName}.js`,
     types: `${libraryName}.d.ts`,
-  })) {
+  };
+  const conflicts = Object.fromEntries(
+    Object.entries(entrypoints).filter(
+      ([key, value]) => result[key] !== undefined && result[key] !== value,
+    ),
+  );
+  for (const [key, value] of Object.entries(entrypoints)) {
     if (result[key] === undefined) {
       result[key] = value;
       changed = true;
@@ -256,52 +433,58 @@ function updatePackageJson({
     }
   }
 
+  const scripts = getObjectProperty(result, "scripts") ?? {};
+  const missingScripts = Object.entries({
+    build: "ferric build",
+    "build:types": "ferric build --dts-only",
+  }).filter(([name]) => scripts[name] === undefined);
+  if (missingScripts.length > 0) {
+    result["scripts"] = { ...scripts, ...Object.fromEntries(missingScripts) };
+    changed = true;
+  }
+
   changed =
-    addMissingEntries(result, "scripts", {
-      build: "ferric build",
-      "build:types": "ferric build --dts-only",
+    updateDependency(result, {
+      name: "react-native-node-api",
+      specifier: hostSpecifier,
+      keys: ["dependencies", "devDependencies", "peerDependencies"],
     }) || changed;
   changed =
-    addMissingEntries(
-      result,
-      "dependencies",
-      { "react-native-node-api": hostSpecifier },
-      ["devDependencies", "peerDependencies"],
-    ) || changed;
-  changed =
-    addMissingEntries(
-      result,
-      "devDependencies",
-      { "ferric-cli": ferricSpecifier },
-      ["dependencies", "peerDependencies"],
-    ) || changed;
+    updateDependency(result, {
+      name: "ferric-cli",
+      specifier: ferricSpecifier,
+      keys: ["devDependencies", "dependencies", "peerDependencies"],
+    }) || changed;
 
-  return changed ? result : undefined;
+  return { updated: changed ? result : undefined, conflicts };
 }
 
 /**
- * Add entries to an object valued property, keeping any entry already declared
- * by it (or by one of the other properties it can be declared in).
+ * Add a dependency to the first of the keys, unless one of them declares it
+ * already, in which case it's bumped if outdated.
  */
-function addMissingEntries(
+function updateDependency(
   packageJson: Record<string, unknown>,
-  key: string,
-  entries: Record<string, string>,
-  alternativeKeys: string[] = [],
+  {
+    name,
+    specifier,
+    keys,
+  }: { name: string; specifier: string; keys: string[] },
 ) {
-  const existing = getObjectProperty(packageJson, key) ?? {};
-  const declaredElsewhere = alternativeKeys.flatMap((alternativeKey) =>
-    Object.keys(getObjectProperty(packageJson, alternativeKey) ?? {}),
+  const declaredIn = keys.find(
+    (key) => getObjectProperty(packageJson, key)?.[name] !== undefined,
   );
-  const missing = Object.entries(entries).filter(
-    ([name]) =>
-      existing[name] === undefined && !declaredElsewhere.includes(name),
-  );
-  if (missing.length === 0) {
-    return false;
+  const key = declaredIn ?? keys[0];
+  const dependencies = getObjectProperty(packageJson, key) ?? {};
+  const declared = dependencies[name];
+  if (
+    declaredIn === undefined ||
+    (typeof declared === "string" && isOutdated(declared, specifier))
+  ) {
+    packageJson[key] = { ...dependencies, [name]: specifier };
+    return true;
   }
-  packageJson[key] = { ...existing, ...Object.fromEntries(missing) };
-  return true;
+  return false;
 }
 
 /**
@@ -337,46 +520,6 @@ export function determineDependencySpecifiers(
     ferricSpecifier:
       typeof ownVersion === "string" ? `^${ownVersion}` : "latest",
   };
-}
-
-/**
- * Notices about anything an existing Cargo manifest needs to build into a
- * Node-API module. It is left untouched: it is likely to carry pinned versions,
- * comments and features which are more valuable than a mechanical update.
- */
-function inspectCargoToml(contents: string) {
-  let manifest: unknown;
-  try {
-    manifest = parseToml(contents);
-  } catch (error) {
-    return [
-      `Cargo.toml could not be parsed: ${error instanceof Error ? error.message : String(error)}`,
-    ];
-  }
-  if (!isRecord(manifest)) {
-    return ["Cargo.toml doesn't declare a package"];
-  }
-  const result: string[] = [];
-  const lib = manifest["lib"];
-  const crateType = isRecord(lib) ? lib["crate-type"] : undefined;
-  if (!Array.isArray(crateType) || !crateType.includes("cdylib")) {
-    result.push(
-      `Cargo.toml doesn't declare ${chalk.blue('crate-type = ["cdylib"]')} in its ${chalk.blue("[lib]")} section, which Node-API modules are built as`,
-    );
-  }
-  for (const [table, dependency] of [
-    ["dependencies", "napi"],
-    ["dependencies", "napi-derive"],
-    ["build-dependencies", "napi-build"],
-  ]) {
-    const dependencies = manifest[table];
-    if (!isRecord(dependencies) || dependencies[dependency] === undefined) {
-      result.push(
-        `Cargo.toml is missing ${chalk.blue(dependency)} from its ${chalk.blue(`[${table}]`)}`,
-      );
-    }
-  }
-  return result;
 }
 
 /**
@@ -452,19 +595,86 @@ const dryRunOption = new Option(
   "Print the changes instead of applying them",
 ).default(false);
 
+const nodeApiVersionOption = new Option(
+  "--node-api-version <version>",
+  "Node-API version enabled when creating a Cargo.toml",
+)
+  .argParser((value) => parseInt(value, 10))
+  .default(undefined, String(DEFAULT_NODE_API_VERSION));
+
+const napiCrateVersionOption = new Option(
+  "--napi-crate-version <version>",
+  "Version of the napi crate",
+).default(undefined, DEFAULT_CRATE_VERSIONS.napi);
+
+const napiDeriveCrateVersionOption = new Option(
+  "--napi-derive-crate-version <version>",
+  "Version of the napi-derive crate",
+).default(undefined, DEFAULT_CRATE_VERSIONS["napi-derive"]);
+
+const napiBuildCrateVersionOption = new Option(
+  "--napi-build-crate-version <version>",
+  "Version of the napi-build crate",
+).default(undefined, DEFAULT_CRATE_VERSIONS["napi-build"]);
+
+const releaseProfileOption = new Option(
+  "--release-profile <profile>",
+  "Release profile written when creating a Cargo.toml",
+)
+  .choices(["speed", "size", "none"] satisfies ReleaseProfile[])
+  .default(undefined, "speed");
+
+const forceOption = new Option(
+  "--force",
+  "Overwrite entrypoints and source files which differ, instead of skipping them",
+).default(false);
+
 export const initCommand = new Command("init")
   .description("Scaffold a package building a Rust Node-API module")
   .argument("[path]", "Path of the package directory", ".")
   .addOption(nameOption)
   .addOption(dryRunOption)
+  .addOption(nodeApiVersionOption)
+  .addOption(napiCrateVersionOption)
+  .addOption(napiDeriveCrateVersionOption)
+  .addOption(napiBuildCrateVersionOption)
+  .addOption(releaseProfileOption)
+  .addOption(forceOption)
   .action(
-    wrapAction(async (packagePath: string, { name, dryRun }) => {
-      const plan = await planInit({ packagePath, crateName: name });
-      if (!dryRun) {
-        await applyChanges(plan.changes);
-      }
-      printPlan(plan, dryRun);
-    }),
+    wrapAction(
+      async (
+        packagePath: string,
+        {
+          name,
+          dryRun,
+          nodeApiVersion,
+          napiCrateVersion,
+          napiDeriveCrateVersion,
+          napiBuildCrateVersion,
+          releaseProfile,
+          force,
+        },
+      ) => {
+        const plan = await planInit({
+          packagePath,
+          crateName: name,
+          nodeApiVersion,
+          crateVersions: Object.fromEntries(
+            Object.entries({
+              napi: napiCrateVersion,
+              "napi-derive": napiDeriveCrateVersion,
+              "napi-build": napiBuildCrateVersion,
+            }).filter(([, version]) => version !== undefined),
+          ),
+          releaseProfile,
+          force,
+        });
+        if (!dryRun) {
+          await applyChanges(plan.changes);
+        }
+        printPlan(plan, dryRun);
+      },
+    ),
   );
 
 /**
@@ -494,25 +704,48 @@ export function formatDiff(previous: string, contents: string, context = 2) {
   ]);
 }
 
+function printDiff(previous: string, contents: string) {
+  for (const line of formatDiff(previous, contents)) {
+    console.log(chalk.dim("│ ") + line);
+  }
+}
+
+function changeLabel(change: Change) {
+  if (change.kind === "create") {
+    return chalk.green("create");
+  }
+  return change.forced ? chalk.red("overwrite") : chalk.yellow("update");
+}
+
 function printPlan(plan: InitPlan, dryRun: boolean) {
   for (const change of plan.changes) {
-    const label =
-      change.kind === "create" ? chalk.green("create") : chalk.yellow("update");
     console.log(
-      `${dryRun ? chalk.dim("would ") : ""}${label} ${prettyPath(change.path)}`,
+      `${dryRun ? chalk.dim("would ") : ""}${changeLabel(change)} ${prettyPath(change.path)}`,
     );
     // Creating writes a template verbatim, printing it would drown the diffs of
     // the files being changed around it
     if (change.kind === "update") {
-      for (const line of formatDiff(change.previous, change.contents)) {
-        console.log(chalk.dim("│ ") + line);
-      }
+      printDiff(change.previous, change.contents);
+    }
+  }
+  for (const skip of plan.skips) {
+    console.log(
+      `${chalk.yellow("skip")} ${prettyPath(skip.path)} ${chalk.dim("differs from what ferric init would write, merge this in by hand:")}`,
+    );
+    printDiff(skip.previous, skip.contents);
+    if (skip.hint) {
+      console.log(`${chalk.yellow("ℹ︎")} ${skip.hint}`);
     }
   }
   for (const notice of plan.notices) {
     console.log(`${chalk.yellow("ℹ︎")} ${notice}`);
   }
-  if (plan.changes.length === 0) {
+  if (plan.skips.length > 0) {
+    console.log(
+      `${chalk.yellow("ℹ︎")} Pass ${chalk.blue("--force")} to overwrite the skipped entrypoints and source files`,
+    );
+  }
+  if (plan.changes.length === 0 && plan.skips.length === 0) {
     console.log(
       `${chalk.green("✔")} ${prettyPath(plan.packagePath)} is already set up to build ${chalk.blue(plan.crateName)}`,
     );

@@ -9,45 +9,22 @@ import { parse as parseToml } from "smol-toml";
 import {
   applyChanges,
   crateNameFromPackageName,
+  DEFAULT_CRATE_VERSIONS,
+  DEFAULT_NODE_API_VERSION,
   determineDependencySpecifiers,
   formatDiff,
   planInit,
   type InitPlan,
 } from "./init.js";
-import { isRecord } from "./json.js";
+import { parseJsonObject } from "./json.js";
 import { findWorkspace } from "./workspaces.js";
 
-const TEMPLATES_PATH = path.resolve(import.meta.dirname, "..", "templates");
 const FERRIC_EXAMPLE_PATH = path.resolve(
   import.meta.dirname,
   "..",
   "..",
   "ferric-example",
 );
-
-/**
- * The version each dependency of a Cargo manifest is declared with, whether as
- * a string or a table with a "version" key.
- */
-function dependencyVersions(contents: string) {
-  const manifest: unknown = parseToml(contents);
-  assert.ok(isRecord(manifest));
-  const result: Record<string, string> = {};
-  for (const table of ["dependencies", "build-dependencies"]) {
-    const dependencies = manifest[table];
-    if (!isRecord(dependencies)) {
-      continue;
-    }
-    for (const [name, value] of Object.entries(dependencies)) {
-      if (typeof value === "string") {
-        result[name] = value;
-      } else if (isRecord(value) && typeof value["version"] === "string") {
-        result[name] = value["version"];
-      }
-    }
-  }
-  return result;
-}
 
 interface FileMap {
   [filePath: string]: string;
@@ -71,11 +48,9 @@ function setupTempDirectory(context: TestContext, files: FileMap = {}) {
 }
 
 function readPackageJson(packagePath: string) {
-  const contents = fs.readFileSync(
-    path.join(packagePath, "package.json"),
-    "utf8",
+  return parseJsonObject(
+    fs.readFileSync(path.join(packagePath, "package.json"), "utf8"),
   );
-  return JSON.parse(contents) as Record<string, unknown>;
 }
 
 function keysOf(value: unknown) {
@@ -215,7 +190,7 @@ describe("planInit", () => {
           main: "index.js",
           files: ["index.js"],
           scripts: { build: "make" },
-          devDependencies: { "ferric-cli": "0.1.0" },
+          devDependencies: { "ferric-cli": "999.0.0" },
         },
         null,
         2,
@@ -231,7 +206,7 @@ describe("planInit", () => {
       "build:types": "ferric build --dts-only",
     });
     assert.deepEqual(packageJson["devDependencies"], {
-      "ferric-cli": "0.1.0",
+      "ferric-cli": "999.0.0",
     });
     // The artifacts are added to an existing "files", which would otherwise
     // keep them out of the published package
@@ -244,14 +219,14 @@ describe("planInit", () => {
     ]);
   });
 
-  it("leaves an existing Cargo manifest alone, noticing what it lacks", async (context) => {
+  it("notices what an existing Cargo manifest lacks", async (context) => {
     const packagePath = setupTempDirectory(context, {
       "Cargo.toml": [
         "[package]",
         'name = "renamed-by-hand"',
         "",
         "[dependencies]",
-        'napi = "=3.4.0"',
+        'napi = "3.14.2"',
         "",
       ].join("\n"),
     });
@@ -262,10 +237,229 @@ describe("planInit", () => {
       ),
       false,
     );
-    assert.equal(plan.notices.length, 3);
-    assert.match(plan.notices.join("\n"), /cdylib/);
-    assert.match(plan.notices.join("\n"), /napi-derive/);
-    assert.match(plan.notices.join("\n"), /napi-build/);
+    const notices = plan.notices.join("\n");
+    assert.match(notices, /cdylib/);
+    assert.match(notices, /napi-derive/);
+    assert.match(notices, /napi-build/);
+    assert.match(notices, /default-features/);
+  });
+
+  it("bumps outdated crates of an existing Cargo manifest in place", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "Cargo.toml": [
+        "# Keep this comment",
+        "[lib]",
+        'crate-type = ["cdylib"]',
+        "",
+        "[dependencies.napi]",
+        'version = "=3.4.0" # and this one',
+        "default-features = false",
+        "",
+        "[dependencies]",
+        'napi-derive = { version = "3.3.0", features = ["type-def"] }',
+        "",
+        "[build-dependencies]",
+        'napi-build = "9.0.0"',
+        "",
+      ].join("\n"),
+    });
+    const plan = await planInit({ packagePath });
+    const change = plan.changes.find(({ path: filePath }) =>
+      filePath.endsWith("Cargo.toml"),
+    );
+    assert(change);
+    assert.equal(
+      change.contents,
+      [
+        "# Keep this comment",
+        "[lib]",
+        'crate-type = ["cdylib"]',
+        "",
+        "[dependencies.napi]",
+        `version = "${DEFAULT_CRATE_VERSIONS.napi}" # and this one`,
+        "default-features = false",
+        "",
+        "[dependencies]",
+        `napi-derive = { version = "${DEFAULT_CRATE_VERSIONS["napi-derive"]}", features = ["type-def"] }`,
+        "",
+        "[build-dependencies]",
+        'napi-build = "9.0.0"',
+        "",
+      ].join("\n"),
+    );
+    assert.deepEqual(plan.notices, []);
+  });
+
+  it("notices crates it cannot bump and a stale napi-sys pin", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "Cargo.toml": [
+        "[lib]",
+        'crate-type = ["cdylib"]',
+        "",
+        "[dependencies]",
+        "napi = { workspace = true, default-features = false }",
+        'napi-derive = "3.6.12"',
+        'napi-sys = { version = "=3.0.1", features = ["dyn-symbols"] }',
+        "",
+        "[build-dependencies]",
+        'napi-build = "2.6.0"',
+        "",
+      ].join("\n"),
+    });
+    const notices = (await planInit({ packagePath })).notices.join("\n");
+    assert.match(notices, /doesn't declare .*napi.* with a version/);
+    assert.match(notices, /pins .*napi-sys/);
+    assert.match(notices, /dyn-symbols/);
+  });
+
+  it("notices options which only apply to a new Cargo manifest", async (context) => {
+    const packagePath = setupTempDirectory(context, { "Cargo.toml": "" });
+    const { notices } = await planInit({
+      packagePath,
+      nodeApiVersion: 10,
+      releaseProfile: "size",
+    });
+    assert.match(notices.join("\n"), /--node-api-version/);
+    assert.match(notices.join("\n"), /--release-profile/);
+  });
+
+  it("writes the options into a new Cargo manifest", async (context) => {
+    const packagePath = setupTempDirectory(context);
+    const plan = await planInit({
+      packagePath,
+      nodeApiVersion: 10,
+      crateVersions: { napi: "3.15.0", "napi-build": "2.7.0" },
+      releaseProfile: "size",
+    });
+    const change = plan.changes.find(({ path: filePath }) =>
+      filePath.endsWith("Cargo.toml"),
+    );
+    assert(change);
+    const manifest = parseJsonObject(
+      JSON.stringify(parseToml(change.contents)),
+    );
+    assert.deepEqual(manifest["dependencies"], {
+      napi: {
+        version: "3.15.0",
+        "default-features": false,
+        features: ["napi10"],
+      },
+      "napi-derive": {
+        version: DEFAULT_CRATE_VERSIONS["napi-derive"],
+        features: ["type-def"],
+      },
+    });
+    assert.deepEqual(manifest["build-dependencies"], { "napi-build": "2.7.0" });
+    assert.deepEqual(manifest["profile"], {
+      release: {
+        lto: true,
+        "codegen-units": 1,
+        "opt-level": "z",
+        strip: true,
+      },
+    });
+  });
+
+  it("omits the release profile when asked to", async (context) => {
+    const packagePath = setupTempDirectory(context);
+    const plan = await planInit({ packagePath, releaseProfile: "none" });
+    const change = plan.changes.find(({ path: filePath }) =>
+      filePath.endsWith("Cargo.toml"),
+    );
+    assert(change);
+    assert.equal(parseToml(change.contents)["profile"], undefined);
+    assert.ok(change.contents.endsWith('"\n'));
+  });
+
+  it("defaults to Node-API version 3", async (context) => {
+    const packagePath = setupTempDirectory(context);
+    const plan = await planInit({ packagePath });
+    assert.equal(DEFAULT_NODE_API_VERSION, 3);
+    const change = plan.changes.find(({ path: filePath }) =>
+      filePath.endsWith("Cargo.toml"),
+    );
+    assert(change);
+    assert.match(change.contents, /features = \["napi3"\]/);
+  });
+
+  it("rejects versions it cannot use", async (context) => {
+    const packagePath = setupTempDirectory(context);
+    await assert.rejects(planInit({ packagePath, nodeApiVersion: 11 }));
+    await assert.rejects(planInit({ packagePath, nodeApiVersion: Number.NaN }));
+    await assert.rejects(
+      planInit({ packagePath, crateVersions: { napi: "not-a-version" } }),
+    );
+  });
+
+  it("bumps outdated dependencies but keeps newer and non-version ones", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "package.json": JSON.stringify({
+        name: "my-addon",
+        peerDependencies: { "react-native-node-api": "^999.0.0" },
+        devDependencies: { "ferric-cli": "^0.0.1" },
+      }),
+    });
+    const plan = await planInit({ packagePath });
+    await applyChanges(plan.changes);
+    const packageJson = readPackageJson(packagePath);
+    const { ferricSpecifier } = determineDependencySpecifiers(undefined);
+    assert.deepEqual(packageJson["peerDependencies"], {
+      "react-native-node-api": "^999.0.0",
+    });
+    assert.deepEqual(packageJson["devDependencies"], {
+      "ferric-cli": ferricSpecifier,
+    });
+  });
+
+  it("skips differing entrypoints and source files", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "package.json": JSON.stringify({
+        name: "my-addon",
+        main: "index.js",
+        type: "module",
+      }),
+      "src/lib.rs": "// mine\n",
+    });
+    const plan = await planInit({ packagePath });
+    await applyChanges(plan.changes);
+
+    assert.equal(readPackageJson(packagePath)["main"], "index.js");
+    assert.equal(
+      fs.readFileSync(path.join(packagePath, "src/lib.rs"), "utf8"),
+      "// mine\n",
+    );
+    const skipped = plan.skips.map(({ path: filePath }) =>
+      path.relative(packagePath, filePath),
+    );
+    assert.deepEqual(skipped.sort(), [
+      "package.json",
+      path.join("src", "lib.rs"),
+    ]);
+    const packageJsonSkip = plan.skips.find(({ path: filePath }) =>
+      filePath.endsWith("package.json"),
+    );
+    assert(packageJsonSkip);
+    assert.match(
+      packageJsonSkip.hint ?? "",
+      /export \{ default \} from "\.\/my_addon\.js"/,
+    );
+    assert.match(packageJsonSkip.contents, /"main": "my_addon\.js"/);
+  });
+
+  it("overwrites them when forced", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "package.json": JSON.stringify({ name: "my-addon", main: "index.js" }),
+      "src/lib.rs": "// mine\n",
+    });
+    const plan = await planInit({ packagePath, force: true });
+    await applyChanges(plan.changes);
+
+    assert.deepEqual(plan.skips, []);
+    assert.equal(readPackageJson(packagePath)["main"], "my_addon.js");
+    assert.match(
+      fs.readFileSync(path.join(packagePath, "src/lib.rs"), "utf8"),
+      /#\[napi\]/,
+    );
   });
 
   it("notices a Cargo manifest it cannot parse", async (context) => {
@@ -322,29 +516,8 @@ describe("planInit", () => {
     const packagePath = FERRIC_EXAMPLE_PATH;
     const plan = await planInit({ packagePath });
     assert.deepEqual(changedPaths(plan, packagePath), []);
+    assert.deepEqual(plan.skips, []);
     assert.deepEqual(plan.notices, []);
-  });
-});
-
-describe("the templates", () => {
-  it("declare the versions the ferric-example is built with", () => {
-    // The example is the crate CI actually builds and runs on devices, so it is
-    // where the pins (see #331) are proven: keeping the template in sync with it
-    // is what stops the versions it scaffolds from going stale unnoticed.
-    const template = dependencyVersions(
-      fs.readFileSync(path.join(TEMPLATES_PATH, "Cargo.toml"), "utf8"),
-    );
-    const example = dependencyVersions(
-      fs.readFileSync(path.join(FERRIC_EXAMPLE_PATH, "Cargo.toml"), "utf8"),
-    );
-    assert.ok(Object.keys(template).length > 0);
-    for (const [name, version] of Object.entries(template)) {
-      assert.equal(
-        example[name],
-        version,
-        `Update the ${name} version in the init template to the ${example[name]} of the ferric-example`,
-      );
-    }
   });
 });
 

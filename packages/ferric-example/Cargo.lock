@@ -31,7 +31,7 @@ checksum = "914a755b7c2d4af2bdcff7ce1739e2db9a1b81a9b07123d8015786ae03c0980d"
 
 [[package]]
 name = "ferric-example"
-version = "1.0.0"
+version = "0.1.0"
 dependencies = [
  "napi",
  "napi-build",
