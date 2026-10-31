@@ -291,9 +291,9 @@ export const buildCommand = new Command("build")
           );
         }
         ensureCargo();
-        ensureAvailableTargets(targets);
+        ensureAvailableTargets(targets, cwd);
         if (!skipFeatureCheck) {
-          assertNapiFeatures(process.cwd(), targets);
+          assertNapiFeatures(cwd, targets);
         }
 
         const appleTargets = filterTargetsByPlatform(targets, "apple");

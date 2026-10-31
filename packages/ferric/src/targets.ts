@@ -156,8 +156,11 @@ export function assertNightlyToolchain() {
  * Ensure the targets are either installed into the Rust toolchain or available via nightly Rust toolchain.
  * We do this up-front because the error message and fix is very unclear from the failure when missing.
  */
-export function ensureAvailableTargets(expectedTargets: Set<TargetName>) {
-  const installedTargets = getInstalledTargets();
+export function ensureAvailableTargets(
+  expectedTargets: Set<TargetName>,
+  cwd: string,
+) {
+  const installedTargets = getInstalledTargets(cwd);
 
   const missingInstallableTargets = expectedTargets
     .difference(installedTargets)
@@ -169,7 +172,7 @@ export function ensureAvailableTargets(expectedTargets: Set<TargetName>) {
       ...missingInstallableTargets,
     ].join(", ")}`,
     {
-      command: `rustup target add ${[...missingInstallableTargets].join(" ")}`,
+      command: `${cwd === process.cwd() ? "" : `cd ${cwd} && `}rustup target add ${[...missingInstallableTargets].join(" ")}`,
     },
   );
 

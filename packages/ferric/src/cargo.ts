@@ -94,8 +94,21 @@ export function ensureCargo() {
 }
 
 type CargoMetadata = {
-  packages: { targets: { name: string; kind: string[] }[] }[];
+  target_directory: string;
+  packages: {
+    manifest_path: string;
+    targets: { name: string; kind: string[] }[];
+  }[];
 };
+
+function getCargoMetadata(cwd: string) {
+  const output = cp.execFileSync(
+    "cargo",
+    ["metadata", "--no-deps", "--format-version", "1"],
+    { cwd, encoding: "utf-8" },
+  );
+  return JSON.parse(output) as CargoMetadata;
+}
 
 /**
  * Determine the name of the crate's "cdylib" target, without building anything,
@@ -104,13 +117,13 @@ type CargoMetadata = {
  * normalizes the crate name (dashes to underscores) for the compiled artifact.
  */
 export function determineCargoLibraryName(cwd: string): string {
-  const output = cp.execFileSync(
-    "cargo",
-    ["metadata", "--no-deps", "--format-version", "1"],
-    { cwd, encoding: "utf-8" },
+  const { packages } = getCargoMetadata(cwd);
+  const manifestPath = fs.realpathSync(path.join(cwd, "Cargo.toml"));
+  // Metadata lists every workspace member, but cargo only builds the current one
+  const currentPackage = packages.find(
+    (pkg) => fs.realpathSync(pkg.manifest_path) === manifestPath,
   );
-  const { packages } = JSON.parse(output) as CargoMetadata;
-  const cdylibNames = packages
+  const cdylibNames = (currentPackage ? [currentPackage] : packages)
     .flatMap((pkg) => pkg.targets)
     .filter((target) => target.kind.includes("cdylib"))
     .map((target) => target.name);
@@ -164,19 +177,15 @@ export async function build(options: BuildOptions) {
     },
   });
   const targetOutputPath = joinPathAndAssertExistence(
-    cwd,
-    "target",
+    getCargoMetadata(cwd).target_directory,
     target,
     configuration,
   );
-  const dynamicLibraryFile = fs
-    .readdirSync(targetOutputPath)
-    .filter((file) => file.endsWith(".so") || file.endsWith(".dylib"));
-  assert(
-    dynamicLibraryFile.length === 1,
-    `Expected a single shared object file in ${targetOutputPath}`,
+  const libraryName = determineCargoLibraryName(cwd);
+  return joinPathAndAssertExistence(
+    targetOutputPath,
+    `lib${libraryName}.${isAndroidTarget(target) ? "so" : "dylib"}`,
   );
-  return joinPathAndAssertExistence(targetOutputPath, dynamicLibraryFile[0]);
 }
 
 export function getLLVMToolchainBinPath(ndkPath: string) {
