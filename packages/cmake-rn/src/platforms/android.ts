@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {
+  chalk,
   Option,
   oraPromise,
   prettyPath,
@@ -19,6 +20,7 @@ import {
   getCmakeJSVariables,
   getWeakNodeApiVariables,
 } from "../weak-node-api.js";
+import { isNinjaAvailable } from "../ninja.js";
 
 // This should match https://github.com/react-native-community/template/blob/main/template/android/build.gradle#L7
 const DEFAULT_NDK_VERSION = "27.1.12297006";
@@ -121,7 +123,6 @@ export function buildCommonDefinitions({
       CMAKE_BUILD_TYPE: configuration,
       CMAKE_SYSTEM_NAME: "Android",
       // "CMAKE_INSTALL_PREFIX": installPath,
-      CMAKE_MAKE_PROGRAM: "ninja",
       ANDROID_NDK: ndkPath,
       ANDROID_TOOLCHAIN: "clang",
       ANDROID_PLATFORM: androidSdkVersion,
@@ -198,6 +199,13 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       define,
     });
 
+    const generator = isNinjaAvailable() ? "Ninja" : "Unix Makefiles";
+    if (generator !== "Ninja") {
+      console.log(
+        `Ninja not found, using ${generator}. ${chalk.dim("Install Ninja for faster builds.")}`,
+      );
+    }
+
     await Promise.all(
       triplets.map(async ({ triplet, spawn }) => {
         const buildPath = getBuildPath(build, triplet, configuration);
@@ -216,7 +224,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           // Ideally, we would use the "Ninja Multi-Config" generator here,
           // but it doesn't support the "RelWithDebInfo" configuration on Android.
           "-G",
-          "Ninja",
+          generator,
           "--toolchain",
           toolchainPath,
           ...toDefineArguments([
