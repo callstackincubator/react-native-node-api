@@ -381,15 +381,15 @@ describe("planInit", () => {
     assert.match(change.contents, /"\r?\n$/);
   });
 
-  it("defaults to Node-API version 3", async (context) => {
+  it("defaults to Node-API version 10", async (context) => {
     const packagePath = setupTempDirectory(context);
     const plan = await planInit({ packagePath });
-    assert.equal(DEFAULT_NODE_API_VERSION, 3);
+    assert.equal(DEFAULT_NODE_API_VERSION, 10);
     const change = plan.changes.find(({ path: filePath }) =>
       filePath.endsWith("Cargo.toml"),
     );
     assert(change);
-    assert.match(change.contents, /features = \["napi3"\]/);
+    assert.match(change.contents, /features = \["napi10"\]/);
   });
 
   it("rejects versions it cannot use", async (context) => {

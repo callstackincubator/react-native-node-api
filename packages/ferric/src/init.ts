@@ -38,7 +38,7 @@ import {
 const PACKAGE_ROOT = path.join(import.meta.dirname, "..");
 const TEMPLATES_PATH = path.join(PACKAGE_ROOT, "templates");
 
-export const DEFAULT_NODE_API_VERSION = 3;
+export const DEFAULT_NODE_API_VERSION = 10;
 
 export const DEFAULT_CRATE_VERSIONS: CrateVersions = {
   napi: "3.14.2",
