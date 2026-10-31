@@ -11,7 +11,7 @@ crate-type = ["cdylib"]
 version = "3.14.2"
 # see https://nodejs.org/api/n-api.html#node-api-version-matrix
 default-features = false
-features = ["napi3"]
+features = ["napi10"]
 
 [dependencies.napi-derive]
 version = "3.6.12"

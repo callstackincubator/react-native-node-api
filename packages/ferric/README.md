@@ -15,8 +15,10 @@ Before building, `ferric build` asks Cargo for the crate's resolved features for
 [dependencies.napi]
 version = "3"
 default-features = false
-features = ["napi3"]
+features = ["napi10"]
 ```
+
+From `napi4` onward, napi-rs's runtime uses threadsafe functions. If your addon doesn't need them (or anything else above Node-API 3), `napi3` gives a slightly smaller binary (about 5 KB for a minimal addon).
 
 Pass `--skip-feature-check` to bypass the check.
 
@@ -41,7 +43,7 @@ Running it against a package which already exists updates rather than overwrites
 
 A newly created `Cargo.toml` can be configured with:
 
-- `--node-api-version <version>`: the `napiN` feature to enable, defaulting to 3.
+- `--node-api-version <version>`: the `napiN` feature to enable, defaulting to 10.
 - `--napi-crate-version`, `--napi-derive-crate-version` and `--napi-build-crate-version`: the crate versions, defaulting to those tested with `ferric-example`. These also set what an existing `Cargo.toml` is bumped to.
 - `--release-profile <speed|size|none>`: `speed` (the default) enables `lto` and a single codegen unit, `size` also optimizes for size and strips symbols, and `none` leaves `[profile.release]` out.
 
