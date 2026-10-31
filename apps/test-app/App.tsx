@@ -24,6 +24,7 @@ type Context = {
   nodeAddonExamples?: boolean;
   nodeTests?: boolean;
   ferricExample?: boolean;
+  cmakeRnExample?: boolean;
 };
 
 function loadTests({
@@ -31,6 +32,7 @@ function loadTests({
   nodeAddonExamples = allTests,
   nodeTests = allTests,
   ferricExample = allTests,
+  cmakeRnExample = allTests,
 }: Context) {
   describeIf(nodeAddonExamples, "Node Addon Examples", () => {
     for (const [suiteName, examples] of Object.entries(
@@ -79,6 +81,18 @@ function loadTests({
       const exampleAddon =
         /* eslint-disable-next-line @typescript-eslint/no-require-imports -- TODO: Determine why a dynamic import doesn't work on Android */
         require("@react-native-node-api/ferric-example") as typeof import("@react-native-node-api/ferric-example");
+      const result = exampleAddon.sum(1, 3);
+      if (result !== 4) {
+        throw new Error(`Expected 1 + 3 to equal 4, but got ${result}`);
+      }
+    });
+  });
+
+  describeIf(cmakeRnExample, "cmake-rn-example", () => {
+    it("exports a callable sum function", () => {
+      const exampleAddon =
+        /* eslint-disable-next-line @typescript-eslint/no-require-imports -- TODO: Determine why a dynamic import doesn't work on Android */
+        require("@react-native-node-api/cmake-rn-example") as typeof import("@react-native-node-api/cmake-rn-example");
       const result = exampleAddon.sum(1, 3);
       if (result !== 4) {
         throw new Error(`Expected 1 + 3 to equal 4, but got ${result}`);

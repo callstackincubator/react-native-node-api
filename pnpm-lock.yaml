@@ -83,6 +83,9 @@ importers:
       '@react-native-community/cli-platform-ios':
         specifier: ^20.0.2
         version: 20.2.0
+      '@react-native-node-api/cmake-rn-example':
+        specifier: workspace:*
+        version: link:../../packages/cmake-rn-example
       '@react-native-node-api/ferric-example':
         specifier: workspace:*
         version: link:../../packages/ferric-example
