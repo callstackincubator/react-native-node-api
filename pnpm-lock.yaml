@@ -152,12 +152,28 @@ importers:
       commander:
         specifier: ^14.0.1
         version: 14.0.3
+      diff:
+        specifier: ^9.0.0
+        version: 9.0.0
       ora:
         specifier: ^8.2.0
         version: 8.2.0
       p-limit:
         specifier: ^7.2.0
         version: 7.3.0
+      picomatch:
+        specifier: ^4.0.5
+        version: 4.0.5
+      semver:
+        specifier: ^7.8.5
+        version: 7.8.5
+    devDependencies:
+      '@types/picomatch':
+        specifier: ^4.0.3
+        version: 4.0.3
+      '@types/semver':
+        specifier: ^7.8.0
+        version: 7.8.0
 
   packages/cmake-file-api:
     dependencies:
@@ -189,6 +205,16 @@ importers:
         specifier: ^4.1.11
         version: 4.4.3
 
+  packages/cmake-rn-example:
+    dependencies:
+      react-native-node-api:
+        specifier: workspace:*
+        version: link:../host
+    devDependencies:
+      cmake-rn:
+        specifier: workspace:*
+        version: link:../cmake-rn
+
   packages/ferric:
     dependencies:
       '@napi-rs/cli':
@@ -197,12 +223,6 @@ importers:
       '@react-native-node-api/cli-utils':
         specifier: workspace:*
         version: link:../cli-utils
-      diff:
-        specifier: ^9.0.0
-        version: 9.0.0
-      picomatch:
-        specifier: ^4.0.5
-        version: 4.0.5
       react-native-node-api:
         specifier: workspace:*
         version: link:../host
@@ -219,9 +239,6 @@ importers:
         specifier: ^4.1.11
         version: 4.4.3
     devDependencies:
-      '@types/picomatch':
-        specifier: ^4.0.3
-        version: 4.0.3
       '@types/semver':
         specifier: ^7.8.0
         version: 7.8.0

@@ -1,0 +1,30 @@
+{
+  "name": "@react-native-node-api/cmake-rn-example",
+  "version": "0.1.0",
+  "private": true,
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
+    "directory": "packages/cmake-rn-example"
+  },
+  "type": "commonjs",
+  "main": "cmake-rn-example.js",
+  "types": "cmake-rn-example.d.ts",
+  "files": [
+    "cmake-rn-example.js",
+    "cmake-rn-example.d.ts",
+    "build/Release/cmake-rn-example.apple.node",
+    "build/Release/cmake-rn-example.android.node"
+  ],
+  "scripts": {
+    "build": "cmake-rn",
+    "bootstrap": "node --run build"
+  },
+  "dependencies": {
+    "react-native-node-api": "workspace:*"
+  },
+  "devDependencies": {
+    "cmake-rn": "workspace:*"
+  }
+}

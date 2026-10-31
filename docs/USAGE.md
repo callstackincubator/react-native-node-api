@@ -39,6 +39,9 @@ We will be implementing this `add` function.
 
 ## Steps needed for the author of the `calculator-lib` library
 
+> [!TIP]
+> Run `npx cmake-rn init` (or `npx ferric init` for Rust) to scaffold a package with the steps below already taken care of, or to bring an existing package up to date.
+
 ### Install `react-native-node-api` as a dev-dependency and declare a peer dependency
 
 ```bash

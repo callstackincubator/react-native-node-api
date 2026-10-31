@@ -81,6 +81,12 @@ jobs:
           git status --porcelain packages/ferric-example
           git diff --exit-code packages/ferric-example
           test -z "$(git status --porcelain packages/ferric-example)"
+      - run: pnpm run init-cmake-rn-example
+      - name: Verify cmake-rn-example matches what cmake-rn init generates
+        run: |
+          git status --porcelain packages/cmake-rn-example
+          git diff --exit-code packages/cmake-rn-example
+          test -z "$(git status --porcelain packages/cmake-rn-example)"
       - run: pnpm run lint
         env:
           DEBUG: eslint:eslint

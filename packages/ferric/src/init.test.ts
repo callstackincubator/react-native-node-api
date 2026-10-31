@@ -8,17 +8,18 @@ import { parse as parseToml } from "smol-toml";
 
 import {
   applyChanges,
-  assertDistinctChanges,
+  determineDependencySpecifiers,
+  findWorkspace,
+  parseJsonObject,
+} from "@react-native-node-api/cli-utils";
+
+import {
   crateNameFromPackageName,
   DEFAULT_CRATE_VERSIONS,
   DEFAULT_NODE_API_VERSION,
-  determineDependencySpecifiers,
-  formatDiff,
   planInit,
   type InitPlan,
 } from "./init.js";
-import { parseJsonObject } from "./json.js";
-import { findWorkspace } from "./workspaces.js";
 
 const FERRIC_EXAMPLE_PATH = path.resolve(
   import.meta.dirname,
@@ -66,11 +67,15 @@ function changedPaths(plan: InitPlan, packagePath: string) {
     .sort();
 }
 
-describe("assertDistinctChanges", () => {
-  it("rejects two changes to the same file", () => {
-    assertDistinctChanges([{ path: "a" }, { path: "b" }]);
-    assert.throws(() =>
-      assertDistinctChanges([{ path: "a" }, { path: "b" }, { path: "a" }]),
+describe("determineDependencySpecifiers", () => {
+  it("uses the workspace protocol inside the mono-repo", () => {
+    const cliPackagePath = path.resolve(import.meta.dirname, "..");
+    assert.deepEqual(
+      determineDependencySpecifiers({
+        cliPackagePath,
+        workspace: findWorkspace(cliPackagePath),
+      }),
+      { hostSpecifier: "workspace:*", cliSpecifier: "workspace:*" },
     );
   });
 });
@@ -79,21 +84,6 @@ describe("crateNameFromPackageName", () => {
   it("strips the scope", () => {
     assert.equal(crateNameFromPackageName("@my-org/my-addon"), "my-addon");
     assert.equal(crateNameFromPackageName("my-addon"), "my-addon");
-  });
-});
-
-describe("determineDependencySpecifiers", () => {
-  it("uses the workspace protocol inside the mono-repo", () => {
-    const workspace = findWorkspace(path.resolve(import.meta.dirname, ".."));
-    assert.deepEqual(determineDependencySpecifiers(workspace), {
-      hostSpecifier: "workspace:*",
-      ferricSpecifier: "workspace:*",
-    });
-  });
-
-  it("uses released versions elsewhere", () => {
-    const { ferricSpecifier } = determineDependencySpecifiers(undefined);
-    assert.match(ferricSpecifier, /^\^\d+\.\d+\.\d+/);
   });
 });
 
@@ -412,7 +402,10 @@ describe("planInit", () => {
     const plan = await planInit({ packagePath });
     await applyChanges(plan.changes);
     const packageJson = readPackageJson(packagePath);
-    const { ferricSpecifier } = determineDependencySpecifiers(undefined);
+    const { cliSpecifier: ferricSpecifier } = determineDependencySpecifiers({
+      cliPackagePath: path.resolve(import.meta.dirname, ".."),
+      workspace: undefined,
+    });
     assert.deepEqual(packageJson["peerDependencies"], {
       "react-native-node-api": "^999.0.0",
     });
@@ -528,15 +521,5 @@ describe("planInit", () => {
     assert.deepEqual(changedPaths(plan, packagePath), []);
     assert.deepEqual(plan.skips, []);
     assert.deepEqual(plan.notices, []);
-  });
-});
-
-describe("formatDiff", () => {
-  it("renders the changed lines with context", () => {
-    const lines = formatDiff("a\nb\nc\n", "a\nb\nB\nc\n").map((line) =>
-      // eslint-disable-next-line no-control-regex -- dropping the colors
-      line.replace(/\u001b\[\d+m/g, ""),
-    );
-    assert.deepEqual(lines, ["@@ -1,3 +1,4 @@", " a", " b", "+B", " c"]);
   });
 });

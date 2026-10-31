@@ -7,3 +7,6 @@ export { default as pLimit } from "p-limit";
 export * from "./actions.js";
 export * from "./errors.js";
 export * from "./paths.js";
+export * from "./init.js";
+export * from "./json.js";
+export * from "./workspaces.js";

@@ -1,19 +1,19 @@
 import * as cli from "@react-native-node-api/cli-utils";
 
-import type { program } from "../cli.js";
+import type { buildCommand } from "../cli.js";
 
 type InferOptionValues<Command extends cli.Command> = ReturnType<
   Command["opts"]
 >;
 
-type BaseCommand = typeof program;
+type BaseCommand = typeof buildCommand;
 type ExtendedCommand<Opts extends cli.OptionValues> = cli.Command<
   [],
   Opts & InferOptionValues<BaseCommand>,
   Record<string, unknown> // Global opts are not supported
 >;
 
-export type BaseOpts = Omit<InferOptionValues<typeof program>, "triplet">;
+export type BaseOpts = Omit<InferOptionValues<typeof buildCommand>, "triplet">;
 
 export type TripletContext<Triplet extends string> = {
   triplet: Triplet;

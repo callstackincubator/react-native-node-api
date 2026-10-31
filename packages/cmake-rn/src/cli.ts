@@ -24,6 +24,7 @@ import {
 import { Platform } from "./platforms/types.js";
 import { getCcachePath } from "./ccache.js";
 import { createOutputPathResolver, expandTemplate } from "./output-path.js";
+import { initCommand } from "./init.js";
 
 const verboseOption = new Option(
   "--verbose",
@@ -145,7 +146,7 @@ const concurrencyOption = new Option(
     `${os.availableParallelism()} or 1 when --verbose is enabled`,
   );
 
-let program = new Command("cmake-rn")
+let buildCommand = new Command("build")
   .description("Build React Native Node API modules with CMake")
   .addOption(tripletOption)
   .addOption(verboseOption)
@@ -168,11 +169,11 @@ for (const platform of platforms) {
     `--${platform.id}`,
     `Enable all ${platform.name} triplets`,
   );
-  program = program.addOption(allOption);
-  program = platform.amendCommand(program);
+  buildCommand = buildCommand.addOption(allOption);
+  buildCommand = platform.amendCommand(buildCommand);
 }
 
-program = program.action(
+buildCommand = buildCommand.action(
   wrapAction(async ({ triplet: requestedTriplets, ...baseOptions }) => {
     baseOptions.build = path.resolve(
       process.cwd(),
@@ -375,4 +376,9 @@ function getTripletsSummary(
     .join(" / ");
 }
 
-export { program };
+const program = new Command("cmake-rn")
+  .description("Build React Native Node API modules with CMake")
+  .addCommand(buildCommand, { isDefault: true })
+  .addCommand(initCommand);
+
+export { buildCommand, program };
