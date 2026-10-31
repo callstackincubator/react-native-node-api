@@ -10,8 +10,8 @@ import {
   determineDependencySpecifiers,
   findWorkspace,
   mergeStepResults,
-  planGitignore as planGitignoreFromTemplate,
-  planPackageJson as planPackageJsonUpdates,
+  planGitignoreLines,
+  planPackageJsonUpdates,
   planTemplateFile,
   planWorkspace,
   printPlan,
@@ -255,7 +255,7 @@ const planSourceFiles: InitStep = async (context) =>
   );
 
 const planGitignore: InitStep = async ({ packagePath }) =>
-  planGitignoreFromTemplate({
+  planGitignoreLines({
     packagePath,
     // The template is named without a leading dot, as npm won't publish a
     // .gitignore file inside a package

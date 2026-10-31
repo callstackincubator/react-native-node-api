@@ -147,7 +147,7 @@ export async function planTemplateFile({
  * Plan a .gitignore with the lines of a template, appending those an existing
  * one lacks.
  */
-export async function planGitignore({
+export async function planGitignoreLines({
   packagePath,
   template,
 }: {
@@ -209,7 +209,7 @@ export type PackageJsonUpdate = (packageJson: PackageJson) => PackageJson;
  * the entrypoints only when missing: a differing value is skipped with a diff,
  * unless forced.
  */
-export function planPackageJson({
+export function planPackageJsonUpdates({
   packagePath,
   packageJson,
   existingPackageJson,

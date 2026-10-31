@@ -47,14 +47,16 @@ export async function regenerateExample({
 
   const generated = await readPackage({ cwd: examplePath, normalize: false });
   const preserved = { name, version, private: isPrivate, homepage, repository };
+  const generatedFields = Object.fromEntries(
+    Object.entries(generated).filter(([key]) => !(key in preserved)),
+  );
 
   fs.writeFileSync(
     packageJsonPath,
     JSON.stringify(
       {
         ...preserved,
-        ...generated,
-        ...preserved,
+        ...generatedFields,
         scripts: { ...generated.scripts, bootstrap: scripts.bootstrap },
       },
       null,

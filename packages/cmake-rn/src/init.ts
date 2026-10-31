@@ -11,8 +11,8 @@ import {
   determineDependencySpecifiers,
   findWorkspace,
   mergeStepResults,
-  planGitignore,
-  planPackageJson,
+  planGitignoreLines,
+  planPackageJsonUpdates,
   planTemplateFile,
   planWorkspace,
   printPlan,
@@ -115,8 +115,8 @@ export async function planInit({
   };
 }
 
-const planPackageJsonStep: InitStep = (context) =>
-  planPackageJson({
+const planPackageJson: InitStep = (context) =>
+  planPackageJsonUpdates({
     packagePath: context.packagePath,
     packageJson: context.packageJson,
     existingPackageJson: context.existingPackageJson,
@@ -177,8 +177,8 @@ const planCmakeProject: InitStep = async ({
   );
 };
 
-const planGitignoreStep: InitStep = async ({ packagePath, libraryName }) =>
-  planGitignore({
+const planGitignore: InitStep = async ({ packagePath, libraryName }) =>
+  planGitignoreLines({
     packagePath,
     // The template is named without a leading dot, as npm won't publish a
     // .gitignore file inside a package
@@ -186,10 +186,10 @@ const planGitignoreStep: InitStep = async ({ packagePath, libraryName }) =>
   });
 
 const INIT_STEPS: InitStep[] = [
-  planPackageJsonStep,
+  planPackageJson,
   planEntrypoints,
   planCmakeProject,
-  planGitignoreStep,
+  planGitignore,
   planWorkspace,
 ];
 
