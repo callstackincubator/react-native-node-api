@@ -126,6 +126,7 @@ export function determineCargoLibraryName(cwd: string): string {
 type BuildOptions = {
   configuration: "debug" | "release";
   verbose: boolean;
+  cwd: string;
 } & (
   | {
       target: AndroidTargetName;
@@ -140,7 +141,7 @@ type BuildOptions = {
 );
 
 export async function build(options: BuildOptions) {
-  const { target, configuration, verbose } = options;
+  const { target, configuration, verbose, cwd } = options;
   const args = ["build", "--target", target];
   if (configuration.toLowerCase() === "release") {
     args.push("--release");
@@ -154,6 +155,7 @@ export async function build(options: BuildOptions) {
     args.push("-Z", "build-std=std,panic_abort");
   }
   await spawn("cargo", args, {
+    cwd,
     outputMode: verbose ? "inherit" : "buffered",
     outputPrefix: verbose ? chalk.dim(`[${target}]`) : undefined,
     env: {
@@ -162,7 +164,7 @@ export async function build(options: BuildOptions) {
     },
   });
   const targetOutputPath = joinPathAndAssertExistence(
-    process.cwd(),
+    cwd,
     "target",
     target,
     configuration,
