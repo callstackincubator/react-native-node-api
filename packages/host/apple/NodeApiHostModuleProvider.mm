@@ -1,4 +1,5 @@
 #import "CxxNodeApiHostModule.hpp"
+#import "HermesFatalHandler.hpp"
 #import "WeakNodeApiInjector.hpp"
 
 #import <ReactCommon/CxxTurboModuleUtils.h>
@@ -8,6 +9,7 @@
 
 @implementation NodeApiHostPackage
 + (void)load {
+  callstack::react_native_node_api::installHermesFatalHandler();
   callstack::react_native_node_api::injectIntoWeakNodeApi();
 
   facebook::react::registerCxxModuleToGlobalModuleMap(
