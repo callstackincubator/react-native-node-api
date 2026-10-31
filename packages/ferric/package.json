@@ -17,12 +17,14 @@
     "ferric": "./bin/ferric.js"
   },
   "scripts": {
-    "start": "tsx src/run.ts"
+    "start": "tsx src/run.ts",
+    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
   "dependencies": {
     "@napi-rs/cli": "~3.10.8",
     "@react-native-node-api/cli-utils": "workspace:*",
     "react-native-node-api": "workspace:*",
-    "weak-node-api": "workspace:*"
+    "weak-node-api": "workspace:*",
+    "zod": "^4.1.11"
   }
 }
