@@ -2,11 +2,12 @@ import cp from "node:child_process";
 
 import { UsageError } from "@react-native-node-api/cli-utils";
 
-export function getInstalledTargets() {
+export function getInstalledTargets(cwd: string) {
   try {
     return new Set(
       cp
         .execFileSync("rustup", ["target", "list", "--installed"], {
+          cwd,
           encoding: "utf-8",
         })
         .split("\n"),
