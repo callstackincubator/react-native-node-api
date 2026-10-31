@@ -2,7 +2,7 @@
 
 ## Setup
 
-You'll need Node.js 24 (pinned in [`.nvmrc`](.nvmrc)) and pnpm, which Corepack provides:
+You'll need the Node.js version pinned in [`.nvmrc`](.nvmrc) and pnpm, which Corepack provides:
 
 ```bash
 nvm install && nvm use
