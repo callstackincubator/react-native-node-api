@@ -116,8 +116,14 @@ const dtsOnlyOption = new Option(
 
 const outputPathOption = new Option(
   "--output <path>",
-  "Writing outputs to this directory",
-).default(process.cwd());
+  "Writing outputs to this directory (defaults to --cwd)",
+);
+const cwdOption = new Option(
+  "--cwd <path>",
+  "Path to the directory containing the Cargo.toml file",
+)
+  .argParser((value) => path.resolve(value))
+  .default(process.cwd());
 const configurationOption = new Option(
   "--configuration <configuration>",
   "Build configuration",
@@ -157,6 +163,7 @@ export const buildCommand = new Command("build")
   .addOption(androidTarget)
   .addOption(ndkVersionOption)
   .addOption(outputPathOption)
+  .addOption(cwdOption)
   .addOption(configurationOption)
   .addOption(xcframeworkExtensionOption)
   .addOption(appleBundleIdentifierOption)
@@ -172,7 +179,8 @@ export const buildCommand = new Command("build")
         apple,
         android,
         ndkVersion,
-        output: outputPath,
+        output,
+        cwd,
         configuration,
         xcframeworkExtension,
         appleBundleIdentifier,
@@ -181,6 +189,12 @@ export const buildCommand = new Command("build")
         dtsOnly,
         skipFeatureCheck,
       }) => {
+        assertFixable(
+          fs.existsSync(cwd),
+          `Expected --cwd directory ${prettyPath(cwd)} to exist`,
+          { instructions: "Pass the path of a directory with a Cargo.toml" },
+        );
+        const outputPath = path.resolve(output ?? cwd);
         if (dtsOnly) {
           assertFixable(
             targetArg.length === 0 && !apple && !android && !clean,
@@ -191,13 +205,13 @@ export const buildCommand = new Command("build")
             },
           );
           ensureCargo();
-          const libraryName = determineCargoLibraryName(process.cwd());
+          const libraryName = determineCargoLibraryName(cwd);
           const declarationsFilename = `${libraryName}.d.ts`;
           const declarationsPath = path.join(outputPath, declarationsFilename);
           await oraPromise(
             generateTypeScriptDeclarations({
               outputFilename: declarationsFilename,
-              createPath: process.cwd(),
+              createPath: cwd,
               outputPath,
             }),
             {
@@ -228,7 +242,7 @@ export const buildCommand = new Command("build")
         }
         if (clean) {
           await oraPromise(
-            () => spawn("cargo", ["clean"], { outputMode: "buffered" }),
+            () => spawn("cargo", ["clean"], { cwd, outputMode: "buffered" }),
             {
               text: "Cleaning target directory",
               successText: "Cleaned target directory",
@@ -277,9 +291,9 @@ export const buildCommand = new Command("build")
           );
         }
         ensureCargo();
-        ensureAvailableTargets(targets);
+        ensureAvailableTargets(targets, cwd);
         if (!skipFeatureCheck) {
-          assertNapiFeatures(process.cwd(), targets);
+          assertNapiFeatures(cwd, targets);
         }
 
         const appleTargets = filterTargetsByPlatform(targets, "apple");
@@ -298,7 +312,7 @@ export const buildCommand = new Command("build")
                   async () =>
                     [
                       target,
-                      await build({ configuration, target, verbose }),
+                      await build({ configuration, target, verbose, cwd }),
                     ] as const,
                 ),
               ),
@@ -313,6 +327,7 @@ export const buildCommand = new Command("build")
                         configuration,
                         target,
                         verbose,
+                        cwd,
                         ndkVersion,
                         androidApiLevel: ANDROID_API_LEVEL,
                       }),
@@ -420,7 +435,7 @@ export const buildCommand = new Command("build")
         await oraPromise(
           generateTypeScriptDeclarations({
             outputFilename: declarationsFilename,
-            createPath: process.cwd(),
+            createPath: cwd,
             outputPath,
           }),
           {

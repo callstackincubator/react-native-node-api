@@ -10,6 +10,7 @@ import {
   spawn,
 } from "@react-native-node-api/cli-utils";
 import { applePrebuildPath, androidPrebuildPath } from "weak-node-api";
+import * as z from "zod";
 
 import {
   AndroidTargetName,
@@ -93,9 +94,26 @@ export function ensureCargo() {
   }
 }
 
-type CargoMetadata = {
-  packages: { targets: { name: string; kind: string[] }[] }[];
-};
+const CargoMetadataSchema = z.object({
+  target_directory: z.string(),
+  packages: z.array(
+    z.object({
+      manifest_path: z.string(),
+      targets: z.array(
+        z.object({ name: z.string(), kind: z.array(z.string()) }),
+      ),
+    }),
+  ),
+});
+
+export function getCargoMetadata(cwd: string) {
+  const output = cp.execFileSync(
+    "cargo",
+    ["metadata", "--no-deps", "--format-version", "1"],
+    { cwd, encoding: "utf-8" },
+  );
+  return CargoMetadataSchema.parse(JSON.parse(output));
+}
 
 /**
  * Determine the name of the crate's "cdylib" target, without building anything,
@@ -104,13 +122,13 @@ type CargoMetadata = {
  * normalizes the crate name (dashes to underscores) for the compiled artifact.
  */
 export function determineCargoLibraryName(cwd: string): string {
-  const output = cp.execFileSync(
-    "cargo",
-    ["metadata", "--no-deps", "--format-version", "1"],
-    { cwd, encoding: "utf-8" },
+  const { packages } = getCargoMetadata(cwd);
+  const manifestPath = fs.realpathSync(path.join(cwd, "Cargo.toml"));
+  // Metadata lists every workspace member, but cargo only builds the current one
+  const currentPackage = packages.find(
+    (pkg) => fs.realpathSync(pkg.manifest_path) === manifestPath,
   );
-  const { packages } = JSON.parse(output) as CargoMetadata;
-  const cdylibNames = packages
+  const cdylibNames = (currentPackage ? [currentPackage] : packages)
     .flatMap((pkg) => pkg.targets)
     .filter((target) => target.kind.includes("cdylib"))
     .map((target) => target.name);
@@ -126,6 +144,7 @@ export function determineCargoLibraryName(cwd: string): string {
 type BuildOptions = {
   configuration: "debug" | "release";
   verbose: boolean;
+  cwd: string;
 } & (
   | {
       target: AndroidTargetName;
@@ -140,7 +159,7 @@ type BuildOptions = {
 );
 
 export async function build(options: BuildOptions) {
-  const { target, configuration, verbose } = options;
+  const { target, configuration, verbose, cwd } = options;
   const args = ["build", "--target", target];
   if (configuration.toLowerCase() === "release") {
     args.push("--release");
@@ -154,6 +173,7 @@ export async function build(options: BuildOptions) {
     args.push("-Z", "build-std=std,panic_abort");
   }
   await spawn("cargo", args, {
+    cwd,
     outputMode: verbose ? "inherit" : "buffered",
     outputPrefix: verbose ? chalk.dim(`[${target}]`) : undefined,
     env: {
@@ -162,19 +182,15 @@ export async function build(options: BuildOptions) {
     },
   });
   const targetOutputPath = joinPathAndAssertExistence(
-    process.cwd(),
-    "target",
+    getCargoMetadata(cwd).target_directory,
     target,
     configuration,
   );
-  const dynamicLibraryFile = fs
-    .readdirSync(targetOutputPath)
-    .filter((file) => file.endsWith(".so") || file.endsWith(".dylib"));
-  assert(
-    dynamicLibraryFile.length === 1,
-    `Expected a single shared object file in ${targetOutputPath}`,
+  const libraryName = determineCargoLibraryName(cwd);
+  return joinPathAndAssertExistence(
+    targetOutputPath,
+    `lib${libraryName}.${isAndroidTarget(target) ? "so" : "dylib"}`,
   );
-  return joinPathAndAssertExistence(targetOutputPath, dynamicLibraryFile[0]);
 }
 
 export function getLLVMToolchainBinPath(ndkPath: string) {
