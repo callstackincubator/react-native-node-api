@@ -39,6 +39,11 @@ function setupTempDirectory(context: TestContext, files: FileMap = {}) {
   return tempPath;
 }
 
+/** Templates are checked out with CRLF line endings on Windows. */
+function readText(filePath: string) {
+  return fs.readFileSync(filePath, "utf8").replaceAll("\r\n", "\n");
+}
+
 function readPackageJson(packagePath: string) {
   return parseJsonObject(
     fs.readFileSync(path.join(packagePath, "package.json"), "utf8"),
@@ -98,10 +103,7 @@ describe("planInit", () => {
       "build/Release/my-addon.android.node",
     ]);
 
-    const cmakeLists = fs.readFileSync(
-      path.join(packagePath, "CMakeLists.txt"),
-      "utf8",
-    );
+    const cmakeLists = readText(path.join(packagePath, "CMakeLists.txt"));
     assert.match(cmakeLists, /^project\(my-addon\)$/m);
     assert.match(cmakeLists, /include\(\$\{WEAK_NODE_API_CONFIG\}\)/);
     assert.match(
@@ -110,7 +112,7 @@ describe("planInit", () => {
     );
     assert.deepEqual(inspectCmakeProject(cmakeLists, "my-addon"), []);
     assert.equal(
-      fs.readFileSync(path.join(packagePath, "my-addon.js"), "utf8"),
+      readText(path.join(packagePath, "my-addon.js")),
       'module.exports = require("./build/Release/my-addon.node");\n',
     );
   });
@@ -258,10 +260,7 @@ describe("planInit", () => {
     assert.deepEqual(readPackageJson(packagePath)["scripts"], {
       build: "cmake-rn --cmake-js",
     });
-    const cmakeLists = fs.readFileSync(
-      path.join(packagePath, "CMakeLists.txt"),
-      "utf8",
-    );
+    const cmakeLists = readText(path.join(packagePath, "CMakeLists.txt"));
     assert.match(cmakeLists, /\$\{CMAKE_JS_INC\}/);
     assert.match(cmakeLists, /\$\{CMAKE_JS_LIB\}/);
     assert.doesNotMatch(cmakeLists, /weak-node-api|WEAK_NODE_API/);
@@ -287,10 +286,7 @@ describe("planInit", () => {
     assert.deepEqual(readPackageJson(packagePath)["scripts"], {
       build: "cmake-rn",
     });
-    const cmakeLists = fs.readFileSync(
-      path.join(packagePath, "CMakeLists.txt"),
-      "utf8",
-    );
+    const cmakeLists = readText(path.join(packagePath, "CMakeLists.txt"));
     assert.doesNotMatch(cmakeLists, /weak-node-api|WEAK_NODE_API|CMAKE_JS/);
 
     const rerun = await planInit({ packagePath, weakNodeApi: "omit" });

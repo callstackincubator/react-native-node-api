@@ -174,12 +174,12 @@ const planCmakeProject: InitStep = async ({
   force,
 }) => {
   const cmakeListsPath = path.join(packagePath, "CMakeLists.txt");
+  const nodeApi = await readTemplate(`node-api-${weakNodeApi}.cmake`, {
+    libraryName,
+  });
   const contents = (
     await readTemplate("CMakeLists.txt", { libraryName })
-  ).replace(
-    "{{nodeApi}}\n",
-    await readTemplate(`node-api-${weakNodeApi}.cmake`, { libraryName }),
-  );
+  ).replace(/\{\{nodeApi\}\}\r?\n/, () => nodeApi);
   const previous = await readFileIfExists(cmakeListsPath);
   if (previous !== undefined && previous !== contents && !force) {
     return {
