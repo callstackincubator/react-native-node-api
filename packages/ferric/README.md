@@ -4,7 +4,12 @@ A wrapper around Cargo making it easier to produce prebuilt binaries targeting i
 
 ## Feature check
 
-Before building, `ferric build` asks Cargo for the crate's resolved features for each target and fails if `napi-sys`'s `dyn-symbols` feature is enabled. That feature makes napi-rs look up Node-API functions in the host process at runtime instead of linking them against `weak-node-api`, which doesn't work in React Native ([#331](https://github.com/callstackincubator/react-native-node-api/issues/331)). `napi` enables it through its default features, so disable those and pick the Node-API version explicitly:
+Before building, `ferric build` asks Cargo for the crate's resolved features for each target and fails if `napi-sys` has either of these enabled:
+
+- `dyn-symbols`, which makes napi-rs look up Node-API functions in the host process at runtime instead of linking them against `weak-node-api`. That doesn't work in React Native ([#331](https://github.com/callstackincubator/react-native-node-api/issues/331)).
+- A `napiN` feature above Node-API version 10, the highest version the host supports.
+
+`napi` enables `dyn-symbols` through its default features, so disable those and pick the Node-API version explicitly:
 
 ```toml
 [dependencies.napi]

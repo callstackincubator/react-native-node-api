@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { getResolvedFeatures, type CargoResolvedMetadata } from "./features.js";
+import {
+  getNodeApiVersion,
+  getResolvedFeatures,
+  type CargoResolvedMetadata,
+} from "./features.js";
 
 const NAPI_SYS_ID =
   "registry+https://github.com/rust-lang/crates.io-index#napi-sys@3.4.0";
@@ -44,5 +48,18 @@ describe("getResolvedFeatures", () => {
       getResolvedFeatures({ ...metadata, resolve: null }, "napi-sys").size,
       0,
     );
+  });
+});
+
+describe("getNodeApiVersion", () => {
+  it("returns the highest enabled napiN feature", () => {
+    assert.equal(
+      getNodeApiVersion(["napi1", "napi10", "napi3", "dyn-symbols"]),
+      10,
+    );
+  });
+
+  it("returns 0 when no napiN feature is enabled", () => {
+    assert.equal(getNodeApiVersion(["dyn-symbols", "napi"]), 0);
   });
 });
