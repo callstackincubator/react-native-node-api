@@ -8,4 +8,5 @@
  * Powered by napi.rs
  */
 /* eslint-disable */
+
 export declare function sum(a: number, b: number): number
