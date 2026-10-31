@@ -42,7 +42,8 @@ describe("readAndParsePlist", () => {
     const infoPlistPath = path.join(tempDirectoryPath, infoPlistSubPath);
 
     const contents = await readAndParsePlist(infoPlistPath);
-    assert.deepEqual(contents, {
+    // @expo/plist returns null-prototype objects
+    assert.deepEqual(structuredClone(contents), {
       CFBundleExecutable: "ExecutableFileName",
       CFBundlePackageType: "FMWK",
       CFBundleInfoDictionaryVersion: "6.0",
