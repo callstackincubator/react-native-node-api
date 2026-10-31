@@ -106,7 +106,7 @@ const CargoMetadataSchema = z.object({
   ),
 });
 
-function getCargoMetadata(cwd: string) {
+export function getCargoMetadata(cwd: string) {
   const output = cp.execFileSync(
     "cargo",
     ["metadata", "--no-deps", "--format-version", "1"],
