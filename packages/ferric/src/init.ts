@@ -331,8 +331,8 @@ function renderCargoManifest(
     .replaceAll("{{napiCrateVersion}}", crateVersions.napi)
     .replaceAll("{{napiDeriveCrateVersion}}", crateVersions["napi-derive"])
     .replaceAll("{{napiBuildCrateVersion}}", crateVersions["napi-build"])
-    .replaceAll(
-      "{{releaseProfile}}\n",
+    .replace(
+      /\{\{releaseProfile\}\}\r?\n/,
       profile.length > 0
         ? ["", "[profile.release]", ...profile, ""].join("\n")
         : "",
