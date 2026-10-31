@@ -211,7 +211,7 @@ export async function planInit({
     force,
   };
   const { changes, skips, notices } = mergeStepResults(
-    await Promise.all(INIT_STEPS.map((step) => step(context))),
+    await Promise.all(INIT_STEPS.map(async (step) => step(context))),
   );
   assertDistinctChanges(changes);
 
