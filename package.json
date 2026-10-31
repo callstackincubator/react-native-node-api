@@ -14,7 +14,7 @@
     "publint": "node scripts/run-in-published.ts pnpm exec publint --strict",
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
-    "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake run test",
+    "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter ferric-cli run test",
     "bootstrap": "node --run build && pnpm --recursive run bootstrap",
     "changeset": "changeset",
     "release": "node --run prerelease && changeset publish",
