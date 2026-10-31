@@ -25,8 +25,16 @@ The command creates whatever is missing — `package.json`, `CMakeLists.txt`,
 Running it against a package which already exists updates rather than overwrites:
 
 - `package.json` gains the scripts, dependencies and prebuilt artifacts it lacks, and outdated dependencies are bumped.
-- An existing `CMakeLists.txt` is left alone. The command points out when it doesn't define or link the `weak-node-api` target, or doesn't build the library the entrypoint loads.
+- An existing `CMakeLists.txt` is left alone. The command points out when it doesn't get Node-API the way `--weak-node-api` asks for, or doesn't build the library the entrypoint loads.
 - A `main`, `types`, entrypoint or `src/addon.c` that differs is skipped, printing a diff to merge by hand. Pass `--force` to overwrite them, along with an existing `CMakeLists.txt`.
+
+A new `CMakeLists.txt` gets Node-API in the way `--weak-node-api <mode>` asks for:
+
+- `link` (the default): links the `weak-node-api` target, defined by `include(${WEAK_NODE_API_CONFIG})`.
+- `cmake-js`: uses the `CMAKE_JS_*` variables instead, so the project builds with both `cmake-js` (for Node.js) and `cmake-rn --cmake-js`, which the `build` script passes.
+- `omit`: leaves Node-API out of the project for you to provide, which it won't build without.
+
+The mode also decides what is pointed out about an existing `CMakeLists.txt`.
 
 The name of the CMake target and the library it builds defaults to the package
 name without its npm scope (`@my-org/my-addon` becomes `my-addon`) and can be set

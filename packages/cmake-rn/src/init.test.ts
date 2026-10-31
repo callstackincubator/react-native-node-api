@@ -247,6 +247,57 @@ describe("planInit", () => {
     ]);
   });
 
+  it("writes a cmake-js project building with --cmake-js", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "package.json": JSON.stringify({ name: "my-addon" }),
+    });
+    const plan = await planInit({ packagePath, weakNodeApi: "cmake-js" });
+    await applyChanges(plan.changes);
+
+    assert.deepEqual(plan.notices, []);
+    assert.deepEqual(readPackageJson(packagePath)["scripts"], {
+      build: "cmake-rn --cmake-js",
+    });
+    const cmakeLists = fs.readFileSync(
+      path.join(packagePath, "CMakeLists.txt"),
+      "utf8",
+    );
+    assert.match(cmakeLists, /\$\{CMAKE_JS_INC\}/);
+    assert.match(cmakeLists, /\$\{CMAKE_JS_LIB\}/);
+    assert.doesNotMatch(cmakeLists, /weak-node-api|WEAK_NODE_API/);
+    assert.deepEqual(
+      inspectCmakeProject(cmakeLists, "my-addon", "cmake-js"),
+      [],
+    );
+
+    const rerun = await planInit({ packagePath, weakNodeApi: "cmake-js" });
+    assert.deepEqual(rerun.changes, []);
+    assert.deepEqual(rerun.notices, []);
+  });
+
+  it("omits Node-API from the project when asked to", async (context) => {
+    const packagePath = setupTempDirectory(context, {
+      "package.json": JSON.stringify({ name: "my-addon" }),
+    });
+    const plan = await planInit({ packagePath, weakNodeApi: "omit" });
+    await applyChanges(plan.changes);
+
+    assert.equal(plan.notices.length, 1);
+    assert.match(plan.notices[0], /doesn't link against Node-API/);
+    assert.deepEqual(readPackageJson(packagePath)["scripts"], {
+      build: "cmake-rn",
+    });
+    const cmakeLists = fs.readFileSync(
+      path.join(packagePath, "CMakeLists.txt"),
+      "utf8",
+    );
+    assert.doesNotMatch(cmakeLists, /weak-node-api|WEAK_NODE_API|CMAKE_JS/);
+
+    const rerun = await planInit({ packagePath, weakNodeApi: "omit" });
+    assert.deepEqual(rerun.changes, []);
+    assert.deepEqual(rerun.notices, []);
+  });
+
   it("has nothing to change about the cmake-rn-example package", async () => {
     const plan = await planInit({ packagePath: EXAMPLE_PATH });
     assert.deepEqual(changedPaths(plan, EXAMPLE_PATH), []);
@@ -297,6 +348,27 @@ describe("inspectCmakeProject", () => {
     );
     assert.equal(notices.length, 1);
     assert.match(notices[0], /--cmake-js/);
+  });
+
+  it("expects the cmake-js variables in cmake-js mode", () => {
+    const notices = inspectCmakeProject(
+      LINKED_CMAKE_LISTS,
+      "my-addon",
+      "cmake-js",
+    );
+    assert.equal(notices.length, 1);
+    assert.match(notices[0], /CMAKE_JS_INC/);
+  });
+
+  it("leaves Node-API to the author in omit mode", () => {
+    assert.deepEqual(
+      inspectCmakeProject(
+        "add_library(my-addon SHARED addon.c)",
+        "my-addon",
+        "omit",
+      ),
+      [],
+    );
   });
 
   it("notices a project not building the library", () => {

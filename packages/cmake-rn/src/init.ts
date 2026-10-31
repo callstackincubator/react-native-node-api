@@ -37,6 +37,14 @@ const TEMPLATES_PATH = path.join(PACKAGE_ROOT, "templates");
 /** Where `cmake-rn build` emits a target's prebuilds by default. */
 const OUTPUT_DIRECTORY = "build/Release";
 
+export const WEAK_NODE_API_MODES = ["link", "cmake-js", "omit"] as const;
+
+/**
+ * How a new CMake project gets Node-API: linking the weak-node-api target,
+ * through the cmake-js variables, or left to the author.
+ */
+export type WeakNodeApiMode = (typeof WEAK_NODE_API_MODES)[number];
+
 export type InitPlan = {
   packagePath: string;
   packageName: string;
@@ -51,6 +59,8 @@ export type InitOptions = {
   packagePath: string;
   /** Name of the CMake target and library, derived from the package name when omitted. */
   libraryName?: string;
+  /** How a new CMake project gets Node-API, defaulting to "link". */
+  weakNodeApi?: WeakNodeApiMode;
   /** Overwrite entrypoints, the CMake project and source files instead of skipping them. */
   force?: boolean;
 };
@@ -63,6 +73,7 @@ type InitContext = {
   existingPackageJson: string | undefined;
   packageJson: PackageJson | undefined;
   workspace: Workspace | undefined;
+  weakNodeApi: WeakNodeApiMode;
   force: boolean;
 };
 
@@ -76,6 +87,7 @@ type InitStep = (context: InitContext) => StepResult | Promise<StepResult>;
 export async function planInit({
   packagePath,
   libraryName: libraryNameOption,
+  weakNodeApi = "link",
   force = false,
 }: InitOptions): Promise<InitPlan> {
   const resolvedPath = path.resolve(packagePath);
@@ -98,6 +110,7 @@ export async function planInit({
     existingPackageJson,
     packageJson,
     workspace: findWorkspace(resolvedPath),
+    weakNodeApi,
     force,
   };
   const { changes, skips, notices } = mergeStepResults(
@@ -157,15 +170,23 @@ const planEntrypoints: InitStep = async ({
 const planCmakeProject: InitStep = async ({
   packagePath,
   libraryName,
+  weakNodeApi,
   force,
 }) => {
   const cmakeListsPath = path.join(packagePath, "CMakeLists.txt");
-  const contents = await readTemplate("CMakeLists.txt", { libraryName });
+  const contents = (
+    await readTemplate("CMakeLists.txt", { libraryName })
+  ).replace(
+    "{{nodeApi}}\n",
+    await readTemplate(`node-api-${weakNodeApi}.cmake`, { libraryName }),
+  );
   const previous = await readFileIfExists(cmakeListsPath);
   if (previous !== undefined && previous !== contents && !force) {
-    return { notices: inspectCmakeProject(previous, libraryName) };
+    return {
+      notices: inspectCmakeProject(previous, libraryName, weakNodeApi),
+    };
   }
-  return mergeStepResults(
+  const result = mergeStepResults(
     await Promise.all([
       planTemplateFile({ outputPath: cmakeListsPath, contents, force }),
       planTemplateFile({
@@ -175,6 +196,15 @@ const planCmakeProject: InitStep = async ({
       }),
     ]),
   );
+  const writesCmakeLists = result.changes.some(
+    ({ path: filePath }) => filePath === cmakeListsPath,
+  );
+  if (weakNodeApi === "omit" && writesCmakeLists) {
+    result.notices.push(
+      `${chalk.blue("CMakeLists.txt")} doesn't link against Node-API: provide its headers and symbols to the ${chalk.blue(libraryName)} target, for example with ${chalk.blue("include(${WEAK_NODE_API_CONFIG})")} and the ${chalk.blue("weak-node-api")} target`,
+    );
+  }
+  return result;
 };
 
 const planGitignore: InitStep = async ({ packagePath, libraryName }) =>
@@ -195,9 +225,13 @@ const INIT_STEPS: InitStep[] = [
 
 /**
  * Point out what an existing CMakeLists.txt lacks to build a Node-API module
- * with `cmake-rn build`.
+ * with `cmake-rn build`, getting Node-API the way the mode asks for.
  */
-export function inspectCmakeProject(contents: string, libraryName: string) {
+export function inspectCmakeProject(
+  contents: string,
+  libraryName: string,
+  weakNodeApi: WeakNodeApiMode = "link",
+) {
   const code = contents.replace(/#.*$/gm, "");
   const cmakeListsName = chalk.blue("CMakeLists.txt");
   const notices: string[] = [];
@@ -207,7 +241,15 @@ export function inspectCmakeProject(contents: string, libraryName: string) {
     /find_package\s*\(\s*weak-node-api\b/.test(code);
   const linksWeakNodeApi =
     /target_link_libraries\s*\([^)]*\bweak-node-api\b/.test(code);
-  if (usesCmakeJs && !importsWeakNodeApi) {
+  if (weakNodeApi === "cmake-js") {
+    if (!usesCmakeJs) {
+      notices.push(
+        `${cmakeListsName} doesn't use the cmake-js variables: add ${chalk.blue("${CMAKE_JS_INC}")} to the include directories and ${chalk.blue("${CMAKE_JS_LIB}")} to the ${chalk.blue("target_link_libraries")} of the addon`,
+      );
+    }
+  } else if (weakNodeApi === "omit") {
+    // Left to the author
+  } else if (usesCmakeJs && !importsWeakNodeApi) {
     notices.push(
       `${cmakeListsName} uses the cmake-js variables: pass ${chalk.blue("--cmake-js")} when building, or link the ${chalk.blue("weak-node-api")} target instead`,
     );
@@ -244,6 +286,7 @@ function getPackageJsonUpdates({
   packageName,
   libraryName,
   workspace,
+  weakNodeApi,
 }: InitContext) {
   const { hostSpecifier, cliSpecifier } = determineDependencySpecifiers({
     cliPackagePath: PACKAGE_ROOT,
@@ -265,7 +308,9 @@ function getPackageJsonUpdates({
       ],
       packageJson === undefined,
     ),
-    withMissingScripts({ build: "cmake-rn" }),
+    withMissingScripts({
+      build: weakNodeApi === "cmake-js" ? "cmake-rn --cmake-js" : "cmake-rn",
+    }),
     withDependency({
       name: "react-native-node-api",
       specifier: hostSpecifier,
@@ -300,6 +345,13 @@ const dryRunOption = new Option(
   "Print the changes instead of applying them",
 ).default(false);
 
+const weakNodeApiOption = new Option(
+  "--weak-node-api <mode>",
+  "How a new CMakeLists.txt gets Node-API: link the weak-node-api target, use the cmake-js variables (building with both cmake-js and cmake-rn --cmake-js) or omit it",
+)
+  .choices(WEAK_NODE_API_MODES)
+  .default("link" satisfies WeakNodeApiMode);
+
 const forceOption = new Option(
   "--force",
   "Overwrite entrypoints, the CMake project and source files which differ, instead of skipping them",
@@ -310,23 +362,27 @@ export const initCommand = new Command("init")
   .argument("[path]", "Path of the package directory", ".")
   .addOption(nameOption)
   .addOption(dryRunOption)
+  .addOption(weakNodeApiOption)
   .addOption(forceOption)
   .action(
-    wrapAction(async (packagePath: string, { name, dryRun, force }) => {
-      const plan = await planInit({
-        packagePath,
-        libraryName: name,
-        force,
-      });
-      if (!dryRun) {
-        await applyChanges(plan.changes);
-      }
-      printPlan({
-        plan,
-        dryRun,
-        command: "cmake-rn init",
-        packagePath: plan.packagePath,
-        targetName: plan.libraryName,
-      });
-    }),
+    wrapAction(
+      async (packagePath: string, { name, dryRun, weakNodeApi, force }) => {
+        const plan = await planInit({
+          packagePath,
+          libraryName: name,
+          weakNodeApi,
+          force,
+        });
+        if (!dryRun) {
+          await applyChanges(plan.changes);
+        }
+        printPlan({
+          plan,
+          dryRun,
+          command: "cmake-rn init",
+          packagePath: plan.packagePath,
+          targetName: plan.libraryName,
+        });
+      },
+    ),
   );
