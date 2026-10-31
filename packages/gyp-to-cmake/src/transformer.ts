@@ -1,6 +1,13 @@
 import cp from "node:child_process";
 import path from "node:path";
 
+import {
+  gypFlagsToArguments,
+  MODULE_ROOT_DIR_PLACEHOLDER,
+  resolveModuleRootDir,
+  splitShellWords,
+  toCmakeShellOption,
+} from "./flags.js";
 import type { GypBinding } from "./gyp.js";
 
 const DEFAULT_NAPI_VERSION = 8;
@@ -19,9 +26,30 @@ export type GypToCmakeListsOptions = {
   namespacedTargets?: boolean;
 };
 
-function isCmdExpansion(value: string) {
-  const trimmedValue = value.trim();
-  return trimmedValue.startsWith("<!");
+const KNOWN_VARIABLES: Record<string, string> = {
+  module_root_dir: MODULE_ROOT_DIR_PLACEHOLDER,
+};
+
+/**
+ * Matches the start of a gyp expansion: `<(var)`, `>(var)`, `<!(cmd)` or `<!@(cmd)`
+ */
+const EXPANSION_START = /[<>](!?)(@?)\(/g;
+
+/**
+ * Matches a command expansion spanning the entire value, without parentheses
+ */
+const LEGACY_CMD_EXPANSION = /^<!(@?)([^(@].*)$/s;
+
+function findClosingParenthesis(input: string, openIndex: number) {
+  let depth = 0;
+  for (let i = openIndex; i < input.length; i++) {
+    if (input[i] === "(") {
+      depth++;
+    } else if (input[i] === ")" && --depth === 0) {
+      return i;
+    }
+  }
+  return -1;
 }
 
 function escapeSpaces(source: string) {
@@ -53,20 +81,64 @@ export function bindingGypToCmakeLists({
   compileFeatures = [],
   namespacedTargets = false,
 }: GypToCmakeListsOptions): string {
-  function mapExpansion(value: string): string[] {
-    if (!isCmdExpansion(value)) {
-      return [value];
-    } else if (executeCmdExpansions) {
-      const cmd = value.trim().replace(/^<!@?/, "");
-      const output = cp.execSync(cmd, { encoding: "utf-8" }).trim();
-      // Split on whitespace, if the expansion starts with "<!@"
-      return value.trim().startsWith("<!@") ? output.split(/\s/) : [output];
-    } else if (unsupportedBehaviour === "throw") {
-      throw new Error(`Unsupported command expansion: ${value}`);
+  function handleUnsupported(message: string) {
+    if (unsupportedBehaviour === "throw") {
+      throw new Error(message);
     } else if (unsupportedBehaviour === "warn") {
-      console.warn(`Unsupported command expansion: ${value}`);
+      console.warn(message);
     }
-    return [value];
+  }
+
+  function executeCommand(command: string): string | null {
+    if (executeCmdExpansions) {
+      return cp.execSync(command, { encoding: "utf-8" }).trim();
+    }
+    handleUnsupported(`Unsupported command expansion: ${command}`);
+    return null;
+  }
+
+  function mapExpansion(value: string): string[] {
+    const legacyMatch = value.trim().match(LEGACY_CMD_EXPANSION);
+    if (legacyMatch) {
+      const [, list, command] = legacyMatch;
+      const output = executeCommand(command);
+      if (output === null) {
+        return [value];
+      }
+      return list ? splitShellWords(output) : [output];
+    }
+
+    let result = "";
+    let lastIndex = 0;
+    for (const match of value.matchAll(EXPANSION_START)) {
+      if (match.index < lastIndex) {
+        continue;
+      }
+      const [start, command, list] = match;
+      const openIndex = match.index + start.length - 1;
+      const closeIndex = findClosingParenthesis(value, openIndex);
+      if (closeIndex === -1) {
+        break;
+      }
+      const expression = value.slice(match.index, closeIndex + 1);
+      const content = value.slice(openIndex + 1, closeIndex);
+      let replacement: string | null;
+      if (command) {
+        replacement = executeCommand(content);
+        if (replacement !== null && list && expression === value.trim()) {
+          return splitShellWords(replacement);
+        }
+      } else if (Object.hasOwn(KNOWN_VARIABLES, content.trim())) {
+        replacement = KNOWN_VARIABLES[content.trim()];
+      } else {
+        handleUnsupported(`Unsupported variable expansion: ${expression}`);
+        replacement = null;
+      }
+      result +=
+        value.slice(lastIndex, match.index) + (replacement ?? expression);
+      lastIndex = closeIndex + 1;
+    }
+    return [result + value.slice(lastIndex)];
   }
 
   function transformPath(input: string) {
@@ -107,20 +179,23 @@ export function bindingGypToCmakeLists({
     const escapedSources = target.sources
       .flatMap(mapExpansion)
       .map(transformPath)
-      .map(escapeSpaces);
+      .map(escapeSpaces)
+      .map(resolveModuleRootDir);
 
     const escapedIncludes = (target.include_dirs || [])
       .flatMap(mapExpansion)
       .map(transformPath)
-      .map(escapeSpaces);
+      .map(escapeSpaces)
+      .map(resolveModuleRootDir);
 
     const escapedDefines = defines
       .flatMap(mapExpansion)
       .map(transformPath)
-      .map(escapeSpaces);
+      .map(escapeSpaces)
+      .map(resolveModuleRootDir);
 
-    const escapedCflags = cflags.flatMap(mapExpansion).map(escapeSpaces);
-    const escapedLdflags = ldflags.flatMap(mapExpansion).map(escapeSpaces);
+    const compileArguments = gypFlagsToArguments(cflags.flatMap(mapExpansion));
+    const linkArguments = gypFlagsToArguments(ldflags.flatMap(mapExpansion));
 
     const libraries = [];
     if (weakNodeApi) {
@@ -222,16 +297,20 @@ export function bindingGypToCmakeLists({
       );
     }
 
-    if (escapedCflags.length > 0) {
-      lines.push(
-        `target_compile_options(${actualTargetName} PRIVATE ${escapedCflags.join(" ")})`,
-      );
-    }
-
-    if (escapedLdflags.length > 0) {
-      lines.push(
-        `target_link_options(${actualTargetName} PRIVATE ${escapedLdflags.join(" ")})`,
-      );
+    if (compileArguments.length > 0 || linkArguments.length > 0) {
+      // gyp only reads target-level cflags and ldflags when not generating for Apple or Windows
+      lines.push("if(NOT APPLE AND NOT WIN32)");
+      if (compileArguments.length > 0) {
+        lines.push(
+          `  target_compile_options(${actualTargetName} PRIVATE ${toCmakeShellOption(compileArguments)})`,
+        );
+      }
+      if (linkArguments.length > 0) {
+        lines.push(
+          `  target_link_options(${actualTargetName} PRIVATE ${toCmakeShellOption(linkArguments)})`,
+        );
+      }
+      lines.push("endif()");
     }
 
     if (compileFeatures.length > 0) {

@@ -228,6 +228,10 @@ importers:
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
+    devDependencies:
+      cmake-file-api:
+        specifier: workspace:*
+        version: link:../cmake-file-api
 
   packages/host:
     dependencies:

@@ -126,8 +126,8 @@ describe("bindingGypToCmakeLists", () => {
     });
   });
 
-  describe("cflags", () => {
-    it("should add cflags as target-specific compile options", () => {
+  describe("in-string expansions", () => {
+    it("should expand commands inside a value", () => {
       const output = bindingGypToCmakeLists({
         projectName: "some-project",
         gyp: {
@@ -135,7 +135,38 @@ describe("bindingGypToCmakeLists", () => {
             {
               target_name: "foo",
               sources: ["foo.cc"],
-              cflags: ["-fPIC", "-Wall", "-DNAME=value with space"],
+              include_dirs: ["<!(echo some)/include"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes("target_include_directories(foo PRIVATE some/include"),
+        `Expected an expanded include directory:\n${output}`,
+      );
+    });
+
+    it("should expand into lists when '<!@(...)' is the entire value", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [{ target_name: "foo", sources: ["<!@(echo bar baz)"] }],
+        },
+      });
+
+      assert(output.includes("add_library(foo SHARED bar baz"));
+    });
+
+    it("should expand module_root_dir to the source directory", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["<(module_root_dir)/foo.cc"],
+              cflags: ["-I<(module_root_dir)/inc"],
             },
           ],
         },
@@ -143,9 +174,71 @@ describe("bindingGypToCmakeLists", () => {
 
       assert(
         output.includes(
-          "target_compile_options(foo PRIVATE -fPIC -Wall -DNAME=value\\ with\\ space)",
+          "add_library(foo SHARED ${CMAKE_CURRENT_SOURCE_DIR}/foo.cc",
+        ),
+        `Expected an expanded source:\n${output}`,
+      );
+      assert(
+        output.includes(
+          'target_compile_options(foo PRIVATE "SHELL:-I\\"${CMAKE_CURRENT_SOURCE_DIR}\\"/inc")',
+        ),
+        `Expected an expanded compile option:\n${output}`,
+      );
+    });
+
+    it("should throw on unknown variables when asked to", () => {
+      assert.throws(
+        () =>
+          bindingGypToCmakeLists({
+            projectName: "some-project",
+            unsupportedBehaviour: "throw",
+            gyp: {
+              targets: [{ target_name: "foo", sources: ["<(unknown)/foo.cc"] }],
+            },
+          }),
+        /Unsupported variable expansion: <\(unknown\)/,
+      );
+    });
+  });
+
+  describe("cflags", () => {
+    it("should add cflags as a single shell option", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            {
+              target_name: "foo",
+              sources: ["foo.cc"],
+              cflags: ["-fPIC", "-include a.h", "-include", "b.h"],
+            },
+          ],
+        },
+      });
+
+      assert(
+        output.includes(
+          'target_compile_options(foo PRIVATE "SHELL:-fPIC -include a.h -include b.h")',
         ),
         `Expected output to include target_compile_options:\n${output}`,
+      );
+    });
+
+    it("should only add cflags when not targeting Apple or Windows", () => {
+      const output = bindingGypToCmakeLists({
+        projectName: "some-project",
+        gyp: {
+          targets: [
+            { target_name: "foo", sources: ["foo.cc"], cflags: ["-fPIC"] },
+          ],
+        },
+      });
+
+      assert(
+        output.includes(
+          'if(NOT APPLE AND NOT WIN32)\n  target_compile_options(foo PRIVATE "SHELL:-fPIC")\nendif()',
+        ),
+        `Expected guarded target_compile_options:\n${output}`,
       );
     });
 
@@ -164,14 +257,16 @@ describe("bindingGypToCmakeLists", () => {
       });
 
       assert(
-        output.includes("target_compile_options(foo PRIVATE -fPIC -Wall)"),
+        output.includes(
+          'target_compile_options(foo PRIVATE "SHELL:-fPIC -Wall")',
+        ),
         `Expected expanded cflags in target_compile_options:\n${output}`,
       );
     });
   });
 
   describe("ldflags", () => {
-    it("should add ldflags as target-specific link options", () => {
+    it("should add ldflags as a single shell option", () => {
       const output = bindingGypToCmakeLists({
         projectName: "some-project",
         gyp: {
@@ -179,7 +274,7 @@ describe("bindingGypToCmakeLists", () => {
             {
               target_name: "foo",
               sources: ["foo.cc"],
-              ldflags: ["-Wl,-dead_strip", "-framework CoreFoundation"],
+              ldflags: ["-Wl,--as-needed", "-Wl,-rpath,'$$ORIGIN'"],
             },
           ],
         },
@@ -187,7 +282,7 @@ describe("bindingGypToCmakeLists", () => {
 
       assert(
         output.includes(
-          "target_link_options(foo PRIVATE -Wl,-dead_strip -framework\\ CoreFoundation)",
+          'target_link_options(foo PRIVATE "SHELL:-Wl,--as-needed -Wl,-rpath,\\$ORIGIN")',
         ),
         `Expected output to include target_link_options:\n${output}`,
       );
@@ -201,7 +296,7 @@ describe("bindingGypToCmakeLists", () => {
             {
               target_name: "foo",
               sources: ["foo.cc"],
-              ldflags: ["<!@echo -Wl,-dead_strip -pthread"],
+              ldflags: ["<!@echo -Wl,--as-needed -pthread"],
             },
           ],
         },
@@ -209,7 +304,7 @@ describe("bindingGypToCmakeLists", () => {
 
       assert(
         output.includes(
-          "target_link_options(foo PRIVATE -Wl,-dead_strip -pthread",
+          'target_link_options(foo PRIVATE "SHELL:-Wl,--as-needed -pthread")',
         ),
         `Expected expanded ldflags in target_link_options:\n${output}`,
       );
@@ -277,7 +372,7 @@ describe("bindingGypToCmakeLists", () => {
         "target_link_libraries(some-project-addon PRIVATE weak-node-api)",
         "target_include_directories(some-project-addon PRIVATE include)",
         "target_compile_definitions(some-project-addon PRIVATE FOO)",
-        "target_compile_options(some-project-addon PRIVATE -fPIC)",
+        'target_compile_options(some-project-addon PRIVATE "SHELL:-fPIC")',
         "target_compile_features(some-project-addon PRIVATE cxx_std_17)",
       ]) {
         assert(
