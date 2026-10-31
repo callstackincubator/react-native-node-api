@@ -1,5 +1,14 @@
 # gyp-to-cmake
 
+## 0.8.0
+
+### Minor Changes
+
+- dba124c: Resolve `cflags` and `ldflags` like gyp's make generator: emit them only when not targeting Apple or Windows, pass each target's flags as a single `SHELL:` option (so CMake no longer de-duplicates repeated flags like `-include a.h -include b.h`), word-split and unquote them as the shell would, and unescape `$$`. Also expand `<!(cmd)`, `<!@(cmd)` and `<(module_root_dir)` inside values.
+- 96ce52d: Translate target-level `ldflags` from `binding.gyp` into private CMake link
+  options. The parser now validates that `ldflags` is an array of strings, and
+  the generated options preserve command expansion and escaped spaces.
+
 ## 0.7.0
 
 ### Minor Changes

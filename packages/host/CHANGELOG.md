@@ -1,5 +1,12 @@
 # react-native-node-api
 
+## 1.2.2
+
+### Patch Changes
+
+- ff237c0: Updated `@expo/plist` to `^0.10.1` (was pinned to `0.4.7`).
+- weak-node-api@0.1.1
+
 ## 1.2.1
 
 ### Patch Changes
