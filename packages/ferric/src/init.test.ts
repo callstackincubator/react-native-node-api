@@ -368,7 +368,7 @@ describe("planInit", () => {
     );
     assert(change);
     assert.equal(parseToml(change.contents)["profile"], undefined);
-    assert.ok(change.contents.endsWith('"\n'));
+    assert.match(change.contents, /"\r?\n$/);
   });
 
   it("defaults to Node-API version 3", async (context) => {
