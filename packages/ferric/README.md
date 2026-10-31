@@ -15,7 +15,7 @@ Before building, `ferric build` asks Cargo for the crate's resolved features for
 [dependencies.napi]
 version = "3"
 default-features = false
-features = ["napi3"]
+features = ["napi10"]
 ```
 
 Pass `--skip-feature-check` to bypass the check.
