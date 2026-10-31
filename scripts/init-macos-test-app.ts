@@ -86,6 +86,8 @@ async function patchPackageJson() {
     "test:nodeTests": "MOCHA_REMOTE_CONTEXT=nodeTests node --run test -- ",
     "test:ferricExample":
       "MOCHA_REMOTE_CONTEXT=ferricExample node --run test -- ",
+    "test:cmakeRnExample":
+      "MOCHA_REMOTE_CONTEXT=cmakeRnExample node --run test -- ",
   };
 
   const transferredDependencies = new Set([
@@ -113,6 +115,10 @@ async function patchPackageJson() {
     "@react-native-node-api/ferric-example": path.relative(
       APP_PATH,
       path.join(ROOT_PATH, "packages", "ferric-example"),
+    ),
+    "@react-native-node-api/cmake-rn-example": path.relative(
+      APP_PATH,
+      path.join(ROOT_PATH, "packages", "cmake-rn-example"),
     ),
     "react-native-node-api": path.relative(
       APP_PATH,

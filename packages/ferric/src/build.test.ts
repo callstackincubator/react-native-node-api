@@ -4,8 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
+import { applyChanges } from "@react-native-node-api/cli-utils";
+
 import { buildCommand } from "./build.js";
-import { applyChanges, planInit } from "./init.js";
+import { planInit } from "./init.js";
 
 describe("ferric build", { skip: process.platform === "win32" }, () => {
   it("builds a crate outside the current directory with --cwd", async (context) => {

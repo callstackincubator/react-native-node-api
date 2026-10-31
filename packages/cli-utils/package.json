@@ -9,17 +9,29 @@
   },
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map"
   ],
   "exports": {
     ".": "./dist/index.js"
+  },
+  "scripts": {
+    "test": "tsx --test --test-reporter=@reporters/github --test-reporter-destination=stdout --test-reporter=spec --test-reporter-destination=stdout"
   },
   "dependencies": {
     "@commander-js/extra-typings": "^14.0.0",
     "bufout": "^1.0.0",
     "chalk": "^5.4.1",
     "commander": "^14.0.1",
+    "diff": "^9.0.0",
     "ora": "^8.2.0",
-    "p-limit": "^7.2.0"
+    "p-limit": "^7.2.0",
+    "picomatch": "^4.0.5",
+    "semver": "^7.8.5"
+  },
+  "devDependencies": {
+    "@types/picomatch": "^4.0.3",
+    "@types/semver": "^7.8.0"
   }
 }

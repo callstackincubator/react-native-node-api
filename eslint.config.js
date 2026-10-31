@@ -18,6 +18,8 @@ export default tseslint.config(
     "packages/ferric-example/ferric_example.js",
     "packages/ferric-example/ferric_example.d.ts",
     "packages/ferric-example/target/**",
+    "packages/cmake-rn-example/cmake-rn-example.js",
+    "packages/cmake-rn-example/cmake-rn-example.d.ts",
     "packages/node-tests/node/**",
     "packages/node-tests/tests/**",
     "packages/node-tests/*.generated.js",

@@ -4,7 +4,8 @@
     "composite": true,
     "emitDeclarationOnly": true,
     "declarationMap": false,
-    "rootDir": "scripts"
+    "rootDir": "scripts",
+    "allowImportingTsExtensions": true
   },
   "include": ["scripts"]
 }

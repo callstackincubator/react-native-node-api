@@ -3,7 +3,7 @@ import semver from "semver";
 import { parse as parseToml } from "smol-toml";
 
 import { MAX_NODE_API_VERSION, getNodeApiVersion } from "./features.js";
-import { isRecord } from "./json.js";
+import { isRecord } from "@react-native-node-api/cli-utils";
 
 export type CrateVersions = {
   napi: string;

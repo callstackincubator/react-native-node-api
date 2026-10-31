@@ -15,11 +15,13 @@
     "test:android:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples node --run test:android -- ",
     "test:android:nodeTests": "MOCHA_REMOTE_CONTEXT=nodeTests node --run test:android -- ",
     "test:android:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample node --run test:android -- ",
+    "test:android:cmakeRnExample": "MOCHA_REMOTE_CONTEXT=cmakeRnExample node --run test:android -- ",
     "test:ios": "mocha-remote --exit-on-error -- concurrently --passthrough-arguments --kill-others-on-fail npm:metro 'npm:ios -- {@}' --",
     "test:ios:allTests": "MOCHA_REMOTE_CONTEXT=allTests node --run test:ios -- ",
     "test:ios:nodeAddonExamples": "MOCHA_REMOTE_CONTEXT=nodeAddonExamples node --run test:ios -- ",
     "test:ios:nodeTests": "MOCHA_REMOTE_CONTEXT=nodeTests node --run test:ios -- ",
-    "test:ios:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample node --run test:ios -- "
+    "test:ios:ferricExample": "MOCHA_REMOTE_CONTEXT=ferricExample node --run test:ios -- ",
+    "test:ios:cmakeRnExample": "MOCHA_REMOTE_CONTEXT=cmakeRnExample node --run test:ios -- "
   },
   "dependencies": {
     "@babel/core": "^7.26.10",
@@ -28,6 +30,7 @@
     "@react-native-community/cli": "^20.0.2",
     "@react-native-community/cli-platform-android": "^20.0.2",
     "@react-native-community/cli-platform-ios": "^20.0.2",
+    "@react-native-node-api/cmake-rn-example": "workspace:*",
     "@react-native-node-api/ferric-example": "workspace:*",
     "@react-native-node-api/node-addon-examples": "workspace:*",
     "@react-native-node-api/node-tests": "workspace:*",

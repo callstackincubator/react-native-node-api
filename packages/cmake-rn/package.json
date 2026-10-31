@@ -16,7 +16,8 @@
     "bin",
     "dist",
     "!dist/**/*.test.d.ts",
-    "!dist/**/*.test.d.ts.map"
+    "!dist/**/*.test.d.ts.map",
+    "templates"
   ],
   "scripts": {
     "build": "tsc",

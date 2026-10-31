@@ -9,7 +9,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * JSON file keep the style it was checked in with.
  */
 export function detectJsonIndentation(contents: string) {
-  const match = contents.match(/\n(\s+)\S/);
+  const match = contents.match(/\n([ \t]+)\S/);
   return match ? match[1] : "  ";
 }
 

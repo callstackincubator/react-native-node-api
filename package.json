@@ -14,13 +14,14 @@
     "publint": "node scripts/run-in-published.ts pnpm exec publint --strict",
     "prettier:check": "prettier --experimental-cli --check .",
     "prettier:write": "prettier --experimental-cli --write .",
-    "test": "pnpm --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter ferric-cli run test",
+    "test": "pnpm --filter @react-native-node-api/cli-utils --filter react-native-node-api --filter cmake-rn --filter gyp-to-cmake --filter ferric-cli run test",
     "bootstrap": "node --run build && pnpm --recursive run bootstrap",
     "changeset": "changeset",
     "release": "node --run prerelease && changeset publish",
     "prerelease": "node --run build && pnpm --recursive run prerelease && node --run publint",
     "init-macos-test-app": "node scripts/init-macos-test-app.ts",
-    "init-ferric-example": "node scripts/init-ferric-example.ts"
+    "init-ferric-example": "node scripts/init-ferric-example.ts",
+    "init-cmake-rn-example": "node scripts/init-cmake-rn-example.ts"
   },
   "author": {
     "name": "Callstack",

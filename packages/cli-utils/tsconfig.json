@@ -1,3 +1,10 @@
 {
-  "extends": "../../configs/tsconfig.node.json"
+  "compilerOptions": {
+    "composite": true
+  },
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.node-tests.json" }
+  ]
 }
