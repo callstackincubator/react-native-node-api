@@ -18,6 +18,8 @@ default-features = false
 features = ["napi10"]
 ```
 
+From `napi4` onward, napi-rs's runtime uses threadsafe functions. If your addon doesn't need them (or anything else above Node-API 3), `napi3` gives a slightly smaller binary (about 5 KB for a minimal addon).
+
 Pass `--skip-feature-check` to bypass the check.
 
 ## `ferric init [path]`
