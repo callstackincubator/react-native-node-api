@@ -75,6 +75,12 @@ jobs:
       # weak-node-api's codegen it can't be reproduced here without reintroducing a
       # native build into the fastest-feedback job. See #414.
       - run: pnpm --filter weak-node-api run prebuild:prepare
+      - run: pnpm run init-ferric-example
+      - name: Verify ferric-example matches what ferric init generates
+        run: |
+          git status --porcelain packages/ferric-example
+          git diff --exit-code packages/ferric-example
+          test -z "$(git status --porcelain packages/ferric-example)"
       - run: pnpm run lint
         env:
           DEBUG: eslint:eslint
