@@ -203,6 +203,9 @@ importers:
       weak-node-api:
         specifier: workspace:*
         version: link:../weak-node-api
+      zod:
+        specifier: ^4.1.11
+        version: 4.4.3
 
   packages/ferric-example:
     dependencies:

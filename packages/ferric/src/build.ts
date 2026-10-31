@@ -39,6 +39,7 @@ import {
 } from "./targets.js";
 import { generateTypeScriptDeclarations } from "./napi-rs.js";
 import { getBlockComment } from "./banner.js";
+import { assertNapiFeatures } from "./features.js";
 
 type EntrypointOptions = {
   outputPath: string;
@@ -104,6 +105,10 @@ const xcframeworkExtensionOption = new Option(
   "--xcframework-extension",
   "Don't rename the xcframework to .apple.node",
 ).default(false);
+const skipFeatureCheckOption = new Option(
+  "--skip-feature-check",
+  "Don't check the crate's resolved napi-sys features before building",
+).default(false);
 const dtsOnlyOption = new Option(
   "--dts-only",
   "Only generate the TypeScript declarations and entrypoint, skipping Android/Apple cross-compilation. Still runs a real `cargo build` for the host target (napi-rs has no lighter typegen-only mode), so this is not a no-op — it's meant for regenerating a checked-in declarations fixture, not for toolchain-free environments.",
@@ -158,6 +163,7 @@ export const buildCommand = new Command("build")
   .addOption(concurrencyOption)
   .addOption(verboseOption)
   .addOption(dtsOnlyOption)
+  .addOption(skipFeatureCheckOption)
   .action(
     wrapAction(
       async ({
@@ -173,6 +179,7 @@ export const buildCommand = new Command("build")
         concurrency,
         verbose,
         dtsOnly,
+        skipFeatureCheck,
       }) => {
         if (dtsOnly) {
           assertFixable(
@@ -271,6 +278,9 @@ export const buildCommand = new Command("build")
         }
         ensureCargo();
         ensureAvailableTargets(targets);
+        if (!skipFeatureCheck) {
+          assertNapiFeatures(process.cwd(), targets);
+        }
 
         const appleTargets = filterTargetsByPlatform(targets, "apple");
         const androidTargets = filterTargetsByPlatform(targets, "android");
