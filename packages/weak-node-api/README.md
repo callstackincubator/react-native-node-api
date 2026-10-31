@@ -14,6 +14,8 @@ This library provides a solution by:
 - Allowing runtime injection of the actual implementation by the host, which is also how the host's `napi_fatal_error` override, logging to logcat on Android, reaches addons
 - Eliminating the need for addons to suppress undefined symbol errors
 
+[nodejs/node#60916](https://github.com/nodejs/node/pull/60916) proposes a better long-term solution: the runtime exposes Node-API through vtables reachable from `napi_env`, so an addon links against nothing and this library is no longer needed.
+
 ## Is this usable in the context of Node.js?
 
 While originally designed for React Native's then-split Node-API implementation, this approach could potentially be adapted for Node.js scenarios where addons need to link with undefined symbols allowed. Usage patterns and examples for Node.js contexts are being explored and this pattern could eventually be upstreamed to Node.js itself, benefiting the broader Node-API ecosystem.
