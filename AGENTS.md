@@ -73,6 +73,7 @@ patch or workaround:
 - **Workspace scripts**: Most build/test commands use pnpm workspaces (`--filter` flag), run in topological (dependency) order and fail fast
 - **Focus on Node.js packages**: AI development primarily targets the Node.js tooling packages rather than native mobile code
 - **No TypeScript type asserts**: You have to ask explicitly and justify if you want to add `as` type assertions.
+- **Prefer TypeScript over Bash**: Write build scripts and similar tooling in TypeScript rather than shell scripts.
 
 ## Key Patterns
 
