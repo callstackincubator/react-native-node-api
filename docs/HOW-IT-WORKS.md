@@ -93,13 +93,13 @@ module.exports = require("react-native-node-api").requireNodeAddon(
 
 ## `react-native-node-api` creates a `napi_env` for the addon
 
-The native implementation of `requireNodeAddon` turns the library name into a platform specific path (`@rpath/<name>.framework/<name>` on Apple platforms, `lib<name>.so` on Android) and creates a `napi_env` for the addon by calling `hermes_napi_create_env` with the low-level Hermes VM runtime behind the `jsi::Runtime`. As in Node.js, each addon gets its own environment.
+`requireNodeAddon` returns the exports cached from an earlier load of the same library. Otherwise it turns the library name into a platform specific path (`@rpath/<name>.framework/<name>` on Apple platforms, `lib<name>.so` on Android) and calls `dlopen(module, filename)`, which has the same semantics as Node's `process.dlopen`. The native implementation of `dlopen` creates a `napi_env` for the addon by calling `hermes_napi_create_env` with the low-level Hermes VM runtime behind the `jsi::Runtime`. As in Node.js, each load gets its own environment.
 
 ## Hermes loads the platform specific dynamic library and initializes the addon
 
 The host hands the path and the environment to `hermes_napi_load_module`, which opens the dynamic library and finds the addon's initialization function, either by looking up an exported `napi_register_module_v1` symbol or by falling back to the `napi_module` passed to a (deprecated) `napi_module_register` call made while the library was loading. It then calls that function with the environment and a fresh `exports` object.
 
-If the library cannot be opened, or exports no initialization function, `requireNodeAddon` throws.
+If the library cannot be opened, or exports no initialization function, `dlopen` throws (and so does `requireNodeAddon`, without caching the failure). Otherwise the resulting exports object is assigned to `module.exports`.
 
 ## The library's C++ code initialize the `exports` object
 
