@@ -1,5 +1,38 @@
 # ferric-cli
 
+## 0.5.0-rc.0
+
+### Minor Changes
+
+- 1f1085f: Add a `--cwd <path>` option to `ferric build`, to build a crate outside the
+  current directory. Outputs default to that directory, unless `--output` is
+  passed.
+- c5278fd: Add a `ferric init [path]` command, scaffolding a package building a Rust Node-API module.
+
+  It writes the `package.json`, `Cargo.toml`, `build.rs`, `src/lib.rs` and `.gitignore` a package needs, and adds it to the workspace of the mono-repo it is initialized into. Run against a package that already exists, it bumps outdated dependencies and crates in place, and prints a diff for every update. A differing entrypoint or source file is skipped with a diff to merge by hand, unless `--force` is passed. `--dry-run` prints all of this without writing anything.
+
+  A new `Cargo.toml` enables Node-API version 10 by default, and can be configured with `--node-api-version`, `--napi-crate-version`, `--napi-derive-crate-version`, `--napi-build-crate-version` and `--release-profile`.
+
+- 51503b0: Check the crate's resolved `napi-sys` features before building and fail if `dyn-symbols` is enabled (it prevents linking against `weak-node-api`) or a `napiN` feature above the supported Node-API version 10. Pass `--skip-feature-check` to bypass.
+
+### Patch Changes
+
+- a136f6f: Update `@napi-rs/cli` to 3.10.8.
+- Updated dependencies [831e233]
+- Updated dependencies [ba85f07]
+- Updated dependencies [98c4c2d]
+- Updated dependencies [29ca6a3]
+- Updated dependencies [5568756]
+- Updated dependencies [a654059]
+- Updated dependencies [dfd38ed]
+- Updated dependencies [fbe5ed9]
+- Updated dependencies [983cb55]
+- Updated dependencies [21bd99a]
+- Updated dependencies [bd6748d]
+  - @react-native-node-api/cli-utils@0.2.0-rc.0
+  - react-native-node-api@2.0.0-rc.0
+  - weak-node-api@0.2.0-rc.0
+
 ## 0.4.6
 
 ### Patch Changes
