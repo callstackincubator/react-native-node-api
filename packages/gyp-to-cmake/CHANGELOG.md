@@ -1,5 +1,12 @@
 # gyp-to-cmake
 
+## 0.8.1-rc.0
+
+### Patch Changes
+
+- Updated dependencies [831e233]
+  - @react-native-node-api/cli-utils@0.2.0-rc.0
+
 ## 0.8.0
 
 ### Minor Changes

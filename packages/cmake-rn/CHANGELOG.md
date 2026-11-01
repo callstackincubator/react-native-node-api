@@ -1,5 +1,32 @@
 # cmake-rn
 
+## 0.9.0-rc.0
+
+### Minor Changes
+
+- 831e233: Add a `cmake-rn init [path]` command, scaffolding a package building a CMake Node-API module.
+
+  It writes the `package.json`, `CMakeLists.txt`, `src/addon.c`, a JavaScript entrypoint with its TypeScript declarations and `.gitignore` a package needs, and adds it to the workspace of the mono-repo it is initialized into. Run against a package that already exists, it bumps outdated dependencies, and inspects an existing `CMakeLists.txt` instead of replacing it, pointing out when it doesn't define or link the `weak-node-api` target. `--weak-node-api <link|cmake-js|omit>` picks how a new `CMakeLists.txt` gets Node-API: linking the `weak-node-api` target (the default), through the cmake-js variables so it also builds with cmake-js, or not at all. A differing entrypoint or source file is skipped with a diff to merge by hand, unless `--force` is passed. `--dry-run` prints all of this without writing anything.
+
+  The build is now the default `build` subcommand, so `cmake-rn` invocations keep working as before, and its options are listed by `cmake-rn build --help`.
+
+### Patch Changes
+
+- Updated dependencies [831e233]
+- Updated dependencies [ba85f07]
+- Updated dependencies [98c4c2d]
+- Updated dependencies [29ca6a3]
+- Updated dependencies [5568756]
+- Updated dependencies [a654059]
+- Updated dependencies [dfd38ed]
+- Updated dependencies [fbe5ed9]
+- Updated dependencies [983cb55]
+- Updated dependencies [21bd99a]
+- Updated dependencies [bd6748d]
+  - @react-native-node-api/cli-utils@0.2.0-rc.0
+  - react-native-node-api@2.0.0-rc.0
+  - weak-node-api@0.2.0-rc.0
+
 ## 0.8.3
 
 ### Patch Changes

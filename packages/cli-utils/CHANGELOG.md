@@ -1,5 +1,11 @@
 # @react-native-node-api/cli-utils
 
+## 0.2.0-rc.0
+
+### Minor Changes
+
+- 831e233: Add the helpers shared by the `ferric init` and `cmake-rn init` commands: planning file changes, updating a `package.json` without overwriting what it declares, printing diffs, and adding a package to a pnpm, npm or yarn workspace.
+
 ## 0.1.5
 
 ### Patch Changes
