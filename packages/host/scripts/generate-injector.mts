@@ -19,7 +19,6 @@ export function generateSource(functions: FunctionDecl[]) {
     #include <weak_node_api.hpp>
 
     #include <Logger.hpp>
-    #include <RuntimeNodeApi.hpp>
 
     #if defined(__APPLE__)
     #define WEAK_NODE_API_LIBRARY_NAME "@rpath/weak-node-api.framework/weak-node-api"

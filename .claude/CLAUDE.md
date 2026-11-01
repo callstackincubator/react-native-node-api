@@ -79,8 +79,8 @@ is exactly the case above. **Whenever you open a PR here:**
 | `Ferric 🦀`     | Ferric Apple triplets build                                                                                                                                                               | `packages/ferric`, `packages/ferric-example`, or anything napi-rs/Cargo related                                                                                                                           |
 | `weak-node-api` | weak-node-api tests                                                                                                                                                                       | `packages/weak-node-api`                                                                                                                                                                                  |
 
-A PR can need more than one label — e.g. a change to `RuntimeNodeApi.cpp`
-that alters buffer semantics warrants `Host 🏡` plus `Apple 🍎` and
+A PR can need more than one label — e.g. a change to `HermesNapiHost.cpp`
+that alters async work semantics warrants `Host 🏡` plus `Apple 🍎` and
 `Android 🤖`, since the actual behavior change can only be verified on a
 real device.
 
