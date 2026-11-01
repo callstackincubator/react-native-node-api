@@ -11,7 +11,7 @@
   "exclude": [],
   "references": [
     {
-      "path": "../weak-node-api/tsconfig.node.json"
+      "path": "../node-api-stub/tsconfig.node.json"
     }
   ]
 }

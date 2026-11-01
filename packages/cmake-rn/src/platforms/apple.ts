@@ -19,10 +19,11 @@ import {
 
 import type { Platform } from "./types.js";
 import * as cmakeFileApi from "cmake-file-api";
+import { NODE_API_STUB_TARGET } from "node-api-stub";
 import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
-  getWeakNodeApiVariables,
+  getNodeApiLinkageVariables,
 } from "../weak-node-api.js";
 
 import * as z from "zod";
@@ -189,6 +190,7 @@ async function readCmakeSharedLibraryTargets(
   return targets.filter(
     ({ type, name }) =>
       type === "SHARED_LIBRARY" &&
+      name !== NODE_API_STUB_TARGET &&
       (target.length === 0 || target.includes(name)),
   );
 }
@@ -292,7 +294,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
   },
   async configure(
     triplets,
-    { source, build, define, weakNodeApiLinkage, cmakeJs, ccachePath },
+    { source, build, define, nodeApiLinkage, cmakeJs, ccachePath },
   ) {
     // When using ccache, we're creating symlinks for the clang and clang++ binaries to the ccache binary
     // This is needed for ccache to understand it's being invoked as clang and clang++ respectively.
@@ -343,7 +345,7 @@ export const platform: Platform<Triplet[], AppleOpts> = {
           "Xcode",
           ...toDefineArguments([
             ...define,
-            weakNodeApiLinkage ? getWeakNodeApiVariables("apple") : {},
+            getNodeApiLinkageVariables(nodeApiLinkage, "apple"),
             cmakeJs ? getCmakeJSVariables("apple") : {},
             compilerDefinitions,
             {

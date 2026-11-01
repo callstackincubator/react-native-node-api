@@ -5,6 +5,7 @@ import path from "node:path";
 import {
   isAndroidTriplet,
   isAppleTriplet,
+  type NodeApiLinkage,
   SupportedTriplet,
 } from "react-native-node-api";
 
@@ -13,6 +14,7 @@ import {
   androidPrebuildPath,
   weakNodeApiCmakePath,
 } from "weak-node-api";
+import { nodeApiStubPath } from "node-api-stub";
 
 import { ANDROID_ARCHITECTURES } from "./platforms/android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
@@ -21,26 +23,28 @@ export function toCmakePath(input: string) {
   return input.split(path.win32.sep).join(path.posix.sep);
 }
 
-export function getWeakNodeApiPath(
-  triplet: SupportedTriplet | "apple",
-): string {
+const NODE_API_CONFIG_DIR = path.resolve(import.meta.dirname, "../cmake");
+
+function findWeakNodeApiPath(triplet: SupportedTriplet | "apple") {
   if (triplet === "apple" || isAppleTriplet(triplet)) {
-    assert(
-      fs.existsSync(applePrebuildPath),
-      `Expected an XCFramework at ${applePrebuildPath}`,
-    );
     return applePrebuildPath;
   } else if (isAndroidTriplet(triplet)) {
-    const libraryPath = path.join(
+    return path.join(
       androidPrebuildPath,
       ANDROID_ARCHITECTURES[triplet],
       "libweak-node-api.so",
     );
-    assert(fs.existsSync(libraryPath), `Expected library at ${libraryPath}`);
-    return libraryPath;
   } else {
     throw new Error(`Unexpected triplet: ${triplet as string}`);
   }
+}
+
+export function getWeakNodeApiPath(
+  triplet: SupportedTriplet | "apple",
+): string {
+  const result = findWeakNodeApiPath(triplet);
+  assert(fs.existsSync(result), `Expected weak-node-api at ${result}`);
+  return result;
 }
 
 function getNodeApiIncludePaths() {
@@ -64,6 +68,39 @@ export function getWeakNodeApiVariables(
     WEAK_NODE_API_CONFIG: weakNodeApiCmakePath,
     WEAK_NODE_API_INC: getNodeApiIncludePaths().join(";"),
     WEAK_NODE_API_LIB: getWeakNodeApiPath(triplet),
+  };
+}
+
+/**
+ * Variables for the selected --node-api-linkage, which the `node-api` target follows.
+ */
+export function getNodeApiLinkageVariables(
+  linkage: NodeApiLinkage,
+  triplet: SupportedTriplet | "apple",
+): Record<string, string> {
+  if (linkage === "none") {
+    return {};
+  }
+  const nodeApiVariables = {
+    // Enable use of `find_package(node-api REQUIRED CONFIG)`
+    "node-api_DIR": NODE_API_CONFIG_DIR,
+    NODE_API_LINKAGE: linkage,
+    NODE_API_INC: getNodeApiIncludePaths().join(";"),
+  };
+  if (linkage === "hermes") {
+    return {
+      // Keeps the `weak-node-api` target available to addons naming it, without requiring it
+      ...(fs.existsSync(findWeakNodeApiPath(triplet))
+        ? getWeakNodeApiVariables(triplet)
+        : {}),
+      ...nodeApiVariables,
+      NODE_API_STUB_DIR: nodeApiStubPath,
+    };
+  }
+  return {
+    ...getWeakNodeApiVariables(triplet),
+    ...nodeApiVariables,
+    NODE_API_LIB: getWeakNodeApiPath(triplet),
   };
 }
 

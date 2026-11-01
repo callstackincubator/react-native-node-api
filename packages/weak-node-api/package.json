@@ -28,7 +28,7 @@
     "copy-node-api-headers": "tsx scripts/copy-node-api-headers.ts",
     "generate": "tsx scripts/generate.ts",
     "prebuild:prepare": "node --run copy-node-api-headers && node --run generate",
-    "prebuild:build": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension",
+    "prebuild:build": "cmake-rn --no-auto-link --node-api-linkage none --xcframework-extension",
     "prebuild:build:android": "node --run prebuild:build -- --android",
     "prebuild:build:apple": "node --run prebuild:build -- --apple",
     "prebuild:build:all": "node --run prebuild:build -- --android --apple",
@@ -64,11 +64,8 @@
     }
   ],
   "license": "MIT",
-  "dependencies": {
-    "node-api-headers": "^1.5.0"
-  },
   "devDependencies": {
     "cmake-rn": "workspace:*",
-    "zod": "^4.1.11"
+    "node-api-stub": "workspace:*"
   }
 }

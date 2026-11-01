@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15...3.31)
 project(async-test)
 
-find_package(weak-node-api REQUIRED CONFIG)
+find_package(node-api REQUIRED CONFIG)
 
 add_library(async-test-addon SHARED addon.c)
 
@@ -24,5 +24,5 @@ else()
    )
 endif()
 
-target_link_libraries(async-test-addon PRIVATE weak-node-api)
+target_link_libraries(async-test-addon PRIVATE node-api)
 target_compile_features(async-test-addon PRIVATE cxx_std_17)

@@ -17,7 +17,8 @@
     "dist",
     "!dist/**/*.test.d.ts",
     "!dist/**/*.test.d.ts.map",
-    "templates"
+    "templates",
+    "cmake"
   ],
   "scripts": {
     "build": "tsc",
@@ -29,7 +30,8 @@
     "cmake-file-api": "workspace:*",
     "react-native-node-api": "workspace:*",
     "zod": "^4.1.11",
-    "weak-node-api": "workspace:*"
+    "weak-node-api": "workspace:*",
+    "node-api-stub": "workspace:*"
   },
   "peerDependencies": {
     "node-addon-api": "^8.3.1",

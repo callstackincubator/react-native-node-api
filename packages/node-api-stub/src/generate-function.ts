@@ -1,4 +1,4 @@
-import type { FunctionDecl } from "../../src/node-api-functions.js";
+import type { FunctionDecl } from "./node-api-functions.js";
 
 type FunctionOptions = FunctionDecl & {
   extern?: true;
@@ -8,6 +8,9 @@ type FunctionOptions = FunctionDecl & {
   argumentNames?: string[];
 };
 
+/**
+ * Generates the C++ declaration of a Node-API function, or its definition when a body is given.
+ */
 export function generateFunction({
   extern,
   static: staticMember,
@@ -16,13 +19,12 @@ export function generateFunction({
   name,
   argumentTypes,
   argumentNames = [],
-  noReturn,
   body,
 }: FunctionOptions) {
   return `
     ${staticMember ? "static " : ""}${extern ? 'extern "C" ' : ""}${returnType} ${namespace ? namespace + "::" : ""}${name}(
       ${argumentTypes.map((type, index) => `${type} ` + (argumentNames[index] ?? `arg${index}`)).join(", ")}
-    ) ${body ? `{ ${body} ${noReturn ? "WEAK_NODE_API_UNREACHABLE;" : ""}\n}` : ""}
+    ) ${body ? `{ ${body}\n}` : ""}
     ;
   `;
 }

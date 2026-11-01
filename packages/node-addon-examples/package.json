@@ -23,16 +23,18 @@
     "copy-examples": "tsx scripts/copy-examples.mts",
     "gyp-to-cmake": "gyp-to-cmake --namespaced-targets --weak-node-api .",
     "generate-root-project": "tsx scripts/generate-root-project.mts",
-    "build": "cmake-rn --configuration RelWithDebInfo",
+    "build": "cmake-rn --configuration RelWithDebInfo --node-api-linkage hermes",
     "copy-and-build": "node --run copy-examples && node --run gyp-to-cmake && node --run generate-root-project && node --run build",
     "verify": "tsx scripts/verify-prebuilds.mts",
     "test": "node --run copy-and-build && node --run verify",
-    "bootstrap": "node --run copy-and-build"
+    "bootstrap": "node --run copy-and-build",
+    "verify:hermes-linkage": "tsx scripts/verify-hermes-linkage.mts"
   },
   "devDependencies": {
     "cmake-rn": "workspace:*",
     "gyp-to-cmake": "workspace:*",
     "node-addon-examples": "github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509",
+    "node-api-stub": "workspace:*",
     "read-pkg": "^9.0.1",
     "weak-node-api": "workspace:*"
   },

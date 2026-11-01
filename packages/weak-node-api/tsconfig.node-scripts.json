@@ -9,5 +9,8 @@
   },
   "include": ["scripts/**/*.ts", "types/**/*.d.ts"],
   "exclude": [],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "references": [
+    { "path": "./tsconfig.node.json" },
+    { "path": "../node-api-stub/tsconfig.node.json" }
+  ]
 }

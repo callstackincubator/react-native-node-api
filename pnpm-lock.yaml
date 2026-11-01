@@ -198,6 +198,9 @@ importers:
       node-api-headers:
         specifier: ^1.5.0
         version: 1.9.0
+      node-api-stub:
+        specifier: workspace:*
+        version: link:../node-api-stub
       react-native-node-api:
         specifier: workspace:*
         version: link:../host
@@ -317,6 +320,9 @@ importers:
       fswin:
         specifier: ^3.24.829
         version: 3.25.1108
+      node-api-stub:
+        specifier: workspace:*
+        version: link:../node-api-stub
       weak-node-api:
         specifier: workspace:*
         version: link:../weak-node-api
@@ -342,12 +348,24 @@ importers:
       node-addon-examples:
         specifier: github:nodejs/node-addon-examples#4b7dd86a85644610e6de80154df9acac9329b509
         version: https://codeload.github.com/nodejs/node-addon-examples/tar.gz/4b7dd86a85644610e6de80154df9acac9329b509
+      node-api-stub:
+        specifier: workspace:*
+        version: link:../node-api-stub
       read-pkg:
         specifier: ^9.0.1
         version: 9.0.1
       weak-node-api:
         specifier: workspace:*
         version: link:../weak-node-api
+
+  packages/node-api-stub:
+    dependencies:
+      node-api-headers:
+        specifier: ^1.5.0
+        version: 1.9.0
+      zod:
+        specifier: ^4.1.11
+        version: 4.4.3
 
   packages/node-tests:
     devDependencies:
@@ -374,17 +392,13 @@ importers:
         version: link:../weak-node-api
 
   packages/weak-node-api:
-    dependencies:
-      node-api-headers:
-        specifier: ^1.5.0
-        version: 1.9.0
     devDependencies:
       cmake-rn:
         specifier: workspace:*
         version: link:../cmake-rn
-      zod:
-        specifier: ^4.1.11
-        version: 4.4.3
+      node-api-stub:
+        specifier: workspace:*
+        version: link:../node-api-stub
 
 packages:
 

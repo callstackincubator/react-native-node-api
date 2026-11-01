@@ -3,10 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-import {
-  FunctionDecl,
-  getNodeApiFunctions,
-} from "../src/node-api-functions.js";
+import { type FunctionDecl, getNodeApiFunctions } from "node-api-stub";
 
 import * as weakNodeApiGenerator from "./generators/weak-node-api.js";
 import * as hostGenerator from "./generators/NodeApiHost.js";

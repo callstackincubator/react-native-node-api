@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 
-import { nodeApiHeaders } from "../src/node-api-functions.js";
+import { nodeApiHeaders } from "node-api-stub";
 const { include_dir: includeSourcePath } = nodeApiHeaders;
 
 const includeDestinationPath = path.join(import.meta.dirname, "../include");

@@ -13,12 +13,13 @@ import {
   AndroidTriplet as Triplet,
 } from "react-native-node-api";
 import * as cmakeFileApi from "cmake-file-api";
+import { NODE_API_STUB_TARGET } from "node-api-stub";
 
 import type { BaseOpts, Platform } from "./types.js";
 import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
-  getWeakNodeApiVariables,
+  getNodeApiLinkageVariables,
 } from "../weak-node-api.js";
 import { isNinjaAvailable } from "../ninja.js";
 
@@ -183,7 +184,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       source,
       define,
       build,
-      weakNodeApiLinkage,
+      nodeApiLinkage,
       cmakeJs,
       ccachePath,
     },
@@ -228,7 +229,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           "--toolchain",
           toolchainPath,
           ...toDefineArguments([
-            ...(weakNodeApiLinkage ? [getWeakNodeApiVariables(triplet)] : []),
+            getNodeApiLinkageVariables(nodeApiLinkage, triplet),
             ...(cmakeJs ? [getCmakeJSVariables(triplet)] : []),
             ...commonDefinitions,
             {
@@ -280,6 +281,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       const sharedLibraries = targets.filter(
         ({ type, name }) =>
           type === "SHARED_LIBRARY" &&
+          name !== NODE_API_STUB_TARGET &&
           (target.length === 0 || target.includes(name)),
       );
       await Promise.all(

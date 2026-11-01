@@ -1,4 +1,4 @@
-import type { FunctionDecl } from "../../src/node-api-functions.js";
+import type { FunctionDecl } from "node-api-stub";
 
 export function generateFunctionDecl({
   returnType,

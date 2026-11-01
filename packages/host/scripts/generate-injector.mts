@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import cp from "node:child_process";
 
-import { type FunctionDecl, getNodeApiFunctions } from "weak-node-api";
+import { type FunctionDecl, getNodeApiFunctions } from "node-api-stub";
 
 export const CPP_SOURCE_PATH = path.join(import.meta.dirname, "../cpp");
 
