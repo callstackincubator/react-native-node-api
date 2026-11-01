@@ -13,31 +13,52 @@ namespace callstack::react_native_node_api {
 
 namespace {
 
-/// Renders the exception Hermes left pending on `env` as a message, clearing
-/// it so the env is usable again. Returns an empty string if the exception
-/// cannot be read, in which case the caller reports the status alone.
-std::string takePendingExceptionMessage(napi_env env) {
+/// Hands `value` over to JSI. Hermes has no public bridge between `napi_value`
+/// and `jsi::Value`, so it crosses through a global property named after the
+/// env (unique per runtime), which is removed again straight after.
+jsi::Value toJsiValue(jsi::Runtime &rt, napi_env env, napi_value value) {
+  char name[32];
+  snprintf(name, sizeof(name), "RN$NodeAddon_%p", static_cast<void *>(env));
+
+  napi_value global = nullptr;
+  napi_status status = napi_get_global(env, &global);
+  assert(status == napi_ok);
+  status = napi_set_named_property(env, global, name, value);
+  assert(status == napi_ok);
+
+  jsi::Value result = rt.global().getProperty(rt, name);
+
+  napi_value key = nullptr;
+  status = napi_create_string_utf8(env, name, NAPI_AUTO_LENGTH, &key);
+  assert(status == napi_ok);
+  bool deleted = false;
+  status = napi_delete_property(env, global, key, &deleted);
+  assert(status == napi_ok && deleted);
+  (void)status;
+  (void)deleted;
+  return result;
+}
+
+/// Takes the exception Hermes left pending on `env`, clearing it so the env is
+/// usable again, or creates an error from `status` if there is none.
+napi_value takeLoadError(napi_env env, napi_status status) {
   napi_value error = nullptr;
-  if (napi_get_and_clear_last_exception(env, &error) != napi_ok ||
-      error == nullptr) {
-    return {};
+  if (napi_get_and_clear_last_exception(env, &error) == napi_ok &&
+      error != nullptr) {
+    napi_valuetype type = napi_undefined;
+    if (napi_typeof(env, error, &type) == napi_ok && type != napi_undefined) {
+      return error;
+    }
   }
-  napi_value asString = nullptr;
-  if (napi_coerce_to_string(env, error, &asString) != napi_ok) {
-    return {};
-  }
-  size_t length = 0;
-  if (napi_get_value_string_utf8(env, asString, nullptr, 0, &length) !=
-      napi_ok) {
-    return {};
-  }
-  std::string message(length, '\0');
-  if (napi_get_value_string_utf8(env, asString, message.data(), length + 1,
-                                 &length) != napi_ok) {
-    return {};
-  }
-  message.resize(length);
-  return message;
+  const std::string message = "Node-API status " + std::to_string(status);
+  napi_value messageValue = nullptr;
+  napi_status createStatus = napi_create_string_utf8(
+      env, message.c_str(), message.size(), &messageValue);
+  assert(createStatus == napi_ok);
+  createStatus = napi_create_error(env, nullptr, messageValue, &error);
+  assert(createStatus == napi_ok);
+  (void)createStatus;
+  return error;
 }
 
 } // namespace
@@ -45,8 +66,7 @@ std::string takePendingExceptionMessage(napi_env env) {
 CxxNodeApiHostModule::CxxNodeApiHostModule(
     std::shared_ptr<react::CallInvoker> jsInvoker)
     : TurboModule(CxxNodeApiHostModule::kModuleName, jsInvoker) {
-  methodMap_["requireNodeAddon"] =
-      MethodMetadata{1, &CxxNodeApiHostModule::requireNodeAddon};
+  methodMap_["dlopen"] = MethodMetadata{2, &CxxNodeApiHostModule::dlopen};
 
   callInvoker_ = std::move(jsInvoker);
 
@@ -85,60 +105,26 @@ CxxNodeApiHostModule::CxxNodeApiHostModule(
   HostContext::retainForProcessLifetime(hostContext_);
 }
 
-jsi::Value
-CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
-                                       react::TurboModule &turboModule,
-                                       const jsi::Value args[], size_t count) {
+jsi::Value CxxNodeApiHostModule::dlopen(jsi::Runtime &rt,
+                                        react::TurboModule &turboModule,
+                                        const jsi::Value args[], size_t count) {
   auto &thisModule = static_cast<CxxNodeApiHostModule &>(turboModule);
-  if (1 == count && args[0].isString()) {
-    return thisModule.requireNodeAddon(rt, args[0].asString(rt));
+  if (count >= 2 && args[0].isObject() && args[1].isString()) {
+    thisModule.dlopen(rt, args[0].asObject(rt), args[1].asString(rt).utf8(rt));
+    return jsi::Value::undefined();
   }
-  throw jsi::JSError(rt, "Expected requireNodeAddon to be called with a single "
-                         "library name string");
+  throw jsi::JSError(
+      rt, "Expected dlopen to be called with a module object and a filename");
 }
 
-jsi::Value
-CxxNodeApiHostModule::requireNodeAddon(jsi::Runtime &rt,
-                                       const jsi::String libraryName) {
-  const std::string libraryNameStr = libraryName.utf8(rt);
-
-  auto [it, inserted] = nodeAddons_.emplace(libraryNameStr, NodeAddon());
-  NodeAddon &addon = it->second;
-
-  // Check if this module has been loaded already, if not then load it...
-  if (inserted) {
-    try {
-      loadNodeAddon(rt, addon, libraryNameStr);
-    } catch (...) {
-      // Leave no half-initialized entry behind, so a later require of the same
-      // addon retries the load instead of reading a missing global.
-      nodeAddons_.erase(it);
-      throw;
-    }
-  }
-
-  // Look the exports up (using JSI) and return it...
-  return rt.global().getProperty(rt, addon.generatedName.c_str());
-}
-
-void CxxNodeApiHostModule::loadNodeAddon(jsi::Runtime &rt, NodeAddon &addon,
-                                         const std::string &libraryName) {
-#if defined(__APPLE__)
-  const std::string libraryPath =
-      "@rpath/" + libraryName + ".framework/" + libraryName;
-#elif defined(__ANDROID__)
-  const std::string libraryPath = "lib" + libraryName + ".so";
-#else
-#error "Loading Node-API addons is unsupported on this platform"
-#endif
-
-  log_debug("[%s] Loading addon by '%s'", libraryName.c_str(),
-            libraryPath.c_str());
+void CxxNodeApiHostModule::dlopen(jsi::Runtime &rt, const jsi::Object &module,
+                                  const std::string &filename) {
+  log_debug("Loading addon from '%s'", filename.c_str());
 
   // Create this addon's Node-API environment. Hermes binds an env to its
   // low-level VM runtime, which we reach through the (unstable) IHermes JSI
   // interface, and takes ownership: the env is torn down with the runtime, so
-  // there is nothing to free here. Each addon gets its own env, as in Node.
+  // there is nothing to free here. Each load gets its own env, as in Node.
   //
   // Fully qualified: `using namespace facebook` makes a bare `hermes`
   // ambiguous with the top-level `::hermes` (VM) namespace pulled in via
@@ -149,52 +135,32 @@ void CxxNodeApiHostModule::loadNodeAddon(jsi::Runtime &rt, NodeAddon &addon,
               "create a Node-API environment");
     abort();
   }
-  addon.env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(),
-                                     hostContext_->host());
-  assert(addon.env != nullptr);
-  napi_env env = addon.env;
-
-  // A name to reference the exports object by from JSI. Instead of using
-  // random numbers to avoid name clashes, we use the address of the env, which
-  // is unique per addon per runtime.
-  char generatedName[32];
-  snprintf(generatedName, sizeof(generatedName), "RN$NodeAddon_%p",
-           static_cast<void *>(env));
-  addon.generatedName = generatedName;
+  napi_env env = hermes_napi_create_env(hermes->getVMRuntimeUnsafe(),
+                                        hostContext_->host());
+  assert(env != nullptr);
 
   // Every napi_value below is created in this scope, and only reachable from
-  // the JavaScript global (or dropped) once it closes.
+  // JSI (or dropped) once it closes.
   napi_handle_scope scope = nullptr;
   napi_status status = napi_open_handle_scope(env, &scope);
   assert(status == napi_ok);
 
+  // Hermes creates the exports object itself rather than taking
+  // `module.exports`, so its result replaces `module.exports` below.
   napi_value exports = nullptr;
-  status = hermes_napi_load_module(env, libraryPath.c_str(), &exports);
-  if (status == napi_ok) {
-    napi_value global = nullptr;
-    status = napi_get_global(env, &global);
-    assert(status == napi_ok);
-    status = napi_set_named_property(env, global, addon.generatedName.c_str(),
-                                     exports);
-    assert(status == napi_ok);
-  }
-
+  status = hermes_napi_load_module(env, filename.c_str(), &exports);
   const bool failed = status != napi_ok;
-  std::string message;
-  if (failed) {
-    message = takePendingExceptionMessage(env);
-    if (message.empty()) {
-      message = "Node-API status " + std::to_string(status);
-    }
-  }
+  jsi::Value result =
+      toJsiValue(rt, env, failed ? takeLoadError(env, status) : exports);
+
   const napi_status closeStatus = napi_close_handle_scope(env, scope);
   assert(closeStatus == napi_ok);
   (void)closeStatus;
 
   if (failed) {
-    throw jsi::JSError(rt, "Failed to load '" + libraryName + "' addon from '" +
-                               libraryPath + "': " + message);
+    throw jsi::JSError(rt, std::move(result));
   }
+  module.setProperty(rt, "exports", std::move(result));
 }
 
 } // namespace callstack::react_native_node_api
