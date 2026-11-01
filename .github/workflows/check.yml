@@ -318,6 +318,14 @@ jobs:
       - name: Build test app
         run: xcodebuild archive -workspace ReactTestApp.xcworkspace -configuration Release -scheme ReactTestApp -destination "generic/platform=iOS Simulator" -archivePath ./build/test-app.xcarchive CODE_SIGN_IDENTITY="-" CODE_SIGNING_ALLOWED=YES C_COMPILER_LAUNCHER=ccache CLANG_ENABLE_EXPLICIT_MODULES_WITH_COMPILER_LAUNCHER=YES
         working-directory: apps/test-app/ios
+      # The async test addon is built with `--node-api-linkage hermes` (#494).
+      - name: Verify the async addon links Hermes directly
+        run: |
+          ./scripts/verify-hermes-linkage.sh \
+            tests/async/build/RelWithDebInfo/addon.apple.node/ios-*-simulator/addon.framework/addon \
+            ../../apps/test-app/ios/build/test-app.xcarchive/Products/Applications/ReactTestApp.app/Frameworks/hermesvm.framework/hermesvm \
+            ../weak-node-api/stub/build/Release/hermesvm.xcframework/ios-*-simulator/hermesvm.framework/hermesvm
+        working-directory: packages/node-addon-examples
       - name: Run test app
         run: |
           # Install the app
@@ -467,6 +475,23 @@ jobs:
             sleep 5
             # Stop logcat
             kill $LOGCAT_PID || true
+      # The async test addon is built with `--node-api-linkage hermes` (#494).
+      - name: Verify the async addon links Hermes directly
+        run: |
+          RNTA_DIR=$(node -p "path.dirname(require.resolve('react-native-test-app/package.json', { paths: ['../../apps/test-app'] }))")
+          APK=$(find ../../apps/test-app/android "$RNTA_DIR/android" -name '*.apk' 2>/dev/null | head -n 1)
+          if [ -z "$APK" ]; then
+            echo "::error::Found no APK of the test app"
+            exit 1
+          fi
+          echo "Extracting Hermes from $APK"
+          unzip -o -j "$APK" lib/x86_64/libhermesvm.so -d "$RUNNER_TEMP/apk"
+          export LLVM_BIN="$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          ./scripts/verify-hermes-linkage.sh \
+            tests/async/build/RelWithDebInfo/addon.android.node/x86_64/libaddon.so \
+            "$RUNNER_TEMP/apk/libhermesvm.so" \
+            ../weak-node-api/stub/build/Release/hermesvm.android.node/x86_64/libhermesvm.so
+        working-directory: packages/node-addon-examples
       - name: Upload device logs
         if: always()
         uses: actions/upload-artifact@v7

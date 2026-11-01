@@ -10,6 +10,7 @@ import {
 
 import * as weakNodeApiGenerator from "./generators/weak-node-api.js";
 import * as hostGenerator from "./generators/NodeApiHost.js";
+import * as stubGenerator from "./generators/stub.js";
 
 export const OUTPUT_PATH = path.join(import.meta.dirname, "../generated");
 
@@ -85,6 +86,16 @@ async function run() {
       @brief Weak Node-API host injection implementation.
      
       Provides the implementation for deferring Node-API function calls from addons into a Node-API host.
+    `,
+  });
+  await generateFile({
+    functions,
+    fileName: "node_api_stub.cpp",
+    generator: stubGenerator.generateSource,
+    headingComment: `
+      @brief Link-time stub of a library exporting Node-API.
+
+      Lets an addon link directly against a Node-API provider (such as Hermes) without having it installed.
     `,
   });
 }

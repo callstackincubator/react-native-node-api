@@ -18,7 +18,7 @@ import type { BaseOpts, Platform } from "./types.js";
 import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
-  getWeakNodeApiVariables,
+  getNodeApiLinkageVariables,
 } from "../weak-node-api.js";
 import { isNinjaAvailable } from "../ninja.js";
 
@@ -183,7 +183,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
       source,
       define,
       build,
-      weakNodeApiLinkage,
+      nodeApiLinkage,
       cmakeJs,
       ccachePath,
     },
@@ -228,7 +228,7 @@ export const platform: Platform<Triplet[], AndroidOpts> = {
           "--toolchain",
           toolchainPath,
           ...toDefineArguments([
-            ...(weakNodeApiLinkage ? [getWeakNodeApiVariables(triplet)] : []),
+            getNodeApiLinkageVariables(nodeApiLinkage, triplet),
             ...(cmakeJs ? [getCmakeJSVariables(triplet)] : []),
             ...commonDefinitions,
             {

@@ -20,6 +20,9 @@
     "generated",
     "build/Debug",
     "build/Release",
+    "stub/CMakeLists.txt",
+    "stub/build/Debug",
+    "stub/build/Release",
     "*.podspec",
     "*.cmake"
   ],
@@ -28,7 +31,7 @@
     "copy-node-api-headers": "tsx scripts/copy-node-api-headers.ts",
     "generate": "tsx scripts/generate.ts",
     "prebuild:prepare": "node --run copy-node-api-headers && node --run generate",
-    "prebuild:build": "cmake-rn --no-auto-link --no-weak-node-api-linkage --xcframework-extension",
+    "prebuild:build": "cmake-rn --no-auto-link --node-api-linkage none --xcframework-extension -D BUILD_NODE_API_STUB=ON",
     "prebuild:build:android": "node --run prebuild:build -- --android",
     "prebuild:build:apple": "node --run prebuild:build -- --apple",
     "prebuild:build:all": "node --run prebuild:build -- --android --apple",

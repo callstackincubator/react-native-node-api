@@ -14,6 +14,7 @@ import {
   pLimit,
   InvalidArgumentError,
 } from "@react-native-node-api/cli-utils";
+import { nodeApiLinkageOption } from "react-native-node-api";
 
 import {
   platforms,
@@ -115,11 +116,6 @@ const noAutoLinkOption = new Option(
   "Don't mark the output as auto-linkable by react-native-node-api",
 );
 
-const noWeakNodeApiLinkageOption = new Option(
-  "--no-weak-node-api-linkage",
-  "Don't pass the path of the weak-node-api library from react-native-node-api",
-);
-
 const cmakeJsOption = new Option(
   "--cmake-js",
   "Define CMAKE_JS_* variables used for compatibility with cmake-js",
@@ -159,7 +155,7 @@ let buildCommand = new Command("build")
   .addOption(targetOption)
   .addOption(stripOption)
   .addOption(noAutoLinkOption)
-  .addOption(noWeakNodeApiLinkageOption)
+  .addOption(nodeApiLinkageOption)
   .addOption(cmakeJsOption)
   .addOption(ccachePathOption)
   .addOption(concurrencyOption);

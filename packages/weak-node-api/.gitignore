@@ -12,3 +12,4 @@
 
 # Clang cache
 /.cache/
+/stub/build/

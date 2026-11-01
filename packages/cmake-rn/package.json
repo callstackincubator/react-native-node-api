@@ -17,7 +17,8 @@
     "dist",
     "!dist/**/*.test.d.ts",
     "!dist/**/*.test.d.ts.map",
-    "templates"
+    "templates",
+    "cmake"
   ],
   "scripts": {
     "build": "tsc",

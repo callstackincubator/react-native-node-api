@@ -28,3 +28,9 @@ export {
 } from "./path-utils.js";
 
 export { readAndParsePlist } from "./plist.js";
+
+export {
+  NODE_API_LINKAGES,
+  type NodeApiLinkage,
+  nodeApiLinkageOption,
+} from "./cli/options.js";

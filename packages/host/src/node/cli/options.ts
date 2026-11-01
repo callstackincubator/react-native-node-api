@@ -26,3 +26,14 @@ export const pathSuffixOption = new Option(
 )
   .choices(LIBRARY_NAMING_CHOICES)
   .default(NODE_API_PATH_SUFFIX || "strip");
+
+export const NODE_API_LINKAGES = ["weak-node-api", "hermes", "none"] as const;
+
+export type NodeApiLinkage = (typeof NODE_API_LINKAGES)[number];
+
+export const nodeApiLinkageOption = new Option(
+  "--node-api-linkage <mode>",
+  "What addons link against for Node-API: weak-node-api, the Hermes library (via a link-time stub) or nothing at all",
+)
+  .choices(NODE_API_LINKAGES)
+  .default("weak-node-api" satisfies NodeApiLinkage);
