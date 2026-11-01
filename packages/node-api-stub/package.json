@@ -1,0 +1,50 @@
+{
+  "name": "node-api-stub",
+  "version": "0.0.0",
+  "description": "Node-API function declarations and a link-time stub of a library exporting Node-API",
+  "homepage": "https://github.com/callstackincubator/react-native-node-api",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/callstackincubator/react-native-node-api.git",
+    "directory": "packages/node-api-stub"
+  },
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.d.ts",
+    "!dist/**/*.test.d.ts.map",
+    "generated",
+    "CMakeLists.txt"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "generate": "tsx scripts/generate-stub.ts",
+    "bootstrap": "node --run generate",
+    "prerelease": "node --run generate"
+  },
+  "keywords": [
+    "node-api",
+    "napi",
+    "stub",
+    "hermes",
+    "cmake"
+  ],
+  "author": {
+    "name": "Callstack",
+    "url": "https://github.com/callstackincubator"
+  },
+  "contributors": [
+    {
+      "name": "Kræn Hansen",
+      "url": "https://github.com/kraenhansen"
+    }
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "node-api-headers": "^1.5.0",
+    "zod": "^4.1.11"
+  }
+}

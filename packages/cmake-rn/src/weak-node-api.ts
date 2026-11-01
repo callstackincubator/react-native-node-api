@@ -12,10 +12,9 @@ import {
 import {
   applePrebuildPath,
   androidPrebuildPath,
-  hermesStubApplePrebuildPath,
-  hermesStubAndroidPrebuildPath,
   weakNodeApiCmakePath,
 } from "weak-node-api";
+import { nodeApiStubPath } from "node-api-stub";
 
 import { ANDROID_ARCHITECTURES } from "./platforms/android.js";
 import { getNodeAddonHeadersPath, getNodeApiHeadersPath } from "./headers.js";
@@ -26,44 +25,26 @@ export function toCmakePath(input: string) {
 
 const NODE_API_CONFIG_DIR = path.resolve(import.meta.dirname, "../cmake");
 
-function getPrebuildPath(
-  triplet: SupportedTriplet | "apple",
-  {
-    apple,
-    android,
-    libraryName,
-  }: { apple: string; android: string; libraryName: string },
-): string {
+function findWeakNodeApiPath(triplet: SupportedTriplet | "apple") {
   if (triplet === "apple" || isAppleTriplet(triplet)) {
-    assert(fs.existsSync(apple), `Expected an XCFramework at ${apple}`);
-    return apple;
+    return applePrebuildPath;
   } else if (isAndroidTriplet(triplet)) {
-    const libraryPath = path.join(
-      android,
+    return path.join(
+      androidPrebuildPath,
       ANDROID_ARCHITECTURES[triplet],
-      `lib${libraryName}.so`,
+      "libweak-node-api.so",
     );
-    assert(fs.existsSync(libraryPath), `Expected library at ${libraryPath}`);
-    return libraryPath;
   } else {
     throw new Error(`Unexpected triplet: ${triplet as string}`);
   }
 }
 
-export function getWeakNodeApiPath(triplet: SupportedTriplet | "apple") {
-  return getPrebuildPath(triplet, {
-    apple: applePrebuildPath,
-    android: androidPrebuildPath,
-    libraryName: "weak-node-api",
-  });
-}
-
-export function getHermesStubPath(triplet: SupportedTriplet | "apple") {
-  return getPrebuildPath(triplet, {
-    apple: hermesStubApplePrebuildPath,
-    android: hermesStubAndroidPrebuildPath,
-    libraryName: "hermesvm",
-  });
+export function getWeakNodeApiPath(
+  triplet: SupportedTriplet | "apple",
+): string {
+  const result = findWeakNodeApiPath(triplet);
+  assert(fs.existsSync(result), `Expected weak-node-api at ${result}`);
+  return result;
 }
 
 function getNodeApiIncludePaths() {
@@ -91,9 +72,7 @@ export function getWeakNodeApiVariables(
 }
 
 /**
- * Variables for the selected --node-api-linkage: the neutral `node-api-linkage`
- * target follows the mode, while the `weak-node-api` target stays available so
- * addons naming it directly keep building alongside.
+ * Variables for the selected --node-api-linkage, which the `node-api` target follows.
  */
 export function getNodeApiLinkageVariables(
   linkage: NodeApiLinkage,
@@ -102,16 +81,26 @@ export function getNodeApiLinkageVariables(
   if (linkage === "none") {
     return {};
   }
+  const nodeApiVariables = {
+    // Enable use of `find_package(node-api REQUIRED CONFIG)`
+    "node-api_DIR": NODE_API_CONFIG_DIR,
+    NODE_API_LINKAGE: linkage,
+    NODE_API_INC: getNodeApiIncludePaths().join(";"),
+  };
+  if (linkage === "hermes") {
+    return {
+      // Keeps the `weak-node-api` target available to addons naming it, without requiring it
+      ...(fs.existsSync(findWeakNodeApiPath(triplet))
+        ? getWeakNodeApiVariables(triplet)
+        : {}),
+      ...nodeApiVariables,
+      NODE_API_STUB_DIR: nodeApiStubPath,
+    };
+  }
   return {
     ...getWeakNodeApiVariables(triplet),
-    // Enable use of `find_package(node-api-linkage REQUIRED CONFIG)`
-    "node-api-linkage_DIR": NODE_API_CONFIG_DIR,
-    NODE_API_LINKAGE: linkage,
-    NODE_API_LINKAGE_INC: getNodeApiIncludePaths().join(";"),
-    NODE_API_LINKAGE_LIB:
-      linkage === "hermes"
-        ? getHermesStubPath(triplet)
-        : getWeakNodeApiPath(triplet),
+    ...nodeApiVariables,
+    NODE_API_LIB: getWeakNodeApiPath(triplet),
   };
 }
 

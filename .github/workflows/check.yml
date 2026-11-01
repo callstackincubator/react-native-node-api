@@ -321,10 +321,9 @@ jobs:
       # The async test addon is built with `--node-api-linkage hermes` (#494).
       - name: Verify the async addon links Hermes directly
         run: |
-          ./scripts/verify-hermes-linkage.sh \
+          node --run verify:hermes-linkage -- \
             tests/async/build/RelWithDebInfo/addon.apple.node/ios-*-simulator/addon.framework/addon \
-            ../../apps/test-app/ios/build/test-app.xcarchive/Products/Applications/ReactTestApp.app/Frameworks/hermesvm.framework/hermesvm \
-            ../weak-node-api/stub/build/Release/hermesvm.xcframework/ios-*-simulator/hermesvm.framework/hermesvm
+            ../../apps/test-app/ios/build/test-app.xcarchive/Products/Applications/ReactTestApp.app/Frameworks/hermesvm.framework/hermesvm
         working-directory: packages/node-addon-examples
       - name: Run test app
         run: |
@@ -487,10 +486,9 @@ jobs:
           echo "Extracting Hermes from $APK"
           unzip -o -j "$APK" lib/x86_64/libhermesvm.so -d "$RUNNER_TEMP/apk"
           export LLVM_BIN="$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          ./scripts/verify-hermes-linkage.sh \
+          node --run verify:hermes-linkage -- \
             tests/async/build/RelWithDebInfo/addon.android.node/x86_64/libaddon.so \
-            "$RUNNER_TEMP/apk/libhermesvm.so" \
-            ../weak-node-api/stub/build/Release/hermesvm.android.node/x86_64/libhermesvm.so
+            "$RUNNER_TEMP/apk/libhermesvm.so"
         working-directory: packages/node-addon-examples
       - name: Upload device logs
         if: always()

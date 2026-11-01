@@ -8,5 +8,10 @@
     "types": ["node", "read-pkg"]
   },
   "include": ["scripts/**/*.mts"],
-  "exclude": []
+  "exclude": [],
+  "references": [
+    {
+      "path": "../node-api-stub/tsconfig.node.json"
+    }
+  ]
 }

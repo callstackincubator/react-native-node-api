@@ -24,22 +24,3 @@ export const weakNodeApiCmakePath = path.resolve(
   weakNodeApiPath,
   "weak-node-api-config.cmake",
 );
-
-const stubPath = path.resolve(weakNodeApiPath, "stub", "build");
-
-const stubOutputPath = fs.existsSync(path.resolve(stubPath, "Debug"))
-  ? path.resolve(stubPath, "Debug")
-  : path.resolve(stubPath, "Release");
-
-/**
- * Link-time stub of the Hermes library, letting addons link Node-API directly against Hermes.
- */
-export const hermesStubApplePrebuildPath = path.resolve(
-  stubOutputPath,
-  "hermesvm.xcframework",
-);
-
-export const hermesStubAndroidPrebuildPath = path.resolve(
-  stubOutputPath,
-  "hermesvm.android.node",
-);

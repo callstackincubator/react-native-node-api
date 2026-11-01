@@ -19,6 +19,7 @@ import {
 
 import type { Platform } from "./types.js";
 import * as cmakeFileApi from "cmake-file-api";
+import { NODE_API_STUB_TARGET } from "node-api-stub";
 import { getArtifactName, toDefineArguments } from "../helpers.js";
 import {
   getCmakeJSVariables,
@@ -189,6 +190,7 @@ async function readCmakeSharedLibraryTargets(
   return targets.filter(
     ({ type, name }) =>
       type === "SHARED_LIBRARY" &&
+      name !== NODE_API_STUB_TARGET &&
       (target.length === 0 || target.includes(name)),
   );
 }

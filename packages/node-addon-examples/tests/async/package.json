@@ -9,6 +9,5 @@
   },
   "scripts": {
     "test": "node addon.js"
-  },
-  "gypfile": true
+  }
 }

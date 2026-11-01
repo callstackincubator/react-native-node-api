@@ -8,5 +8,10 @@
     "types": ["node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["**/*.test.ts"]
+  "exclude": ["**/*.test.ts"],
+  "references": [
+    {
+      "path": "../node-api-stub/tsconfig.node.json"
+    }
+  ]
 }

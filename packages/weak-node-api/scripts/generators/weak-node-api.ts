@@ -1,5 +1,4 @@
-import type { FunctionDecl } from "../../src/node-api-functions.js";
-import { generateFunction } from "./shared.js";
+import { type FunctionDecl, generateFunction } from "node-api-stub";
 
 export function generateHeader() {
   return `
@@ -29,6 +28,7 @@ function generateFunctionImpl(fn: FunctionDecl) {
         ${returnType === "void" ? "" : "return "} g_host.${name}(
           ${argumentTypes.map((_, index) => `arg${index}`).join(", ")}
         );
+        ${fn.noReturn ? "WEAK_NODE_API_UNREACHABLE;" : ""}
       `,
   });
 }

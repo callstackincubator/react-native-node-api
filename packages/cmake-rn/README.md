@@ -88,19 +88,19 @@ endif()
 
 ### Choosing what to link with `--node-api-linkage`
 
-An addon can instead link the neutral `node-api-linkage` target, which links whatever `--node-api-linkage <mode>` selects:
+An addon can instead link the `node-api` target, which links whatever `--node-api-linkage <mode>` selects:
 
 - `weak-node-api` (the default): the `weak-node-api` library described above.
-- `hermes`: a link-time stub of Hermes' `hermesvm` library, so the addon records `hermesvm` and calls Hermes' Node-API directly. The stub is never loaded or shipped: the app's own Hermes provides the implementation at runtime. This requires a Hermes exporting Node-API (such as the one vendored by `react-native-node-api`), and the addon gets Hermes' own `napi_fatal_error` instead of the host's.
+- `hermes`: a link-time stub of Hermes' `hermesvm` library from [`node-api-stub`](../node-api-stub), built along with the addon, so the addon records `hermesvm` and calls Hermes' Node-API directly. The stub is never shipped: the app's own Hermes provides the implementation at runtime. This doesn't need `weak-node-api` to be built, but requires a Hermes exporting Node-API (such as the one vendored by `react-native-node-api`), and the addon gets Hermes' own `napi_fatal_error` instead of the host's.
 - `none`: neither target is defined.
 
 ```cmake
-# Defines the "node-api-linkage" target
-find_package(node-api-linkage REQUIRED CONFIG)
+# Defines the "node-api" target
+find_package(node-api REQUIRED CONFIG)
 
-target_link_libraries(addon PRIVATE node-api-linkage)
+target_link_libraries(addon PRIVATE node-api)
 ```
 
-The `weak-node-api` target stays available in every mode but `none`, so addons linking it directly can be built alongside.
+Addons linking the `weak-node-api` target directly can be built alongside: it's defined in the `weak-node-api` mode, and in the `hermes` mode whenever `weak-node-api` is built.
 
 This is different from how `cmake-js` "injects" the Node-API for linking (via `${CMAKE_JS_INC}`, `${CMAKE_JS_SRC}` and `${CMAKE_JS_LIB}`). To allow for interoperability between these tools, we inject these when you pass `--cmake-js` to `cmake-rn`.

@@ -68,8 +68,3 @@ if(BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
-
-option(BUILD_NODE_API_STUB "Build a link-time stub of a library exporting Node-API" OFF)
-if(BUILD_NODE_API_STUB)
-  add_subdirectory(stub)
-endif()
