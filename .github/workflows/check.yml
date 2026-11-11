@@ -52,7 +52,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
@@ -108,7 +108,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
@@ -148,7 +148,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
@@ -185,7 +185,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
@@ -215,7 +215,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       # Device names change with every Xcode release, so pick one dynamically.
@@ -339,7 +339,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
@@ -388,7 +388,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
@@ -482,7 +482,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6.1.1
         with:
           cache: true
       - name: Setup cpp tools
