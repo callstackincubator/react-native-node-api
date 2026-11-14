@@ -35,8 +35,8 @@ concurrency:
 # `cache: true` caches the same store without needing pnpm to already exist.
 #
 # hendrikmuhs/ccache-action is pinned to an exact patch, not a floating major:
-# its v1 / v1.2 tags still point at a Node.js 20 build, which the runners now
-# warn about. Float again once upstream moves them to >= v1.2.22.
+# its v1 / v1.2 tags still point at v1.2.20, a Node.js 20 build, which the
+# runners now warn about. Float again once upstream moves them to >= v1.2.22.
 #
 # pnpm/action-setup is likewise pinned to an exact tag: upstream's floating v6
 # hasn't been moved past v6.0.10 yet, one release behind v6.1.0 (adds pnpm v12
@@ -59,7 +59,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - run: pnpm install
@@ -103,7 +103,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
@@ -143,7 +143,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - run: pnpm install
@@ -186,7 +186,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
           # The action defaults to 500M, which a from-source React Native build
@@ -276,7 +276,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
@@ -325,7 +325,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
@@ -419,7 +419,7 @@ jobs:
         with:
           clang-format: true
       - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2.24
+        uses: hendrikmuhs/ccache-action@v1.2.25
         with:
           key: ${{ github.job }}-${{ runner.os }}
       - name: Set up JDK 17
