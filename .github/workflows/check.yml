@@ -37,10 +37,6 @@ concurrency:
 # hendrikmuhs/ccache-action is pinned to an exact patch, not a floating major:
 # its v1 / v1.2 tags still point at a Node.js 20 build, which the runners now
 # warn about. Float again once upstream moves them to >= v1.2.22.
-#
-# pnpm/action-setup is likewise pinned to an exact tag: upstream's floating v6
-# hasn't been moved past v6.0.10 yet, one release behind v6.1.0 (adds pnpm v12
-# support). Move back to floating v6 once it catches up.
 
 jobs:
   lint:
@@ -51,7 +47,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - name: Setup cpp tools
@@ -95,7 +91,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - name: Setup cpp tools
@@ -135,7 +131,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - name: Setup cpp tools
@@ -165,7 +161,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       # Device names change with every Xcode release, so pick one dynamically.
@@ -268,7 +264,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - name: Setup cpp tools
@@ -317,7 +313,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - name: Setup cpp tools
@@ -411,7 +407,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: lts/krypton
-      - uses: pnpm/action-setup@v6.1.0
+      - uses: pnpm/action-setup@v6
         with:
           cache: true
       - name: Setup cpp tools
