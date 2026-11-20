@@ -12,8 +12,6 @@ add_library(node-api-host SHARED
   ../cpp/Logger.cpp
   ../cpp/CxxNodeApiHostModule.cpp
   ../cpp/WeakNodeApiInjector.cpp
-  ../cpp/RuntimeNodeApi.cpp
-  ../cpp/RuntimeNodeApi.hpp
   ../cpp/HermesNapiHost.cpp
   ../cpp/HermesNapiHost.hpp
 )
